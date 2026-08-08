@@ -6,17 +6,18 @@ import re
 OPCODES = {
     'NOP':    0,
     'LOADI':  1,
+    'MOV':    2,
     'CONS':   3,
     'CAR':    4,
     'CDR':    5,
-    'ADD':    6,
-    'SUB':    7,
-    'EQ':     8,
-    'JMP':    9,
+    'ATOM':   6,
+    'EQ':     7,
+    'JMP':    8,
     'JF':     10,
     'HALT':   11,
     'OUT':    12,
-    'ATOM':   13,
+    'ADD':    13,
+    'SUB':    14,
     'IN':     15
 }
 
@@ -94,7 +95,7 @@ def assemble(lines):
             elif op in ['LOADI']:
                 rd = parse_reg(parts[1])
                 imm = parse_imm(parts[2], labels)
-                instr_word |= (rd << 24) | (imm & 0xFFFFFF)
+                instr_word |= (rd << 24) | (imm & 0xFFFF)
                 
             elif op in ['MOV', 'CAR', 'CDR']:
                 rd = parse_reg(parts[1])
@@ -119,7 +120,7 @@ def assemble(lines):
                     
             elif op in ['JMP']:
                 imm = parse_imm(parts[1], labels)
-                instr_word |= (imm & 0xFFFFFF)
+                instr_word |= (imm & 0xFFFF)
                 
             elif op in ['JF']:
                 rs1 = parse_reg(parts[1])
