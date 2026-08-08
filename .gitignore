@@ -9,3 +9,5 @@ __pycache__/
 docs/*.pdf
 docs/TangPrimer-25K-example/
 impl/
+
+fpga/boot/*.mem
