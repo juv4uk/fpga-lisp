@@ -171,6 +171,17 @@ module control (
                         ldu_cmd_cdr = 1;
                         next_state = ST_WAIT_LDU;
                     end
+                    OP_ATOM: begin
+                        reg_we = 1;
+                        if (reg_rd_data_a.tag == TAG_CONS) begin
+                            reg_wr_data.tag = TAG_NIL;
+                            reg_wr_data.value = 28'd0;
+                        end else begin
+                            reg_wr_data.tag = TAG_TRUE;
+                            reg_wr_data.value = 28'd1;
+                        end
+                        next_state = ST_FETCH;
+                    end
                     OP_OUT: begin
                         next_state = ST_OUT_START;
                     end
