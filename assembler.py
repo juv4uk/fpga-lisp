@@ -13,6 +13,7 @@ OPCODES = {
     'ATOM':   6,
     'EQ':     7,
     'JMP':    8,
+    'LOADSYM': 9,
     'JF':     10,
     'HALT':   11,
     'OUT':    12,
@@ -92,7 +93,7 @@ def assemble(lines):
             if op in ['NOP', 'HALT']:
                 pass
                 
-            elif op in ['LOADI']:
+            elif op in ['LOADI', 'LOADSYM']:
                 rd = parse_reg(parts[1])
                 imm = parse_imm(parts[2], labels)
                 instr_word |= (rd << 24) | (imm & 0xFFFF)

@@ -148,6 +148,12 @@ module control (
                         reg_wr_data.value = {12'd0, imm};
                         next_state = ST_FETCH;
                     end
+                    OP_LOADSYM: begin // Load immediate as SYMBOL
+                        reg_we = 1;
+                        reg_wr_data.tag = TAG_SYMBOL;
+                        reg_wr_data.value = {12'd0, imm};
+                        next_state = ST_FETCH;
+                    end
                     OP_MOV: begin
                         reg_we = 1;
                         reg_wr_data = reg_rd_data_a;

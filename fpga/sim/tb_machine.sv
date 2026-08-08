@@ -35,11 +35,11 @@ module tb_machine;
         // We will send 5 instructions (length = 5)
         send_uart_byte(8'd5);
         
-        // 0: LOADI R1, SYMBOL A (id=2) -> 32'h11000002
-        send_uart_word(32'h11000002);
-        
-        // 1: LOADI R2, SYMBOL B (id=3) -> 32'h12000003
-        send_uart_word(32'h12000003);
+        // 0: LOADSYM R1, SYMBOL A (id=2) -> 32'h91000002
+        send_uart_word(32'h91000002);
+
+        // 1: LOADSYM R2, SYMBOL B (id=3) -> 32'h92000003
+        send_uart_word(32'h92000003);
         
         // 2: CONS R3, R1, R2 -> 32'h33120000
         send_uart_word(32'h33120000);

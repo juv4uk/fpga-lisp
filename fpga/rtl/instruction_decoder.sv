@@ -10,7 +10,7 @@ typedef enum logic [3:0] {
     OP_ATOM  = 4'd6,
     OP_EQ    = 4'd7,
     OP_JMP   = 4'd8,
-    OP_JT    = 4'd9,
+    OP_LOADSYM = 4'd9,
     OP_JF    = 4'd10,
     OP_HALT  = 4'd11,
     OP_OUT   = 4'd12,
