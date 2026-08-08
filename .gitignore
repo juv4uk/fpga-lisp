@@ -1,0 +1,11 @@
+*.vcd
+*.vvp
+*.bin
+a.out
+iverilog_setup.exe
+__pycache__/
+*.pyc
+
+docs/*.pdf
+docs/TangPrimer-25K-example/
+impl/

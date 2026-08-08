@@ -1,0 +1,167 @@
+import sys
+import argparse
+import struct
+import re
+
+OPCODES = {
+    'NOP':    0,
+    'LOADI':  1,
+    'CONS':   3,
+    'CAR':    4,
+    'CDR':    5,
+    'ADD':    6,
+    'SUB':    7,
+    'EQ':     8,
+    'JMP':    9,
+    'JF':     10,
+    'HALT':   11,
+    'OUT':    12,
+    'ATOM':   13,
+    'IN':     15
+}
+
+def parse_reg(reg_str):
+    if not reg_str.startswith('R'):
+        raise ValueError(f"Expected register (e.g., R1), got {reg_str}")
+    return int(reg_str[1:])
+
+def parse_imm(imm_str, labels):
+    if imm_str in labels:
+        return labels[imm_str]
+    # Handle hex, bin, and dec
+    if imm_str.startswith('0x'):
+        return int(imm_str, 16)
+    elif imm_str.startswith('0b'):
+        return int(imm_str, 2)
+    else:
+        return int(imm_str)
+
+def assemble(lines):
+    labels = {}
+    instructions_pass1 = []
+    
+    # First pass: strip comments, find labels, record instruction strings
+    pc = 0
+    for line_num, line in enumerate(lines):
+        # Strip comments
+        if ';' in line:
+            line = line.split(';')[0]
+        # Also support '#' comments for convenience
+        if '#' in line:
+            line = line.split('#')[0]
+            
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Check for label
+        if line.endswith(':'):
+            label = line[:-1].strip()
+            labels[label] = pc
+            continue
+            
+        # If line has a label and an instruction on the same line (e.g. "loop: OUT R1")
+        if ':' in line:
+            parts = line.split(':', 1)
+            label = parts[0].strip()
+            labels[label] = pc
+            line = parts[1].strip()
+            if not line:
+                continue
+                
+        instructions_pass1.append((line_num + 1, line))
+        pc += 1
+
+    # Second pass: assemble instructions
+    machine_code = []
+    for line_num, line in instructions_pass1:
+        # replace commas with spaces to unify parsing
+        line_clean = line.replace(',', ' ')
+        parts = [p for p in line_clean.split() if p]
+        
+        op = parts[0].upper()
+        if op not in OPCODES:
+            print(f"Error (line {line_num}): Unknown opcode '{op}'")
+            sys.exit(1)
+            
+        opcode_val = OPCODES[op]
+        instr_word = opcode_val << 28
+        
+        try:
+            if op in ['NOP', 'HALT']:
+                pass
+                
+            elif op in ['LOADI']:
+                rd = parse_reg(parts[1])
+                imm = parse_imm(parts[2], labels)
+                instr_word |= (rd << 24) | (imm & 0xFFFFFF)
+                
+            elif op in ['MOV', 'CAR', 'CDR']:
+                rd = parse_reg(parts[1])
+                rs1 = parse_reg(parts[2])
+                instr_word |= (rd << 24) | (rs1 << 20)
+                
+            elif op in ['CONS', 'ADD', 'SUB', 'EQ', 'ATOM']:
+                # Note: ATOM historically took 2 ops in some designs, but if it takes 1, we handle it
+                rd = parse_reg(parts[1])
+                rs1 = parse_reg(parts[2])
+                rs2 = parse_reg(parts[3]) if len(parts) > 3 else 0
+                instr_word |= (rd << 24) | (rs1 << 20) | (rs2 << 16)
+                
+            elif op in ['OUT', 'IN']:
+                # Format varies slightly: IN R1, OUT R1
+                if op == 'IN':
+                    rd = parse_reg(parts[1])
+                    instr_word |= (rd << 24)
+                else: # OUT R1 uses rs1
+                    rs1 = parse_reg(parts[1])
+                    instr_word |= (rs1 << 20)
+                    
+            elif op in ['JMP']:
+                imm = parse_imm(parts[1], labels)
+                instr_word |= (imm & 0xFFFFFF)
+                
+            elif op in ['JF']:
+                rs1 = parse_reg(parts[1])
+                imm = parse_imm(parts[2], labels)
+                instr_word |= (rs1 << 20) | (imm & 0xFFFF)
+                
+            else:
+                print(f"Error (line {line_num}): Unhandled format for opcode '{op}'")
+                sys.exit(1)
+                
+        except Exception as e:
+            print(f"Error (line {line_num}): Failed to parse '{line}': {e}")
+            sys.exit(1)
+            
+        machine_code.append(instr_word)
+        
+    return machine_code
+
+def main():
+    parser = argparse.ArgumentParser(description="Lisp FPGA Assembler")
+    parser.add_argument('input', help="Input .asm file")
+    parser.add_argument('-o', '--output', help="Output .bin file")
+    args = parser.parse_args()
+    
+    with open(args.input, 'r') as f:
+        lines = f.readlines()
+        
+    machine_code = assemble(lines)
+    
+    out_file = args.output
+    if not out_file:
+        out_file = args.input.replace('.asm', '.bin')
+        if out_file == args.input:
+            out_file += '.bin'
+            
+    print(f"Assembled {len(machine_code)} instructions.")
+    
+    with open(out_file, 'wb') as f:
+        for instr in machine_code:
+            f.write(struct.pack('<I', instr))
+            
+    print(f"Wrote binary to {out_file}")
+
+if __name__ == '__main__':
+    main()
