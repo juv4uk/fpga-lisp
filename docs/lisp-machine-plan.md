@@ -485,6 +485,8 @@ FPGA фізично: виділяє cons-cell у BRAM, записує A в CAR �
 
 - ✅ **M20 — друга bootstrap-функція**: `second` з `core.my` (`(lambda (values) (car (cdr values)))`) — інший патерн композиції, ніж M19's `null?`: тіло closure ланцюжком викликає ДВА примітиви (`car` над результатом `cdr`), а не один примітив напряму над параметром. Застосовано до `(quote (x y z))` → `y`. [tb_bootstrap_second.sv](../fpga/sim/tb_bootstrap_second.sv), PASS.
 
+- ✅ **M21 — третя bootstrap-функція**: `not` з `core.my` (`(cond (value '()) (t t))`) — перше тіло closure, побудоване з `cond` (спецформа), а не аплікації примітиву; captured env може бути `NIL`, бо тілу нічого шукати. `t` вбудований напряму як літерал `TRUE`, а не через символьний lookup — той самий підхід, що й з `NIL`-літералами раніше. `(not NIL) => TRUE`, `(not (quote a)) => NIL`. [tb_bootstrap_not.sv](../fpga/sim/tb_bootstrap_not.sv), PASS.
+
 Кожен крок — окремий тестбенч (M12→M15), як і всі попередні. Після
 M15 маємо мінімальний робочий `eval` для підмножини `my-lisp`
 (atom/quote/cond/apply без `lambda`-визначення через `def`, без macro,
