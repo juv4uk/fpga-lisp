@@ -120,6 +120,13 @@ def main():
     with serial.Serial(args.port, args.baud, timeout=2) as ser:
         if args.file:
             upload_program(ser, args.file)
+            # pyserial's reset_input_buffer() can be a no-op if the OS
+            # driver hasn't caught up yet (pyserial#344); sleep briefly
+            # so any bytes in flight land, then actually discard them,
+            # so a stale byte from upload/reset doesn't throw off every
+            # subsequent 4-byte reply by a fixed offset.
+            time.sleep(0.2)
+            ser.reset_input_buffer()
             input("Press Enter once the board has halted... ")
         repl(ser)
 

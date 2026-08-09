@@ -13,4 +13,5 @@ add_file "fpga/rtl/uart.sv"
 add_file "fpga/rtl/bootloader.sv"
 add_file "fpga/rtl/lisp_machine.sv"
 add_file "fpga/rtl/lisp_machine.cst"
+add_file "fpga/synth/lisp_machine.sdc"
 run all
