@@ -71,8 +71,19 @@ def cmd_heap(ser, addr):
     print(f"HEAP[{addr}] = ({fmt_word(car)} . {fmt_word(cdr)})")
 
 
+def cmd_err(ser):
+    ser.write(bytes([0x04]))
+    word = struct.unpack("<I", read_exact(ser, 4))[0]
+    err_flag = (word >> 8) & 1
+    err_pc = word & 0xFF
+    if err_flag:
+        print(f"ERR: type error at pc={err_pc} (CAR/CDR/CONS on a non-CONS)")
+    else:
+        print("ERR: no error (halted normally via HALT)")
+
+
 def repl(ser):
-    print("Monitor ready. Commands: reg <n> | heap <addr> | hp | quit")
+    print("Monitor ready. Commands: reg <n> | heap <addr> | hp | err | quit")
     while True:
         try:
             line = input("> ").strip()
@@ -89,10 +100,12 @@ def repl(ser):
                 cmd_heap(ser, int(parts[1]))
             elif cmd == "hp":
                 cmd_hp(ser)
+            elif cmd == "err":
+                cmd_err(ser)
             elif cmd in ("quit", "exit"):
                 break
             else:
-                print("Unknown command. Use: reg <n> | heap <addr> | hp | quit")
+                print("Unknown command. Use: reg <n> | heap <addr> | hp | err | quit")
         except TimeoutError as e:
             print(f"No reply from board: {e}")
 

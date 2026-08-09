@@ -52,8 +52,13 @@ module control (
     //   0x01 <reg>        -> replies with the 4-byte register word (LE)
     //   0x02 <lo> <hi>    -> replies with CAR (4B LE) then CDR (4B LE) at heap[addr]
     //   0x03              -> replies with the 4-byte heap pointer (LE)
+    //   0x04              -> replies with {23'd0, err_flag, err_pc} (LE): a
+    //                        CAR/CDR/CONS type error (e.g. CAR of a non-CONS)
+    //                        halts the machine like HALT rather than hanging
+    //                        forever in ST_WAIT_LDU; this command tells you
+    //                        whether that happened and at which PC.
     // Unknown command bytes are ignored (monitor keeps waiting for the next byte).
-    typedef enum logic [3:0] {
+    typedef enum logic [4:0] {
         ST_FETCH,
         ST_DECODE,
         ST_EXECUTE,
@@ -68,6 +73,7 @@ module control (
         ST_MON_HEAP_WAIT,
         ST_MON_REG_SEND,
         ST_MON_HP_SEND,
+        ST_MON_ERR_SEND,
         ST_MON_TX_START,
         ST_MON_TX_WAIT
     } state_t;
@@ -97,6 +103,11 @@ module control (
     logic [63:0] mon_tx_buf;
     logic [3:0]  mon_tx_remaining;
 
+    // Latched by a CAR/CDR/CONS type error (see ST_WAIT_LDU below), read
+    // back via monitor command 0x04 instead of hanging forever.
+    logic        err_flag;
+    logic [7:0]  err_pc;
+
     assign imem_addr = pc;
     assign reg_rd_addr_a = (state == ST_MON_REG_SEND) ? mon_arg1[3:0] : rs1;
     assign reg_rd_addr_b = rs2;
@@ -112,6 +123,8 @@ module control (
             mon_arg2 <= 0;
             mon_tx_buf <= 0;
             mon_tx_remaining <= 0;
+            err_flag <= 0;
+            err_pc <= 0;
         end else begin
             state <= next_state;
             
@@ -140,9 +153,16 @@ module control (
                     end
                 end
                 ST_WAIT_LDU: begin
-                    if (ldu_valid) begin
+                    if (ldu_error) begin
+                        err_flag <= 1;
+                        err_pc <= pc;
+                    end else if (ldu_valid) begin
                         pc <= pc + 1;
                     end
+                end
+                ST_MON_ERR_SEND: begin
+                    mon_tx_buf <= {32'd0, 23'd0, err_flag, err_pc};
+                    mon_tx_remaining <= 4;
                 end
                 ST_OUT_WAIT: begin
                     if (!out_busy) begin
@@ -208,6 +228,7 @@ module control (
         if (state == ST_HALT || state == ST_MON_CMD || state == ST_MON_ARG1 ||
             state == ST_MON_ARG2 || state == ST_MON_HEAP_WAIT ||
             state == ST_MON_REG_SEND || state == ST_MON_HP_SEND ||
+            state == ST_MON_ERR_SEND ||
             state == ST_MON_TX_START || state == ST_MON_TX_WAIT) begin
             halted = 1;
         end
@@ -352,7 +373,12 @@ module control (
                 end
             end
             ST_WAIT_LDU: begin
-                if (ldu_valid) begin
+                if (ldu_error) begin
+                    // Unrecoverable type error (e.g. CAR of a non-CONS):
+                    // halt like HALT instead of waiting for a ldu_valid
+                    // that will never come. Inspect via monitor cmd 0x04.
+                    next_state = ST_HALT;
+                end else if (ldu_valid) begin
                     reg_we = 1;
                     reg_wr_data = ldu_result;
                     next_state = ST_FETCH;
@@ -370,6 +396,7 @@ module control (
                         8'h01:   next_state = ST_MON_ARG1; // REG <idx>
                         8'h02:   next_state = ST_MON_ARG1; // HEAP <lo> <hi>
                         8'h03:   next_state = ST_MON_HP_SEND; // HP
+                        8'h04:   next_state = ST_MON_ERR_SEND; // ERR
                         default: next_state = ST_MON_CMD; // unknown, ignore
                     endcase
                 end
@@ -400,6 +427,9 @@ module control (
                 next_state = ST_MON_TX_START;
             end
             ST_MON_HP_SEND: begin
+                next_state = ST_MON_TX_START;
+            end
+            ST_MON_ERR_SEND: begin
                 next_state = ST_MON_TX_START;
             end
             ST_MON_TX_START: begin
