@@ -16,7 +16,7 @@ The full design philosophy, instruction set, memory model, and milestone-by-mile
 - **Heap**: a bump-allocated cons-cell store (parallel `CAR`/`CDR` BRAMs), no garbage collector yet.
 - **ISA**: 16 opcodes, all allocated. `CALL`/`RET` and `GETTAG` reuse the `JMP` and `MOV` opcodes (RISC-V JAL/JALR-style dual-purposing) rather than consuming new instruction slots.
 - **Toolchain**: [`assembler.py`](assembler.py) (asm → `.bin`), [`upload.py`](upload.py) (serial bootloader + terminal), [`monitor.py`](monitor.py) (post-`HALT` binary debug REPL: `reg <n>`, `heap <addr>`, `hp`).
-- **Status**: primitives, branching, lists, subroutine calls, environments (alists), closures, and the first `eval` dispatch (atoms) are all implemented and verified — see [`docs/testing.md`](docs/testing.md) for the full milestone list. Tagged releases: `lisp-machine-v0.01`, `lisp-machine-v0.02`.
+- **Status**: primitives, branching, lists, subroutine calls, environments (alists), closures, and a complete `eval(expr, env)` — atoms, `quote`, `cond`, and closure application, with recursion handled by a software call stack built from `CONS` cells (no hardware call stack exists) — are all implemented and verified. `(identity 42) => 42` runs through the full evaluator. See [`docs/testing.md`](docs/testing.md) for the full milestone list. Tagged releases: `lisp-machine-v0.01`, `lisp-machine-v0.02`.
 
 ### Build, simulate, flash
 
@@ -63,7 +63,7 @@ python monitor.py COM3 your_program.bin   # upload + post-HALT debug REPL
 - **Heap**: сховище cons-комірок з bump-allocator (паралельні `CAR`/`CDR` BRAM), garbage collector'а поки немає.
 - **ISA**: 16 опкодів, усі зайняті. `CALL`/`RET` і `GETTAG` перевикористовують опкоди `JMP` і `MOV` (за принципом RISC-V JAL/JALR) замість нових слотів інструкцій.
 - **Інструментарій**: [`assembler.py`](assembler.py) (asm → `.bin`), [`upload.py`](upload.py) (серійний завантажувач + термінал), [`monitor.py`](monitor.py) (бінарний debug REPL після `HALT`: `reg <n>`, `heap <addr>`, `hp`).
-- **Стан**: примітиви, розгалуження, списки, виклики підпрограм, середовища (alist), closures і перший диспетчер `eval` (атоми) — реалізовані й перевірені; повний перелік — [`docs/testing.md`](docs/testing.md). Теговані релізи: `lisp-machine-v0.01`, `lisp-machine-v0.02`.
+- **Стан**: примітиви, розгалуження, списки, виклики підпрограм, середовища (alist), closures і повний `eval(expr, env)` — атоми, `quote`, `cond` і аплікація closure, з рекурсією через програмний call-стек на `CONS`-комірках (апаратного стеку немає) — реалізовані й перевірені. `(identity 42) => 42` проходить через повний evaluator. Повний перелік — [`docs/testing.md`](docs/testing.md). Теговані релізи: `lisp-machine-v0.01`, `lisp-machine-v0.02`.
 
 ### Збірка, симуляція, прошивка
 
@@ -110,7 +110,7 @@ Die vollständige Design-Philosophie, der Befehlssatz, das Speichermodell und di
 - **Heap**: ein Bump-Allocator-Cons-Zellen-Speicher (parallele `CAR`/`CDR`-BRAMs), noch kein Garbage Collector.
 - **ISA**: 16 Opcodes, alle belegt. `CALL`/`RET` und `GETTAG` nutzen die Opcodes von `JMP` und `MOV` wieder (RISC-V-JAL/JALR-Stil) statt neue Instruktions-Slots zu verbrauchen.
 - **Toolchain**: [`assembler.py`](assembler.py), [`upload.py`](upload.py), [`monitor.py`](monitor.py) (binäres Debug-REPL nach `HALT`).
-- **Status**: Primitive, Verzweigung, Listen, Unterprogrammaufrufe, Umgebungen (Alists), Closures und der erste `eval`-Dispatch (Atome) sind implementiert und verifiziert — vollständige Liste in [`docs/testing.md`](docs/testing.md). Getaggte Releases: `lisp-machine-v0.01`, `lisp-machine-v0.02`.
+- **Status**: Primitive, Verzweigung, Listen, Unterprogrammaufrufe, Umgebungen (Alists), Closures und ein vollständiges `eval(expr, env)` — Atome, `quote`, `cond` und Closure-Anwendung, mit Rekursion über einen Software-Aufrufstapel aus `CONS`-Zellen — sind implementiert und verifiziert. `(identity 42) => 42` läuft durch den vollständigen Evaluator. Vollständige Liste in [`docs/testing.md`](docs/testing.md). Getaggte Releases: `lisp-machine-v0.01`, `lisp-machine-v0.02`.
 
 ### Bauen, Simulieren, Flashen
 
