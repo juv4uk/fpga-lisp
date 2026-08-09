@@ -33,6 +33,7 @@ vvp tb.vvp
 | M15 | [`tb_eval_apply.sv`](../fpga/sim/tb_eval_apply.sv) | `eval` applies an M11 closure to an argument: evaluates the operator and argument, binds the parameter by extending the closure's captured env, evaluates the body in the new env. `(identity 42) => 42` — closes the plan's first big phase. |
 | M16 | [`tb_eval_primitive.sv`](../fpga/sim/tb_eval_primitive.sv) | `eval` also dispatches to hardware `CAR`/`CONS` when the operator evaluates to a new `TAG_PRIMITIVE` marker instead of a closure. `(eval '(car (cons 'a 'b)) env) => a` — the plan's literal Etap-1 goal. Program is read from `eval_primitive_demo.bin` via `$fread` rather than hand-transcribed (190 instructions). |
 | M17 | [`tb_error_recovery.sv`](../fpga/sim/tb_error_recovery.sv) | A `CAR`/`CDR`/`CONS` type error now halts cleanly (`ST_WAIT_LDU` -> `ST_HALT`) instead of hanging forever, and monitor command `0x04` reports `{err_flag, err_pc}` for diagnosis. |
+| M18 | [`tb_eval_all_primitives.sv`](../fpga/sim/tb_eval_all_primitives.sv) | Extends M16's primitive dispatch (`car`, `cons`) with `cdr`, `atom`, `eq` — all five hardware primitives are now callable from `eval` as ordinary procedures. `(eq (atom (cdr (quote (a . b)))) (atom (quote c))) => TRUE`. |
 
 There is also [`tb_cons.sv`](../fpga/sim/tb_cons.sv), a unit-level test of `lisp_data_unit` alone (no bootloader, no control unit) — the very first thing that ever worked in this project.
 
@@ -43,7 +44,7 @@ No opcode is added lightly: the 4-bit opcode field has been full (16/16) since `
 No CI runs these yet; run the full set locally before trusting a change:
 
 ```bash
-for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery; do
+for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives; do
   iverilog -g2012 -I fpga/rtl -o ${tb}.vvp fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
     fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
     fpga/rtl/control.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
@@ -74,6 +75,7 @@ done
 | M15 | [`tb_eval_apply.sv`](../fpga/sim/tb_eval_apply.sv) | `eval` застосовує closure з M11 до аргументу: обчислює оператор і аргумент, зв'язує параметр через розширення захопленого середовища, обчислює тіло в новому середовищі. `(identity 42) => 42` — закриває перший великий етап плану. |
 | M16 | [`tb_eval_primitive.sv`](../fpga/sim/tb_eval_primitive.sv) | `eval` також диспетчерить на апаратні `CAR`/`CONS`, коли оператор обчислюється до нового маркера `TAG_PRIMITIVE` замість closure. `(eval '(car (cons 'a 'b)) env) => a` — буквальна мета Етапу 1 плану. |
 | M17 | [`tb_error_recovery.sv`](../fpga/sim/tb_error_recovery.sv) | Тип-помилка `CAR`/`CDR`/`CONS` тепер чисто зупиняє машину (`ST_WAIT_LDU` → `ST_HALT`) замість вічного зависання; команда монітора `0x04` повертає `{err_flag, err_pc}`. |
+| M18 | [`tb_eval_all_primitives.sv`](../fpga/sim/tb_eval_all_primitives.sv) | Розширює диспетчеризацію M16 (`car`, `cons`) на `cdr`, `atom`, `eq` — усі п'ять апаратних примітивів тепер викликані з `eval` як звичайні процедури. |
 
 Також є [`tb_cons.sv`](../fpga/sim/tb_cons.sv) — модульний тест лише `lisp_data_unit` (без bootloader, без control unit) — перше, що взагалі запрацювало в цьому проєкті.
 
@@ -103,6 +105,7 @@ Ausführung über [Icarus Verilog](http://iverilog.icarus.com/) — siehe Befehl
 | M15 | [`tb_eval_apply.sv`](../fpga/sim/tb_eval_apply.sv) | `eval` wendet eine Closure aus M11 auf ein Argument an — schließt die erste große Phase des Plans ab. `(identity 42) => 42`. |
 | M16 | [`tb_eval_primitive.sv`](../fpga/sim/tb_eval_primitive.sv) | `eval` dispatcht auch an Hardware-`CAR`/`CONS`, wenn der Operator zu einem neuen `TAG_PRIMITIVE`-Marker ausgewertet wird. `(eval '(car (cons 'a 'b)) env) => a`. |
 | M17 | [`tb_error_recovery.sv`](../fpga/sim/tb_error_recovery.sv) | Ein `CAR`/`CDR`/`CONS`-Typfehler haelt die Maschine nun sauber an, statt fuer immer zu haengen; Monitor-Befehl `0x04` liefert `{err_flag, err_pc}`. |
+| M18 | [`tb_eval_all_primitives.sv`](../fpga/sim/tb_eval_all_primitives.sv) | Erweitert M16s Dispatch (`car`, `cons`) um `cdr`, `atom`, `eq` — alle fuenf Hardware-Primitive sind nun als Prozeduren aus `eval` aufrufbar. |
 
 Auch vorhanden: [`tb_cons.sv`](../fpga/sim/tb_cons.sv), ein reiner Unit-Test von `lisp_data_unit`.
 
