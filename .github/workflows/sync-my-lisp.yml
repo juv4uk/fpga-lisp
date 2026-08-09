@@ -1,0 +1,53 @@
+name: Sync my-lisp reference files
+
+# Pulls the small set of my-lisp files fpga-lisp keeps as reference
+# material under docs/reference/ (the conformance contract, the
+# language contract, and the canonical bootstrap library/meta-eval)
+# and opens a PR when upstream has changed. Never pushes to master
+# directly, since these are reference copies that deserve a look
+# before landing.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # every Monday 06:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out fpga-lisp
+        uses: actions/checkout@v4
+
+      - name: Fetch reference files from my-lisp
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p docs/reference/my-lisp-lib
+          fetch() {
+            gh api "repos/juv4uk/my-lisp/contents/$1" --jq '.content' | base64 -d > "$2"
+          }
+          fetch "tests/fixtures/conformance.my" "docs/reference/conformance.my"
+          fetch "docs/language-core.md" "docs/reference/language-core.md"
+          fetch "lib/core.my" "docs/reference/my-lisp-lib/core.my"
+          fetch "lib/meta-eval.my" "docs/reference/my-lisp-lib/meta-eval.my"
+
+      - name: Open a PR if anything changed
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Sync reference files from my-lisp"
+          title: "Sync reference files from my-lisp"
+          body: |
+            Automated sync of the reference files fpga-lisp mirrors from
+            [my-lisp](https://github.com/juv4uk/my-lisp) under `docs/reference/`:
+
+            - `tests/fixtures/conformance.my` — the implementation-independent contract
+            - `docs/language-core.md` — the language contract
+            - `lib/core.my` — the canonical bootstrapped standard library
+            - `lib/meta-eval.my` — the metacircular eval/apply reference
+
+            Review the diff before merging — a conformance-contract change may
+            mean fpga-lisp's own eval needs a matching update.
+          branch: sync/my-lisp-reference
+          delete-branch: true
