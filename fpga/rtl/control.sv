@@ -237,8 +237,15 @@ module control (
                         next_state = ST_FETCH;
                     end
                     OP_MOV: begin
+                        // rs2==1: GETTAG rd,rs1 -- rd = FIXNUM(tag of rs1).
+                        // rs2==0 (the assembler's default): plain MOV rd,rs1.
                         reg_we = 1;
-                        reg_wr_data = reg_rd_data_a;
+                        if (rs2 == 4'd1) begin
+                            reg_wr_data.tag = TAG_FIXNUM;
+                            reg_wr_data.value = {24'd0, reg_rd_data_a.tag};
+                        end else begin
+                            reg_wr_data = reg_rd_data_a;
+                        end
                         next_state = ST_FETCH;
                     end
                     OP_CONS: begin

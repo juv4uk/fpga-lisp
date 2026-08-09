@@ -7,6 +7,7 @@ OPCODES = {
     'NOP':    0,
     'LOADI':  1,
     'MOV':    2,
+    'GETTAG': 2,  # MOV with rs2 == 1: rd = FIXNUM(tag of rs1)
     'CONS':   3,
     'CAR':    4,
     'CDR':    5,
@@ -104,7 +105,14 @@ def assemble(lines):
                 rd = parse_reg(parts[1])
                 rs1 = parse_reg(parts[2])
                 instr_word |= (rd << 24) | (rs1 << 20)
-                
+
+            elif op in ['GETTAG']:
+                # Same opcode as MOV; rs2=1 selects the tag-extraction mode.
+                rd = parse_reg(parts[1])
+                rs1 = parse_reg(parts[2])
+                instr_word |= (rd << 24) | (rs1 << 20) | (1 << 16)
+
+
             elif op in ['CONS', 'ADD', 'SUB', 'EQ', 'ATOM']:
                 # Note: ATOM historically took 2 ops in some designs, but if it takes 1, we handle it
                 rd = parse_reg(parts[1])
