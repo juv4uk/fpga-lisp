@@ -425,5 +425,6 @@ FPGA фізично: виділяє cons-cell у BRAM, записує A в CAR �
 - ❌ Немає окремих тестів `tb_heap.sv`/`tb_car_cdr.sv` (M01/M02/M04) — покриття є лише через `tb_cons.sv` і `tb_machine.sv`.
 - ❌ Немає git tag `lisp-machine-v0.01` / `v0.02` — усі базові примітиви (CONS/CAR/CDR/ATOM/EQ) вже готові й перевірені, час тегувати.
 - ✅ Branching (M07 CONTROL): `JMP`/`JF` перевірені циклом (countdown) — [tb_control.sv](../fpga/sim/tb_control.sv), PASS.
-- ❌ Списки (M06), symbol table на ПК ще не оформлені як окремі тести.
+- ✅ Списки (M06 LIST): 3-елементний список `(radio antenna signal)` побудований через ланцюжок `CONS` і пройдений `CAR`/`CDR` до `NIL` — [tb_list.sv](../fpga/sim/tb_list.sv), PASS.
+- ❌ Symbol table на ПК (interned names ще не мають друку в жодному host-інструменті).
 - ❌ Function calls / environment / lambda / cond / evaluator — не почато.
