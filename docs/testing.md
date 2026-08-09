@@ -34,6 +34,7 @@ vvp tb.vvp
 | M16 | [`tb_eval_primitive.sv`](../fpga/sim/tb_eval_primitive.sv) | `eval` also dispatches to hardware `CAR`/`CONS` when the operator evaluates to a new `TAG_PRIMITIVE` marker instead of a closure. `(eval '(car (cons 'a 'b)) env) => a` — the plan's literal Etap-1 goal. Program is read from `eval_primitive_demo.bin` via `$fread` rather than hand-transcribed (190 instructions). |
 | M17 | [`tb_error_recovery.sv`](../fpga/sim/tb_error_recovery.sv) | A `CAR`/`CDR`/`CONS` type error now halts cleanly (`ST_WAIT_LDU` -> `ST_HALT`) instead of hanging forever, and monitor command `0x04` reports `{err_flag, err_pc}` for diagnosis. |
 | M18 | [`tb_eval_all_primitives.sv`](../fpga/sim/tb_eval_all_primitives.sv) | Extends M16's primitive dispatch (`car`, `cons`) with `cdr`, `atom`, `eq` — all five hardware primitives are now callable from `eval` as ordinary procedures. `(eq (atom (cdr (quote (a . b)))) (atom (quote c))) => TRUE`. |
+| M19 | [`tb_bootstrap_nullp.sv`](../fpga/sim/tb_bootstrap_nullp.sv) | The first function ported from my-lisp's `lib/core.my`: `null?`, as a closure whose body calls the `eq` primitive. `(null? NIL) => TRUE`, `(null? (quote a)) => NIL`. Assembled externally (216 instructions), read via `$fread`. |
 
 There is also [`tb_cons.sv`](../fpga/sim/tb_cons.sv), a unit-level test of `lisp_data_unit` alone (no bootloader, no control unit) — the very first thing that ever worked in this project.
 
@@ -44,7 +45,7 @@ No opcode is added lightly: the 4-bit opcode field has been full (16/16) since `
 No CI runs these yet; run the full set locally before trusting a change:
 
 ```bash
-for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives; do
+for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp; do
   iverilog -g2012 -I fpga/rtl -o ${tb}.vvp fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
     fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
     fpga/rtl/control.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
@@ -76,6 +77,7 @@ done
 | M16 | [`tb_eval_primitive.sv`](../fpga/sim/tb_eval_primitive.sv) | `eval` також диспетчерить на апаратні `CAR`/`CONS`, коли оператор обчислюється до нового маркера `TAG_PRIMITIVE` замість closure. `(eval '(car (cons 'a 'b)) env) => a` — буквальна мета Етапу 1 плану. |
 | M17 | [`tb_error_recovery.sv`](../fpga/sim/tb_error_recovery.sv) | Тип-помилка `CAR`/`CDR`/`CONS` тепер чисто зупиняє машину (`ST_WAIT_LDU` → `ST_HALT`) замість вічного зависання; команда монітора `0x04` повертає `{err_flag, err_pc}`. |
 | M18 | [`tb_eval_all_primitives.sv`](../fpga/sim/tb_eval_all_primitives.sv) | Розширює диспетчеризацію M16 (`car`, `cons`) на `cdr`, `atom`, `eq` — усі п'ять апаратних примітивів тепер викликані з `eval` як звичайні процедури. |
+| M19 | [`tb_bootstrap_nullp.sv`](../fpga/sim/tb_bootstrap_nullp.sv) | Перша функція, перенесена з `lib/core.my` my-lisp: `null?` як closure, тіло якого викликає примітив `eq`. `(null? NIL) => TRUE`, `(null? (quote a)) => NIL`. |
 
 Також є [`tb_cons.sv`](../fpga/sim/tb_cons.sv) — модульний тест лише `lisp_data_unit` (без bootloader, без control unit) — перше, що взагалі запрацювало в цьому проєкті.
 
@@ -106,6 +108,7 @@ Ausführung über [Icarus Verilog](http://iverilog.icarus.com/) — siehe Befehl
 | M16 | [`tb_eval_primitive.sv`](../fpga/sim/tb_eval_primitive.sv) | `eval` dispatcht auch an Hardware-`CAR`/`CONS`, wenn der Operator zu einem neuen `TAG_PRIMITIVE`-Marker ausgewertet wird. `(eval '(car (cons 'a 'b)) env) => a`. |
 | M17 | [`tb_error_recovery.sv`](../fpga/sim/tb_error_recovery.sv) | Ein `CAR`/`CDR`/`CONS`-Typfehler haelt die Maschine nun sauber an, statt fuer immer zu haengen; Monitor-Befehl `0x04` liefert `{err_flag, err_pc}`. |
 | M18 | [`tb_eval_all_primitives.sv`](../fpga/sim/tb_eval_all_primitives.sv) | Erweitert M16s Dispatch (`car`, `cons`) um `cdr`, `atom`, `eq` — alle fuenf Hardware-Primitive sind nun als Prozeduren aus `eval` aufrufbar. |
+| M19 | [`tb_bootstrap_nullp.sv`](../fpga/sim/tb_bootstrap_nullp.sv) | Die erste aus my-lisps `lib/core.my` portierte Funktion: `null?` als Closure, deren Body das `eq`-Primitiv aufruft. |
 
 Auch vorhanden: [`tb_cons.sv`](../fpga/sim/tb_cons.sv), ein reiner Unit-Test von `lisp_data_unit`.
 
