@@ -428,4 +428,5 @@ FPGA фізично: виділяє cons-cell у BRAM, записує A в CAR �
 - ✅ Списки (M06 LIST): 3-елементний список `(radio antenna signal)` побудований через ланцюжок `CONS` і пройдений `CAR`/`CDR` до `NIL` — [tb_list.sv](../fpga/sim/tb_list.sv), PASS.
 - ❌ Symbol table на ПК (interned names ще не мають друку в жодному host-інструменті).
 - ✅ Function calls (M09 CALL/RET): опкодний простір повністю зайнятий (16/16), тож `CALL`/`RET` перевикористовують `OP_JMP` за принципом RISC-V JAL/JALR — `rd≠0,rs1=0` пише адресу повернення в `rd` і стрибає (CALL), `rd=0,rs1≠0` стрибає за адресою з `rs1` (RET). [tb_call.sv](../fpga/sim/tb_call.sv), PASS. Апаратного call-стеку немає — глибина вкладених викликів обмежена кількістю вільних регістрів для link-адрес.
-- ❌ Environment / lambda / cond / evaluator — не почато.
+- ✅ Environment (M10): `((x . 10) (y . 20))` побудовано як alist через `CONS` (без окремого апаратного типу ENV — точно за планом), і рукописна підпрограма `lookup` (CAR/CDR/EQ-цикл + CALL/RET) знаходить значення за ключем. [tb_env.sv](../fpga/sim/tb_env.sv), PASS. `lookup` поки написана вручну асемблером, не самою Lisp (бо ще немає читача/eval) — це наступний розрив.
+- ❌ `lambda` / `cond` / evaluator — не почато.
