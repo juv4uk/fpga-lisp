@@ -416,11 +416,13 @@ FPGA фізично: виділяє cons-cell у BRAM, записує A в CAR �
 
 - ✅ Tagged word ([lisp_word.sv](../fpga/rtl/lisp_word.sv)): FIXNUM/CONS/SYMBOL/NIL/TRUE.
 - ✅ Heap + bump allocator ([heap.sv](../fpga/rtl/heap.sv), [lisp_data_unit.sv](../fpga/rtl/lisp_data_unit.sv)).
-- ✅ CONS/CAR/CDR/EQ реалізовані.
-- ❌ ATOM — opcode зарезервований, але в `control.sv` не реалізований (falls to default/NOP).
+- ✅ CONS/CAR/CDR/EQ/ATOM реалізовані ([control.sv](../fpga/rtl/control.sv)).
 - ✅ Control unit + мінімальна ISA ([control.sv](../fpga/rtl/control.sv), [instruction_decoder.sv](../fpga/rtl/instruction_decoder.sv)).
 - ✅ `LOADSYM` — окремий опкод для завантаження символів з тегом.
 - ✅ `(car (cons 'a 'b))` проходить у симуляції (`tb_machine.sv`, MILESTONE 0.03) і прошито на плату.
+- ✅ M05 (`ATOM`/`EQ`) проходить у симуляції ([tb_atom_eq.sv](../fpga/sim/tb_atom_eq.sv)) і прошито на плату.
 - ⚠️ UART є лише як bootloader-протокол завантаження програми, без діагностичного monitor (`dump`/`heap`/`hp`).
-- ❌ Немає окремих тестів M01–M05 (`tb_heap.sv`, `tb_car_cdr.sv`, `tb_atom_eq.sv`) — лише `tb_cons.sv` і `tb_machine.sv`.
-- ❌ Немає git tag `lisp-machine-v0.01`.
+- ❌ Немає окремих тестів `tb_heap.sv`/`tb_car_cdr.sv` (M01/M02/M04) — покриття є лише через `tb_cons.sv` і `tb_machine.sv`.
+- ❌ Немає git tag `lisp-machine-v0.01` / `v0.02` — усі базові примітиви (CONS/CAR/CDR/ATOM/EQ) вже готові й перевірені, час тегувати.
+- ❌ Списки (M06), symbol table на ПК, branching/JF-based control flow ще не оформлені як окремі тести.
+- ❌ Function calls / environment / lambda / cond / evaluator — не почато.
