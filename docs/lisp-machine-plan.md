@@ -424,5 +424,6 @@ FPGA фізично: виділяє cons-cell у BRAM, записує A в CAR �
 - ✅ UART-monitor (крок 12): після `HALT` машина переходить у режим команд — бінарний протокол `REG <idx>` / `HEAP <lo> <hi>` / `HP` читає регістри, heap і heap-pointer через UART ([control.sv](../fpga/rtl/control.sv), [lisp_data_unit.sv](../fpga/rtl/lisp_data_unit.sv) `cmd_peek`). M08 у [tb_monitor.sv](../fpga/sim/tb_monitor.sv) — PASS. Навмисно бінарний, а не текстовий: за тим самим принципом, що й interned symbols (Етап 9) — FPGA не повинна знати ASCII/hex-парсинг, це відповідальність PC-інструменту.
 - ❌ Немає окремих тестів `tb_heap.sv`/`tb_car_cdr.sv` (M01/M02/M04) — покриття є лише через `tb_cons.sv` і `tb_machine.sv`.
 - ❌ Немає git tag `lisp-machine-v0.01` / `v0.02` — усі базові примітиви (CONS/CAR/CDR/ATOM/EQ) вже готові й перевірені, час тегувати.
-- ❌ Списки (M06), symbol table на ПК, branching/JF-based control flow ще не оформлені як окремі тести.
+- ✅ Branching (M07 CONTROL): `JMP`/`JF` перевірені циклом (countdown) — [tb_control.sv](../fpga/sim/tb_control.sv), PASS.
+- ❌ Списки (M06), symbol table на ПК ще не оформлені як окремі тести.
 - ❌ Function calls / environment / lambda / cond / evaluator — не почато.
