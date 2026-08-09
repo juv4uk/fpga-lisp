@@ -8,6 +8,8 @@ OPCODES = {
     'LOADI':  1,
     'MOV':    2,
     'GETTAG': 2,  # MOV with rs2 == 1: rd = FIXNUM(tag of rs1)
+    'MAKEPRIM': 2,  # MOV with rs2 == 2: rd = PRIMITIVE(value of rs1)
+    'GETVAL': 2,  # MOV with rs2 == 3: rd = FIXNUM(value of rs1)
     'CONS':   3,
     'CAR':    4,
     'CDR':    5,
@@ -106,11 +108,12 @@ def assemble(lines):
                 rs1 = parse_reg(parts[2])
                 instr_word |= (rd << 24) | (rs1 << 20)
 
-            elif op in ['GETTAG']:
-                # Same opcode as MOV; rs2=1 selects the tag-extraction mode.
+            elif op in ['GETTAG', 'MAKEPRIM', 'GETVAL']:
+                # Same opcode as MOV; rs2 selects the mode (see OPCODES).
+                mode = {'GETTAG': 1, 'MAKEPRIM': 2, 'GETVAL': 3}[op]
                 rd = parse_reg(parts[1])
                 rs1 = parse_reg(parts[2])
-                instr_word |= (rd << 24) | (rs1 << 20) | (1 << 16)
+                instr_word |= (rd << 24) | (rs1 << 20) | (mode << 16)
 
 
             elif op in ['CONS', 'ADD', 'SUB', 'EQ', 'ATOM']:

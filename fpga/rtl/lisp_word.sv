@@ -10,7 +10,8 @@ typedef enum logic [3:0] {
     TAG_CONS    = 4'd1,
     TAG_SYMBOL  = 4'd2,
     TAG_NIL     = 4'd3,
-    TAG_TRUE    = 4'd4
+    TAG_TRUE    = 4'd4,
+    TAG_PRIMITIVE = 4'd5
 } lisp_tag_t;
 
 typedef struct packed {

@@ -31,15 +31,18 @@ vvp tb.vvp
 | M13 | [`tb_eval_quote.sv`](../fpga/sim/tb_eval_quote.sv) | `eval` dispatches on `ATOM` vs `CONS`; for a `CONS` expr it checks `car(expr) == 'quote` and returns `car(cdr(expr))` unevaluated — `(quote radio) => radio`, the first fixture in `conformance.my`. |
 | M14 | [`tb_eval_cond.sv`](../fpga/sim/tb_eval_cond.sv) | `eval` recognizes `(cond ...)` and recurses into itself for each clause's test/value — the first genuine self-recursion, requiring a software call stack built from `CONS` cells (register frames alone can't survive a recursive call into the same subroutine). `(cond (() 'wrong) (t 'right)) => right`. |
 | M15 | [`tb_eval_apply.sv`](../fpga/sim/tb_eval_apply.sv) | `eval` applies an M11 closure to an argument: evaluates the operator and argument, binds the parameter by extending the closure's captured env, evaluates the body in the new env. `(identity 42) => 42` — closes the plan's first big phase. |
+| M16 | [`tb_eval_primitive.sv`](../fpga/sim/tb_eval_primitive.sv) | `eval` also dispatches to hardware `CAR`/`CONS` when the operator evaluates to a new `TAG_PRIMITIVE` marker instead of a closure. `(eval '(car (cons 'a 'b)) env) => a` — the plan's literal Etap-1 goal. Program is read from `eval_primitive_demo.bin` via `$fread` rather than hand-transcribed (190 instructions). |
 
 There is also [`tb_cons.sv`](../fpga/sim/tb_cons.sv), a unit-level test of `lisp_data_unit` alone (no bootloader, no control unit) — the very first thing that ever worked in this project.
+
+`tb_eval_primitive.sv` is the one exception to "hand-transcribed hex words in the testbench": at 190 instructions, hand-transcription was too error-prone, so it reads `eval_primitive_demo.bin` directly via `$fread`. Assemble it first: `python assembler.py eval_primitive_demo.asm` (the `.bin` is a gitignored build artifact, not committed).
 
 No opcode is added lightly: the 4-bit opcode field has been full (16/16) since `LOADSYM` claimed the unused `OP_JT` slot. `CALL`/`RET` (M09) and `GETTAG` (M12) both extend existing opcodes (`JMP`, `MOV`) by giving meaning to previously-ignored instruction fields, rather than consuming new slots — check the commit history and `lisp-machine-plan.md`'s status section before assuming a new instruction is the only way to add a capability.
 
 No CI runs these yet; run the full set locally before trusting a change:
 
 ```bash
-for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply; do
+for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive; do
   iverilog -g2012 -I fpga/rtl -o ${tb}.vvp fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
     fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
     fpga/rtl/control.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
@@ -68,6 +71,7 @@ done
 | M13 | [`tb_eval_quote.sv`](../fpga/sim/tb_eval_quote.sv) | `eval` розгалужується через `ATOM` vs `CONS`; для `CONS`-виразу перевіряє `car(expr) == 'quote` і повертає `car(cdr(expr))` без обчислення — `(quote radio) => radio`, перша фікстура `conformance.my`. |
 | M14 | [`tb_eval_cond.sv`](../fpga/sim/tb_eval_cond.sv) | `eval` розпізнає `(cond ...)` і рекурсивно викликає сам себе для test/value кожної клаузи — перша справжня самореференція, що потребує програмного call-стеку з `CONS`-комірок. `(cond (() 'wrong) (t 'right)) => right`. |
 | M15 | [`tb_eval_apply.sv`](../fpga/sim/tb_eval_apply.sv) | `eval` застосовує closure з M11 до аргументу: обчислює оператор і аргумент, зв'язує параметр через розширення захопленого середовища, обчислює тіло в новому середовищі. `(identity 42) => 42` — закриває перший великий етап плану. |
+| M16 | [`tb_eval_primitive.sv`](../fpga/sim/tb_eval_primitive.sv) | `eval` також диспетчерить на апаратні `CAR`/`CONS`, коли оператор обчислюється до нового маркера `TAG_PRIMITIVE` замість closure. `(eval '(car (cons 'a 'b)) env) => a` — буквальна мета Етапу 1 плану. |
 
 Також є [`tb_cons.sv`](../fpga/sim/tb_cons.sv) — модульний тест лише `lisp_data_unit` (без bootloader, без control unit) — перше, що взагалі запрацювало в цьому проєкті.
 
@@ -95,6 +99,7 @@ Ausführung über [Icarus Verilog](http://iverilog.icarus.com/) — siehe Befehl
 | M13 | [`tb_eval_quote.sv`](../fpga/sim/tb_eval_quote.sv) | `eval` verzweigt über `ATOM` vs `CONS`; bei `CONS` prüft es `car(expr) == 'quote` und liefert `car(cdr(expr))` unausgewertet zurück. |
 | M14 | [`tb_eval_cond.sv`](../fpga/sim/tb_eval_cond.sv) | `eval` erkennt `(cond ...)` und ruft sich selbst rekursiv auf — die erste echte Selbstrekursion, die einen Software-Aufrufstapel aus `CONS`-Zellen benötigt. |
 | M15 | [`tb_eval_apply.sv`](../fpga/sim/tb_eval_apply.sv) | `eval` wendet eine Closure aus M11 auf ein Argument an — schließt die erste große Phase des Plans ab. `(identity 42) => 42`. |
+| M16 | [`tb_eval_primitive.sv`](../fpga/sim/tb_eval_primitive.sv) | `eval` dispatcht auch an Hardware-`CAR`/`CONS`, wenn der Operator zu einem neuen `TAG_PRIMITIVE`-Marker ausgewertet wird. `(eval '(car (cons 'a 'b)) env) => a`. |
 
 Auch vorhanden: [`tb_cons.sv`](../fpga/sim/tb_cons.sv), ein reiner Unit-Test von `lisp_data_unit`.
 
