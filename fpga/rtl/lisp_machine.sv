@@ -71,21 +71,36 @@ module lisp_machine (
     logic ldu_cmd_cons, ldu_cmd_car, ldu_cmd_cdr;
     lisp_word_t ldu_result;
     logic ldu_valid, ldu_error;
-    
+
+    // Debug/monitor raw heap access (active only after HALT)
+    logic mon_peek_cmd;
+    logic [11:0] mon_peek_addr;
+    lisp_word_t mon_peek_car, mon_peek_cdr;
+    logic mon_peek_valid;
+    logic [11:0] ldu_hp;
+
     lisp_data_unit u_ldu (
         .clk(clk),
         .rst_n(cpu_rst_n), // Use CPU reset
-        
+
         .cmd_cons(ldu_cmd_cons),
         .cmd_car(ldu_cmd_car),
         .cmd_cdr(ldu_cmd_cdr),
-        
+
         .op_a(reg_rd_data_a),
         .op_b(reg_rd_data_b),
-        
+
         .result(ldu_result),
         .valid(ldu_valid),
-        .error(ldu_error)
+        .error(ldu_error),
+
+        .cmd_peek(mon_peek_cmd),
+        .peek_addr(mon_peek_addr),
+        .peek_car(mon_peek_car),
+        .peek_cdr(mon_peek_cdr),
+        .peek_valid(mon_peek_valid),
+
+        .hp_out(ldu_hp)
     );
     
     // --- UART Modules ---
@@ -142,7 +157,14 @@ module lisp_machine (
         .in_data(in_data),
         .in_valid(in_valid),
         .in_ack(in_ack),
-        
+
+        .mon_peek_cmd(mon_peek_cmd),
+        .mon_peek_addr(mon_peek_addr),
+        .mon_peek_car(mon_peek_car),
+        .mon_peek_cdr(mon_peek_cdr),
+        .mon_peek_valid(mon_peek_valid),
+        .hp_in({4'd0, ldu_hp}),
+
         .halted(halted)
     );
     

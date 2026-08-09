@@ -34,10 +34,25 @@ module control (
     input  logic [7:0]   in_data,
     input  logic         in_valid,
     output logic         in_ack,
-    
+
+    // Debug/monitor: raw heap peek (active only after HALT)
+    output logic         mon_peek_cmd,
+    output logic [11:0]  mon_peek_addr,
+    input  lisp_word_t   mon_peek_car,
+    input  lisp_word_t   mon_peek_cdr,
+    input  logic         mon_peek_valid,
+
+    // Debug/monitor: current heap pointer, zero-extended to 16 bits
+    input  logic [15:0]  hp_in,
+
     output logic         halted
 );
 
+    // Post-HALT diagnostic monitor protocol (binary, one command at a time):
+    //   0x01 <reg>        -> replies with the 4-byte register word (LE)
+    //   0x02 <lo> <hi>    -> replies with CAR (4B LE) then CDR (4B LE) at heap[addr]
+    //   0x03              -> replies with the 4-byte heap pointer (LE)
+    // Unknown command bytes are ignored (monitor keeps waiting for the next byte).
     typedef enum logic [3:0] {
         ST_FETCH,
         ST_DECODE,
@@ -46,18 +61,26 @@ module control (
         ST_OUT_START,
         ST_OUT_WAIT,
         ST_IN_WAIT,
-        ST_HALT
+        ST_HALT,
+        ST_MON_CMD,
+        ST_MON_ARG1,
+        ST_MON_ARG2,
+        ST_MON_HEAP_WAIT,
+        ST_MON_REG_SEND,
+        ST_MON_HP_SEND,
+        ST_MON_TX_START,
+        ST_MON_TX_WAIT
     } state_t;
-    
+
     state_t state, next_state;
-    
+
     logic [7:0] pc;
     logic [31:0] instruction;
-    
+
     opcode_t opcode;
     logic [3:0] rd, rs1, rs2;
     logic [15:0] imm;
-    
+
     instruction_decoder dec (
         .instruction(instruction),
         .opcode(opcode),
@@ -66,16 +89,29 @@ module control (
         .rs2(rs2),
         .imm(imm)
     );
-    
+
+    // Monitor scratch registers
+    logic [7:0]  mon_cmd;
+    logic [7:0]  mon_arg1;
+    logic [7:0]  mon_arg2;
+    logic [63:0] mon_tx_buf;
+    logic [3:0]  mon_tx_remaining;
+
     assign imem_addr = pc;
-    assign reg_rd_addr_a = rs1;
+    assign reg_rd_addr_a = (state == ST_MON_REG_SEND) ? mon_arg1[3:0] : rs1;
     assign reg_rd_addr_b = rs2;
+    assign mon_peek_addr = {mon_arg2[3:0], mon_arg1};
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= ST_FETCH;
             pc <= 0;
             instruction <= 0;
+            mon_cmd <= 0;
+            mon_arg1 <= 0;
+            mon_arg2 <= 0;
+            mon_tx_buf <= 0;
+            mon_tx_remaining <= 0;
         end else begin
             state <= next_state;
             
@@ -111,6 +147,35 @@ module control (
                         pc <= pc + 1;
                     end
                 end
+                ST_MON_CMD: begin
+                    if (in_valid) mon_cmd <= in_data;
+                end
+                ST_MON_ARG1: begin
+                    if (in_valid) mon_arg1 <= in_data;
+                end
+                ST_MON_ARG2: begin
+                    if (in_valid) mon_arg2 <= in_data;
+                end
+                ST_MON_REG_SEND: begin
+                    mon_tx_buf <= {32'd0, reg_rd_data_a};
+                    mon_tx_remaining <= 4;
+                end
+                ST_MON_HP_SEND: begin
+                    mon_tx_buf <= {32'd0, 16'd0, hp_in};
+                    mon_tx_remaining <= 4;
+                end
+                ST_MON_HEAP_WAIT: begin
+                    if (mon_peek_valid) begin
+                        mon_tx_buf <= {mon_peek_cdr, mon_peek_car};
+                        mon_tx_remaining <= 8;
+                    end
+                end
+                ST_MON_TX_WAIT: begin
+                    if (!out_busy) begin
+                        mon_tx_buf <= mon_tx_buf >> 8;
+                        mon_tx_remaining <= mon_tx_remaining - 1;
+                    end
+                end
             endcase
         end
     end
@@ -129,7 +194,17 @@ module control (
         out_valid = 0;
         out_data = 8'd0;
         in_ack = 0;
-        
+        mon_peek_cmd = 0;
+
+        // Machine reports halted from the moment HALT executes through the
+        // whole post-halt monitor session (the monitor never resumes ST_FETCH).
+        if (state == ST_HALT || state == ST_MON_CMD || state == ST_MON_ARG1 ||
+            state == ST_MON_ARG2 || state == ST_MON_HEAP_WAIT ||
+            state == ST_MON_REG_SEND || state == ST_MON_HP_SEND ||
+            state == ST_MON_TX_START || state == ST_MON_TX_WAIT) begin
+            halted = 1;
+        end
+
         case (state)
             ST_FETCH: begin
                 next_state = ST_DECODE;
@@ -250,7 +325,62 @@ module control (
                 end
             end
             ST_HALT: begin
-                halted = 1;
+                if (in_valid) begin
+                    next_state = ST_MON_CMD;
+                end
+            end
+            ST_MON_CMD: begin
+                if (in_valid) begin
+                    in_ack = 1;
+                    case (in_data)
+                        8'h01:   next_state = ST_MON_ARG1; // REG <idx>
+                        8'h02:   next_state = ST_MON_ARG1; // HEAP <lo> <hi>
+                        8'h03:   next_state = ST_MON_HP_SEND; // HP
+                        default: next_state = ST_MON_CMD; // unknown, ignore
+                    endcase
+                end
+            end
+            ST_MON_ARG1: begin
+                if (in_valid) begin
+                    in_ack = 1;
+                    if (mon_cmd == 8'h02) begin
+                        next_state = ST_MON_ARG2;
+                    end else begin
+                        next_state = ST_MON_REG_SEND;
+                    end
+                end
+            end
+            ST_MON_ARG2: begin
+                if (in_valid) begin
+                    in_ack = 1;
+                    mon_peek_cmd = 1;
+                    next_state = ST_MON_HEAP_WAIT;
+                end
+            end
+            ST_MON_HEAP_WAIT: begin
+                if (mon_peek_valid) begin
+                    next_state = ST_MON_TX_START;
+                end
+            end
+            ST_MON_REG_SEND: begin
+                next_state = ST_MON_TX_START;
+            end
+            ST_MON_HP_SEND: begin
+                next_state = ST_MON_TX_START;
+            end
+            ST_MON_TX_START: begin
+                out_valid = 1;
+                out_data = mon_tx_buf[7:0];
+                next_state = ST_MON_TX_WAIT;
+            end
+            ST_MON_TX_WAIT: begin
+                if (!out_busy) begin
+                    if (mon_tx_remaining > 1) begin
+                        next_state = ST_MON_TX_START;
+                    end else begin
+                        next_state = ST_MON_CMD;
+                    end
+                end
             end
         endcase
     end
