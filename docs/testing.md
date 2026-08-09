@@ -29,6 +29,7 @@ vvp tb.vvp
 | M11 | [`tb_lambda.sv`](../fpga/sim/tb_lambda.sv) | A closure represented as `(params . (body . env))`, with parameter binding via environment extension. |
 | M12 | [`tb_eval_atom.sv`](../fpga/sim/tb_eval_atom.sv) | The first real `eval(expr, env)` call: symbol → `lookup`, non-symbol → self-evaluating, dispatched via the new `GETTAG` mode of `OP_MOV`. |
 | M13 | [`tb_eval_quote.sv`](../fpga/sim/tb_eval_quote.sv) | `eval` dispatches on `ATOM` vs `CONS`; for a `CONS` expr it checks `car(expr) == 'quote` and returns `car(cdr(expr))` unevaluated — `(quote radio) => radio`, the first fixture in `conformance.my`. |
+| M14 | [`tb_eval_cond.sv`](../fpga/sim/tb_eval_cond.sv) | `eval` recognizes `(cond ...)` and recurses into itself for each clause's test/value — the first genuine self-recursion, requiring a software call stack built from `CONS` cells (register frames alone can't survive a recursive call into the same subroutine). `(cond (() 'wrong) (t 'right)) => right`. |
 
 There is also [`tb_cons.sv`](../fpga/sim/tb_cons.sv), a unit-level test of `lisp_data_unit` alone (no bootloader, no control unit) — the very first thing that ever worked in this project.
 
@@ -37,7 +38,7 @@ No opcode is added lightly: the 4-bit opcode field has been full (16/16) since `
 No CI runs these yet; run the full set locally before trusting a change:
 
 ```bash
-for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote; do
+for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond; do
   iverilog -g2012 -I fpga/rtl -o ${tb}.vvp fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
     fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
     fpga/rtl/control.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
@@ -64,6 +65,7 @@ done
 | M11 | [`tb_lambda.sv`](../fpga/sim/tb_lambda.sv) | Closure як `(params . (body . env))`, зв'язування параметра через розширення середовища. |
 | M12 | [`tb_eval_atom.sv`](../fpga/sim/tb_eval_atom.sv) | Перший реальний виклик `eval(expr, env)`: символ → `lookup`, не-символ → self-evaluating, диспетчеризація через новий режим `GETTAG` в `OP_MOV`. |
 | M13 | [`tb_eval_quote.sv`](../fpga/sim/tb_eval_quote.sv) | `eval` розгалужується через `ATOM` vs `CONS`; для `CONS`-виразу перевіряє `car(expr) == 'quote` і повертає `car(cdr(expr))` без обчислення — `(quote radio) => radio`, перша фікстура `conformance.my`. |
+| M14 | [`tb_eval_cond.sv`](../fpga/sim/tb_eval_cond.sv) | `eval` розпізнає `(cond ...)` і рекурсивно викликає сам себе для test/value кожної клаузи — перша справжня самореференція, що потребує програмного call-стеку з `CONS`-комірок. `(cond (() 'wrong) (t 'right)) => right`. |
 
 Також є [`tb_cons.sv`](../fpga/sim/tb_cons.sv) — модульний тест лише `lisp_data_unit` (без bootloader, без control unit) — перше, що взагалі запрацювало в цьому проєкті.
 
@@ -89,6 +91,7 @@ Ausführung über [Icarus Verilog](http://iverilog.icarus.com/) — siehe Befehl
 | M11 | [`tb_lambda.sv`](../fpga/sim/tb_lambda.sv) | Eine Closure als `(params . (body . env))`. |
 | M12 | [`tb_eval_atom.sv`](../fpga/sim/tb_eval_atom.sv) | Der erste echte `eval(expr, env)`-Aufruf. |
 | M13 | [`tb_eval_quote.sv`](../fpga/sim/tb_eval_quote.sv) | `eval` verzweigt über `ATOM` vs `CONS`; bei `CONS` prüft es `car(expr) == 'quote` und liefert `car(cdr(expr))` unausgewertet zurück. |
+| M14 | [`tb_eval_cond.sv`](../fpga/sim/tb_eval_cond.sv) | `eval` erkennt `(cond ...)` und ruft sich selbst rekursiv auf — die erste echte Selbstrekursion, die einen Software-Aufrufstapel aus `CONS`-Zellen benötigt. |
 
 Auch vorhanden: [`tb_cons.sv`](../fpga/sim/tb_cons.sv), ein reiner Unit-Test von `lisp_data_unit`.
 
