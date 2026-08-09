@@ -38,6 +38,7 @@ vvp tb.vvp
 | M20 | [`tb_bootstrap_second.sv`](../fpga/sim/tb_bootstrap_second.sv) | `second` from `core.my`: a closure body chaining two primitive calls (`car` of `cdr`). `(second (quote (x y z))) => y`. |
 | M21 | [`tb_bootstrap_not.sv`](../fpga/sim/tb_bootstrap_not.sv) | `not` from `core.my`: a closure body built from `cond` rather than a primitive application. `(not NIL) => TRUE`, `(not (quote a)) => NIL`. |
 | M22 | [`tb_bootstrap_pair.sv`](../fpga/sim/tb_bootstrap_pair.sv) | `pair` from `core.my`: the first two-parameter closure. `params` is a 2-element list, distinguished from the 1-arg shape via `ATOM`. `(pair 'a 'b) => (a b)`. |
+| M23 | [`tb_bootstrap_caar.sv`](../fpga/sim/tb_bootstrap_caar.sv) | `caar` from `core.my`: same chained-primitive shape as M20's `second`, but `car` of `car`. `(caar '((x y) z)) => x`. |
 
 There is also [`tb_cons.sv`](../fpga/sim/tb_cons.sv), a unit-level test of `lisp_data_unit` alone (no bootloader, no control unit) — the very first thing that ever worked in this project.
 
@@ -48,7 +49,7 @@ No opcode is added lightly: the 4-bit opcode field has been full (16/16) since `
 No CI runs these yet; run the full set locally before trusting a change:
 
 ```bash
-for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair; do
+for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair tb_bootstrap_caar; do
   iverilog -g2012 -I fpga/rtl -o ${tb}.vvp fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
     fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
     fpga/rtl/control.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
@@ -84,6 +85,7 @@ done
 | M20 | [`tb_bootstrap_second.sv`](../fpga/sim/tb_bootstrap_second.sv) | `second` з `core.my`: тіло closure ланцюжком викликає два примітиви (`car` над `cdr`). `(second (quote (x y z))) => y`. |
 | M21 | [`tb_bootstrap_not.sv`](../fpga/sim/tb_bootstrap_not.sv) | `not` з `core.my`: тіло closure побудоване з `cond`, а не аплікації примітиву. `(not NIL) => TRUE`, `(not (quote a)) => NIL`. |
 | M22 | [`tb_bootstrap_pair.sv`](../fpga/sim/tb_bootstrap_pair.sv) | `pair` з `core.my`: перша двопараметрична closure. `params` — 2-елементний список, розрізнюваний через `ATOM`. `(pair 'a 'b) => (a b)`. |
+| M23 | [`tb_bootstrap_caar.sv`](../fpga/sim/tb_bootstrap_caar.sv) | `caar` з `core.my`: той самий патерн, що й M20's `second`, але `car` над `car`. `(caar '((x y) z)) => x`. |
 
 Також є [`tb_cons.sv`](../fpga/sim/tb_cons.sv) — модульний тест лише `lisp_data_unit` (без bootloader, без control unit) — перше, що взагалі запрацювало в цьому проєкті.
 
@@ -118,6 +120,7 @@ Ausführung über [Icarus Verilog](http://iverilog.icarus.com/) — siehe Befehl
 | M20 | [`tb_bootstrap_second.sv`](../fpga/sim/tb_bootstrap_second.sv) | `second` aus `core.my`: ein Closure-Body, der zwei Primitive verkettet (`car` von `cdr`). |
 | M21 | [`tb_bootstrap_not.sv`](../fpga/sim/tb_bootstrap_not.sv) | `not` aus `core.my`: ein Closure-Body aus `cond` statt einer Primitiv-Anwendung. |
 | M22 | [`tb_bootstrap_pair.sv`](../fpga/sim/tb_bootstrap_pair.sv) | `pair` aus `core.my`: die erste zweiparametrige Closure. |
+| M23 | [`tb_bootstrap_caar.sv`](../fpga/sim/tb_bootstrap_caar.sv) | `caar` aus `core.my`: gleiche Form wie M20s `second`, aber `car` von `car`. |
 
 Auch vorhanden: [`tb_cons.sv`](../fpga/sim/tb_cons.sv), ein reiner Unit-Test von `lisp_data_unit`.
 
