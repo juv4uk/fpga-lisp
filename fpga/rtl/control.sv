@@ -121,7 +121,14 @@ module control (
                 end
                 ST_EXECUTE: begin
                     if (opcode == OP_JMP) begin
-                        pc <= imm[7:0];
+                        // rd=0,rs1=0: plain JMP addr.
+                        // rd!=0,rs1=0: CALL rd,addr (reg[rd] <= return addr, jump).
+                        // rd=0,rs1!=0: RET rs1 (jump to address held in rs1).
+                        if (rs1 != 0) begin
+                            pc <= reg_rd_data_a.value[7:0];
+                        end else begin
+                            pc <= imm[7:0];
+                        end
                     end else if (opcode == OP_JF) begin
                         if (reg_rd_data_a.tag == TAG_NIL || (reg_rd_data_a.tag == TAG_FIXNUM && reg_rd_data_a.value == 0)) begin
                             pc <= imm[7:0];
@@ -287,6 +294,13 @@ module control (
                         next_state = ST_FETCH;
                     end
                     OP_JMP: begin
+                        // CALL form (rd!=0, rs1==0): link register gets the
+                        // return address (pc+1) before the jump takes effect.
+                        if (rd != 0 && rs1 == 0) begin
+                            reg_we = 1;
+                            reg_wr_data.tag = TAG_FIXNUM;
+                            reg_wr_data.value = {20'd0, pc} + 28'd1;
+                        end
                         next_state = ST_FETCH;
                     end
                     OP_JF: begin

@@ -13,6 +13,8 @@ OPCODES = {
     'ATOM':   6,
     'EQ':     7,
     'JMP':    8,
+    'CALL':   8,  # JMP with rd != 0: reg[rd] = return addr, then jump
+    'RET':    8,  # JMP with rs1 != 0: jump to address held in rs1
     'LOADSYM': 9,
     'JF':     10,
     'HALT':   11,
@@ -122,7 +124,16 @@ def assemble(lines):
             elif op in ['JMP']:
                 imm = parse_imm(parts[1], labels)
                 instr_word |= (imm & 0xFFFF)
-                
+
+            elif op in ['CALL']:
+                rd = parse_reg(parts[1])
+                imm = parse_imm(parts[2], labels)
+                instr_word |= (rd << 24) | (imm & 0xFFFF)
+
+            elif op in ['RET']:
+                rs1 = parse_reg(parts[1])
+                instr_word |= (rs1 << 20)
+
             elif op in ['JF']:
                 rs1 = parse_reg(parts[1])
                 imm = parse_imm(parts[2], labels)
