@@ -1,0 +1,297 @@
+; my-lisp bootstrap library: derived behavior belongs in the language itself.
+; Bootstrap-бібліотека my-lisp: похідна поведінка належить самій мові.
+; my-lisp-Bootstrap-Bibliothek: Abgeleitetes Verhalten gehört in die Sprache selbst.
+
+(def identity (lambda (value) value))
+
+; `list` used to be a Rust special form (`evaluate_list_func`) — moved here
+; 2026-08-09 once variadic lambda parameters existed to express it: a bare
+; symbol as the parameter list binds every argument, evaluated left to
+; right, as one list. This is pure sugar over `cons`/`'()`, exactly the
+; kind of thing G4/G5 (docs/language-core-axioms.md) say belongs in the
+; language itself once the core can already express it, not bolted onto
+; the host. Kept first in this file (not wherever it happens to be used)
+; because `let`/`let*` below build their expansion with it.
+; `list` раніше був спеціальною формою Rust (`evaluate_list_func`) —
+; перенесено сюди 2026-08-09, щойно з'явились варіативні параметри lambda,
+; якими його можна виразити: голий символ як список параметрів зв'язує
+; кожен аргумент, обчислений зліва направо, в один список. Це чистий цукор
+; над `cons`/`'()` — саме те, що G4/G5 (docs/language-core-axioms.md)
+; кажуть має належати самій мові, щойно ядро вже може це виразити, не
+; хосту. Лишено першим у файлі (не там, де випадково використовується),
+; бо `let`/`let*` нижче будують свою розгортку через нього.
+(def list (lambda args args))
+
+(def not
+  (lambda (value)
+    (cond
+      (value '())
+      (t t))))
+
+(def pair
+  (lambda (left right)
+    (cons left (cons right '()))))
+
+(def second
+  (lambda (values)
+    (car (cdr values))))
+
+(def third
+  (lambda (values)
+    (car (cdr (cdr values)))))
+
+(def caar
+  (lambda (values)
+    (car (car values))))
+
+(def cadr
+  (lambda (values)
+    (car (cdr values))))
+
+; length/map/filter build their result via a tail-recursive `-onto`
+; accumulator, same shape as reverse/reverse-onto below, instead of consing
+; after the recursive call returns (the way append naively would if it
+; didn't reuse reverse/reverse-onto) — that non-tail shape grows the Rust
+; call stack one frame per element, same risk `crates/my-lisp/tests/stack_safety.rs`
+; exists to catch for the language's own tail calls. map/filter accumulate
+; in reverse order, so they call `reverse` once at the end to undo that;
+; length doesn't build a list at all, so it just returns its accumulator.
+; length/map/filter будують результат через хвостово-рекурсивний
+; `-onto`-акумулятор, тієї самої форми, що й reverse/reverse-onto нижче,
+; замість консити після повернення з рекурсивного виклику (як append робив
+; би наївно, якби не перевикористовував reverse/reverse-onto) — та
+; не-хвостова форма ростить Rust call stack на один фрейм на елемент, той
+; самий ризик, який `crates/my-lisp/tests/stack_safety.rs` існує, щоб
+; ловити для власних хвостових викликів мови. map/filter накопичують у
+; зворотному порядку, тож викликають `reverse` раз наприкінці, щоб це
+; скасувати; length взагалі не будує список, тож просто повертає свій
+; акумулятор.
+; length/map/filter bauen ihr Ergebnis über einen endrekursiven
+; `-onto`-Akkumulator auf, derselben Form wie reverse/reverse-onto unten,
+; statt nach der Rückkehr des rekursiven Aufrufs zu konsen (wie append es
+; naiv täte, würde es nicht reverse/reverse-onto wiederverwenden) — diese
+; Nicht-Tail-Form lässt den Rust-Call-Stack um einen Frame pro Element
+; wachsen, dasselbe Risiko, das `crates/my-lisp/tests/stack_safety.rs` für
+; die eigenen Tail Calls der Sprache abfängt. map/filter akkumulieren in
+; umgekehrter Reihenfolge und rufen daher am Ende einmal `reverse` auf, um
+; das rückgängig zu machen; length baut gar keine Liste, sondern gibt
+; einfach seinen Akkumulator zurück.
+(def length-onto
+  (lambda (values acc)
+    (cond
+      ((atom values) acc)
+      (t (length-onto (cdr values) (+ acc 1))))))
+
+(def length
+  (lambda (values)
+    (length-onto values 0)))
+
+(def reverse-onto
+  (lambda (values acc)
+    (cond
+      ((atom values) acc)
+      (t (reverse-onto (cdr values) (cons (car values) acc))))))
+
+(def reverse
+  (lambda (values)
+    (reverse-onto values '())))
+
+; (reverse-onto (reverse left) right): reversing left first and then
+; consing it back onto right, one element at a time, rebuilds
+; left ++ right in the correct order — two tail-recursive passes instead
+; of one non-tail pass, trading a little work for a Rust-stack-safe append.
+; (reverse-onto (reverse left) right): спершу розвертаємо left, а тоді
+; консимо його назад на right по елементу — відбудовує left ++ right у
+; правильному порядку — два хвостово-рекурсивні проходи замість одного
+; не-хвостового, невелика доплата роботою заради append, безпечного для
+; Rust-стека.
+; (reverse-onto (reverse left) right): left zuerst umkehren und dann
+; Element für Element wieder auf right konsen, baut left ++ right in
+; korrekter Reihenfolge wieder auf — zwei endrekursive Durchläufe statt
+; eines Nicht-Tail-Durchlaufs, ein kleiner Mehraufwand für ein
+; Rust-Stack-sicheres append.
+(def append
+  (lambda (left right)
+    (reverse-onto (reverse left) right)))
+
+(def map-onto
+  (lambda (f values acc)
+    (cond
+      ((atom values) (reverse acc))
+      (t (map-onto f (cdr values) (cons (f (car values)) acc))))))
+
+(def map
+  (lambda (f values)
+    (map-onto f values '())))
+
+(def filter-onto
+  (lambda (predicate values acc)
+    (cond
+      ((atom values) (reverse acc))
+      ((predicate (car values)) (filter-onto predicate (cdr values) (cons (car values) acc)))
+      (t (filter-onto predicate (cdr values) acc)))))
+
+(def filter
+  (lambda (predicate values)
+    (filter-onto predicate values '())))
+
+(def reduce
+  (lambda (f acc values)
+    (cond
+      ((atom values) acc)
+      (t (reduce f (f acc (car values)) (cdr values))))))
+
+; `let` desugars to an immediately-invoked `lambda`: `(let ((x 1) (y 2)) body)`
+; expands to `((lambda (x y) body) 1 2)` — the classic trick, same shape as
+; the `unless` example in docs/quote-tutorial.md. Bindings are evaluated in
+; the *outer* environment before the new lexical frame exists (so
+; `(let ((x 1) (y x)) ...)` fails — `y`'s value expression can't see `x`
+; yet), matching Scheme/Racket's parallel `let`. Exactly two arguments,
+; `body` a single expression: `defmacro` uses the same fixed-arity
+; parameter binding as `lambda` (see docs/language-core.md), so there is no
+; variadic/rest-body support to lean on. For a sequence of expressions,
+; wrap them the same way the rest of this codebase already does —
+; `(let (...) ((lambda () expr1 expr2)))`.
+; `let` розгортається в негайно викликану `lambda`: `(let ((x 1) (y 2))
+; тіло)` розгортається в `((lambda (x y) тіло) 1 2)` — класичний прийом,
+; тієї самої форми, що й приклад `unless` у docs/quote-tutorial.md.
+; Bindings обчислюються в *зовнішньому* середовищі до того, як з'явиться
+; новий лексичний фрейм (тож `(let ((x 1) (y x)) ...)` провалиться — вираз
+; значення `y` ще не бачить `x`), як і паралельний `let` у Scheme/Racket.
+; Рівно два аргументи, `body` — один вираз: `defmacro` використовує те
+; саме зв'язування параметрів фіксованої арності, що й `lambda` (див.
+; docs/language-core.md), тож немає variadic/rest-body, на яке можна
+; спертись. Для послідовності виразів загортай так само, як і решта цього
+; коду вже робить — `(let (...) ((lambda () вираз1 вираз2)))`.
+; `let` entzuckert sich zu einem sofort aufgerufenen `lambda`:
+; `(let ((x 1) (y 2)) rumpf)` wird zu `((lambda (x y) rumpf) 1 2)` — der
+; klassische Trick, dieselbe Form wie das `unless`-Beispiel in
+; docs/quote-tutorial.md. Bindings werden in der *äußeren* Umgebung
+; ausgewertet, bevor der neue lexikalische Frame existiert (daher
+; scheitert `(let ((x 1) (y x)) ...)` — der Wertausdruck von `y` sieht `x`
+; noch nicht), passend zu Schemes/Rackets parallelem `let`. Genau zwei
+; Argumente, `body` ein einzelner Ausdruck: `defmacro` nutzt dieselbe
+; Parameterbindung fester Arität wie `lambda` (siehe docs/language-core.md),
+; es gibt also kein variadisches/Rest-Body, auf das man sich stützen
+; könnte. Für eine Folge von Ausdrücken genauso einpacken, wie es der
+; Rest dieses Codes bereits tut — `(let (...) ((lambda () ausdruck1 ausdruck2)))`.
+(defmacro let (bindings body)
+  (cons (list 'lambda (map (lambda (binding) (car binding)) bindings) body)
+        (map (lambda (binding) (second binding)) bindings)))
+
+; `let*` is `let` with sequential (not parallel) dependency: each binding's
+; value expression can see every binding before it. Expands recursively —
+; `(let* ((x 1) (y (+ x 1))) body)` becomes
+; `(let ((x 1)) (let* ((y (+ x 1))) body))`, peeling one binding into its
+; own nested `let` at a time until none are left, at which point `body`
+; evaluates directly. Each expansion step is itself new code handed back to
+; the evaluator, the same macro-expansion mechanism `unless` and `let`
+; already use — `let*` calling `let*` is ordinary recursion, not a special
+; case the evaluator needs to know about.
+; `let*` — це `let` з послідовною (не паралельною) залежністю: вираз
+; значення кожного binding бачить усі попередні. Розгортається
+; рекурсивно — `(let* ((x 1) (y (+ x 1))) тіло)` стає
+; `(let ((x 1)) (let* ((y (+ x 1))) тіло))`, знімаючи по одному binding у
+; власний вкладений `let`, поки жодного не лишиться, і тоді `тіло`
+; обчислюється напряму. Кожен крок розгортання сам є новим кодом,
+; переданим назад evaluator'у, тим самим механізмом розгортання макросів,
+; що вже використовують `unless` і `let` — виклик `let*` із `let*` —
+; звичайна рекурсія, не особливий випадок, про який має знати evaluator.
+; `let*` ist `let` mit sequenzieller (nicht paralleler) Abhängigkeit: der
+; Wertausdruck jedes Bindings sieht alle vorherigen. Entfaltet sich
+; rekursiv — `(let* ((x 1) (y (+ x 1))) rumpf)` wird zu
+; `(let ((x 1)) (let* ((y (+ x 1))) rumpf))`, wobei jeweils ein Binding in
+; ein eigenes verschachteltes `let` geschält wird, bis keines mehr übrig
+; ist, woraufhin `rumpf` direkt ausgewertet wird. Jeder Entfaltungsschritt
+; ist selbst neuer Code, der an den Evaluator zurückgegeben wird, derselbe
+; Makro-Expansionsmechanismus, den `unless` und `let` bereits nutzen —
+; `let*`, das `let*` aufruft, ist gewöhnliche Rekursion, kein Sonderfall,
+; von dem der Evaluator wissen müsste.
+; `eq` is deliberately atom-only per McCarthy's original primitive (see
+; docs/language-core.md) — `(eq '(1 2) '(1 2))` errors rather than comparing
+; structurally. `equal?` is the structural/deep-equality counterpart, built
+; on top of `eq` and `atom` rather than replacing them: two atoms compare
+; via `eq` (always safe — both sides are already known atoms in that
+; branch); two pairs compare by recursing into `car`/`cdr`; an atom against
+; a pair is unconditionally false, checked before ever reaching `eq` so it
+; can't be handed a non-atom the way `var?` and `unify` in lib/unify.my
+; originally were (see that file's header comment for the bug that caught).
+; `eq` навмисно приймає лише атоми, за оригінальним примітивом Маккарті
+; (див. docs/language-core.md) — `(eq '(1 2) '(1 2))` падає замість
+; структурного порівняння. `equal?` — структурний/глибокий відповідник,
+; побудований поверх `eq` і `atom`, не замість них: два атоми порівнюються
+; через `eq` (завжди безпечно — обидві сторони вже точно атоми в цій
+; гілці); дві пари порівнюються рекурсією в `car`/`cdr`; атом проти пари —
+; безумовно хиба, перевіряється до того, як дійде до `eq`, тож йому не
+; можна підсунути не-атом так, як спершу можна було `var?` і `unify` в
+; lib/unify.my (баг, який це зловив, описано в header-коментарі того файлу).
+; `eq` akzeptiert nach McCarthys ursprünglichem Primitiv bewusst nur Atome
+; (siehe docs/language-core.md) — `(eq '(1 2) '(1 2))` löst einen Fehler
+; aus statt strukturell zu vergleichen. `equal?` ist das
+; strukturelle/tiefe Gegenstück, aufgebaut auf `eq` und `atom`, statt sie
+; zu ersetzen: zwei Atome vergleichen sich über `eq` (immer sicher — beide
+; Seiten sind in diesem Zweig bereits bekanntermaßen Atome); zwei Paare
+; vergleichen sich durch Rekursion in `car`/`cdr`; ein Atom gegen ein Paar
+; ist unbedingt falsch, geprüft bevor es je zu `eq` kommt, sodass ihm nie
+; ein Nicht-Atom untergeschoben werden kann, wie es `var?` und `unify` in
+; lib/unify.my anfangs passieren konnte (der dabei gefangene Bug steht im
+; Header-Kommentar dieser Datei).
+(def equal?
+  (lambda (a b)
+    (cond
+      ((atom a) (cond ((atom b) (eq a b)) (t '())))
+      ((atom b) '())
+      (t (cond
+           ((equal? (car a) (car b)) (equal? (cdr a) (cdr b)))
+           (t '()))))))
+
+(defmacro let* (bindings body)
+  (cond
+    ((atom bindings) body)
+    (t (list 'let
+             (list (car bindings))
+             (list 'let* (cdr bindings) body)))))
+
+; string-length/string-empty?/string-prefix?/string-contains? (PLAN.md
+; item 14, item 20's G5 audit test applied live) — none of these need a
+; new Rust primitive: string-first/string-rest already expose a string
+; one character at a time, and eq already compares Value::String by
+; value, so "" is a real, checkable base case — the same shape as any
+; other recursive list walk in this file, just walking a string instead
+; of a pair chain. string-append (genuinely un-expressible this way,
+; since nothing here can build a new combined string) stays in Rust —
+; see its own comment in special_forms.rs for why.
+;
+; string-length/string-empty?/string-prefix?/string-contains? (PLAN.md,
+; пункт 14, живо застосований тест G5 з пункту 20) — жодна з них не
+; потребує нового Rust-примітива: string-first/string-rest уже дають
+; рядок по одному символу, а eq вже порівнює Value::String за
+; значенням, тож "" — реальний, перевірюваний базовий випадок — та сама
+; форма, що й будь-який інший рекурсивний обхід списку в цьому файлі,
+; лише по рядку, не по ланцюжку пар. string-append (справді невиразний
+; так само — нічого тут не може побудувати новий об'єднаний рядок)
+; лишається в Rust — див. власний коментар у special_forms.rs, чому.
+(def string-empty?
+  (lambda (s) (eq s "")))
+
+(def string-length
+  (lambda (s)
+    (cond
+      ((string-empty? s) 0)
+      (t (+ 1 (string-length (string-rest s)))))))
+
+(def string-prefix?
+  (lambda (prefix s)
+    (cond
+      ((string-empty? prefix) t)
+      ((string-empty? s) '())
+      ((eq (string-first prefix) (string-first s))
+       (string-prefix? (string-rest prefix) (string-rest s)))
+      (t '()))))
+
+(def string-contains?
+  (lambda (needle s)
+    (cond
+      ((string-prefix? needle s) t)
+      ((string-empty? s) '())
+      (t (string-contains? needle (string-rest s))))))
