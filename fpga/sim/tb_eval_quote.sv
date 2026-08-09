@@ -37,6 +37,7 @@ module tb_eval_quote;
         #100;
 
         send_uart_byte(8'd59);
+        send_uart_byte(8'd0); // program length hi byte
         send_uart_word(32'h9100003C); // 0:  LOADSYM R1, 60 (dummy A)
         send_uart_word(32'h9200003D); // 1:  LOADSYM R2, 61 (dummy B)
         send_uart_word(32'h76120000); // 2:  EQ R6, R1, R2 -> NIL

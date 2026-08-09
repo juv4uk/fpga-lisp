@@ -38,6 +38,7 @@ module tb_monitor;
 
         // Program: LOADSYM R1,#2 ; LOADSYM R2,#3 ; CONS R3,R1,R2 ; HALT
         send_uart_byte(8'd4);
+        send_uart_byte(8'd0); // program length hi byte
         send_uart_word(32'h91000002); // LOADSYM R1, #2
         send_uart_word(32'h92000003); // LOADSYM R2, #3
         send_uart_word(32'h33120000); // CONS R3, R1, R2

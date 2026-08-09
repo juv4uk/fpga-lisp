@@ -41,6 +41,7 @@ module tb_eval_cond;
         #100;
 
         send_uart_byte(8'd94);
+        send_uart_byte(8'd0); // program length hi byte
         send_uart_word(32'h91000064); // 0:  LOADSYM R1, 100
         send_uart_word(32'h92000065); // 1:  LOADSYM R2, 101
         send_uart_word(32'h7B120000); // 2:  EQ R11, R1, R2 -> NIL (stack)

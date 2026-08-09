@@ -5,7 +5,7 @@ module control (
     input  logic         rst_n,
     
     // Instruction memory (ROM for now)
-    output logic [7:0]   imem_addr,
+    output logic [11:0]  imem_addr,
     input  logic [31:0]  imem_data,
     
     // Register file interface
@@ -52,7 +52,7 @@ module control (
     //   0x01 <reg>        -> replies with the 4-byte register word (LE)
     //   0x02 <lo> <hi>    -> replies with CAR (4B LE) then CDR (4B LE) at heap[addr]
     //   0x03              -> replies with the 4-byte heap pointer (LE)
-    //   0x04              -> replies with {23'd0, err_flag, err_pc} (LE): a
+    //   0x04              -> replies with {19'd0, err_flag, err_pc} (LE): a
     //                        CAR/CDR/CONS type error (e.g. CAR of a non-CONS)
     //                        halts the machine like HALT rather than hanging
     //                        forever in ST_WAIT_LDU; this command tells you
@@ -80,7 +80,7 @@ module control (
 
     state_t state, next_state;
 
-    logic [7:0] pc;
+    logic [11:0] pc;
     logic [31:0] instruction;
 
     opcode_t opcode;
@@ -106,7 +106,7 @@ module control (
     // Latched by a CAR/CDR/CONS type error (see ST_WAIT_LDU below), read
     // back via monitor command 0x04 instead of hanging forever.
     logic        err_flag;
-    logic [7:0]  err_pc;
+    logic [11:0] err_pc;
 
     assign imem_addr = pc;
     assign reg_rd_addr_a = (state == ST_MON_REG_SEND) ? mon_arg1[3:0] : rs1;
@@ -138,13 +138,13 @@ module control (
                         // rd!=0,rs1=0: CALL rd,addr (reg[rd] <= return addr, jump).
                         // rd=0,rs1!=0: RET rs1 (jump to address held in rs1).
                         if (rs1 != 0) begin
-                            pc <= reg_rd_data_a.value[7:0];
+                            pc <= reg_rd_data_a.value[11:0];
                         end else begin
-                            pc <= imm[7:0];
+                            pc <= imm[11:0];
                         end
                     end else if (opcode == OP_JF) begin
                         if (reg_rd_data_a.tag == TAG_NIL || (reg_rd_data_a.tag == TAG_FIXNUM && reg_rd_data_a.value == 0)) begin
-                            pc <= imm[7:0];
+                            pc <= imm[11:0];
                         end else begin
                             pc <= pc + 1;
                         end
@@ -161,7 +161,7 @@ module control (
                     end
                 end
                 ST_MON_ERR_SEND: begin
-                    mon_tx_buf <= {32'd0, 23'd0, err_flag, err_pc};
+                    mon_tx_buf <= {32'd0, 19'd0, err_flag, err_pc};
                     mon_tx_remaining <= 4;
                 end
                 ST_OUT_WAIT: begin
@@ -340,7 +340,7 @@ module control (
                         if (rd != 0 && rs1 == 0) begin
                             reg_we = 1;
                             reg_wr_data.tag = TAG_FIXNUM;
-                            reg_wr_data.value = {20'd0, pc} + 28'd1;
+                            reg_wr_data.value = {16'd0, pc} + 28'd1;
                         end
                         next_state = ST_FETCH;
                     end

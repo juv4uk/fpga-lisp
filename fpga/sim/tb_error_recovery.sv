@@ -42,6 +42,7 @@ module tb_error_recovery;
         #100;
 
         send_uart_byte(8'd4);
+        send_uart_byte(8'd0); // program length hi byte
         send_uart_word(32'h91000000 | 16'd60); // 0: LOADSYM R1, 60
         send_uart_word(32'h92000000 | 16'd61); // 1: LOADSYM R2, 61
         send_uart_word(32'h73120000);          // 2: EQ R3, R1, R2 -> NIL
@@ -56,8 +57,8 @@ module tb_error_recovery;
             send_uart_byte(8'h04);
             recv_word(word0);
         join
-        $display("ERR = 0x%08x (err_flag=%0d err_pc=%0d)", word0, word0[8], word0[7:0]);
-        if (word0[8] !== 1'b1 || word0[7:0] !== 8'd3) begin
+        $display("ERR = 0x%08x (err_flag=%0d err_pc=%0d)", word0, word0[12], word0[11:0]);
+        if (word0[12] !== 1'b1 || word0[11:0] !== 12'd3) begin
             $display("FAIL: expected err_flag=1 err_pc=3");
             errors = errors + 1;
         end

@@ -1,40 +1,46 @@
-module bootloader (
+module bootloader #(
+    parameter integer ADDR_WIDTH = 12
+) (
     input  logic        clk,
     input  logic        rst_n,
-    
+
     input  logic        rx_valid,
     input  logic [7:0]  rx_data,
-    
-    output logic        boot_we,
-    output logic [7:0]  boot_addr,
-    output logic [31:0] boot_data,
-    
+
+    output logic                   boot_we,
+    output logic [ADDR_WIDTH-1:0]  boot_addr,
+    output logic [31:0]            boot_data,
+
     output logic        boot_done
 );
 
+    // Program length is sent as 2 bytes, little-endian (up to 4095
+    // instructions for a 12-bit imem address), followed by that many
+    // 32-bit instruction words, also little-endian.
     typedef enum logic [1:0] {
-        STATE_WAIT_LENGTH,
+        STATE_WAIT_LENGTH_LO,
+        STATE_WAIT_LENGTH_HI,
         STATE_READ_BYTES,
         STATE_DONE
     } state_t;
-    
+
     state_t state, next_state;
-    
-    logic [7:0] prog_length;
-    logic [7:0] next_prog_length;
-    
-    logic [7:0] word_count;
-    logic [7:0] next_word_count;
-    
+
+    logic [15:0] prog_length;
+    logic [15:0] next_prog_length;
+
+    logic [ADDR_WIDTH-1:0] word_count;
+    logic [ADDR_WIDTH-1:0] next_word_count;
+
     logic [1:0] byte_count;
     logic [1:0] next_byte_count;
-    
+
     logic [31:0] assembled_word;
     logic [31:0] next_assembled_word;
-    
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            state <= STATE_WAIT_LENGTH;
+            state <= STATE_WAIT_LENGTH_LO;
             prog_length <= 0;
             word_count <= 0;
             byte_count <= 0;
@@ -47,24 +53,31 @@ module bootloader (
             assembled_word <= next_assembled_word;
         end
     end
-    
+
     always_comb begin
         next_state = state;
         next_prog_length = prog_length;
         next_word_count = word_count;
         next_byte_count = byte_count;
         next_assembled_word = assembled_word;
-        
+
         boot_we = 0;
         boot_addr = word_count;
         boot_data = assembled_word;
         boot_done = 0;
-        
+
         case (state)
-            STATE_WAIT_LENGTH: begin
+            STATE_WAIT_LENGTH_LO: begin
                 if (rx_valid) begin
-                    next_prog_length = rx_data;
-                    if (rx_data == 0) begin
+                    next_prog_length[7:0] = rx_data;
+                    next_state = STATE_WAIT_LENGTH_HI;
+                end
+            end
+
+            STATE_WAIT_LENGTH_HI: begin
+                if (rx_valid) begin
+                    next_prog_length[15:8] = rx_data;
+                    if (rx_data == 0 && prog_length[7:0] == 0) begin
                         next_state = STATE_DONE;
                     end else begin
                         next_state = STATE_READ_BYTES;
@@ -74,7 +87,7 @@ module bootloader (
                     end
                 end
             end
-            
+
             STATE_READ_BYTES: begin
                 if (rx_valid) begin
                     // Assemble word (Little Endian)
@@ -84,15 +97,15 @@ module bootloader (
                         2'd2: next_assembled_word[23:16] = rx_data;
                         2'd3: next_assembled_word[31:24] = rx_data;
                     endcase
-                    
+
                     if (byte_count == 2'd3) begin
                         boot_we = 1;
                         boot_data = next_assembled_word; // Use the fully assembled word
-                        
+
                         next_word_count = word_count + 1;
                         next_byte_count = 0;
-                        
-                        if (word_count + 1 == prog_length) begin
+
+                        if ({{(16-ADDR_WIDTH){1'b0}}, word_count} + 1 == prog_length) begin
                             next_state = STATE_DONE;
                         end
                     end else begin
@@ -100,7 +113,7 @@ module bootloader (
                     end
                 end
             end
-            
+
             STATE_DONE: begin
                 boot_done = 1;
             end

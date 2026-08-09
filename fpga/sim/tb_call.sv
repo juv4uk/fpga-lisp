@@ -35,6 +35,7 @@ module tb_call;
         #100;
 
         send_uart_byte(8'd5);
+        send_uart_byte(8'd0); // program length hi byte
         send_uart_word(32'h12000005); // 0: LOADI R2, 5
         send_uart_word(32'h81000003); // 1: CALL R1, func(3)
         send_uart_word(32'hB0000000); // 2: HALT  (returned-to here)

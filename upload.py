@@ -26,8 +26,8 @@ def upload_program(port, baudrate, binary_file):
         
     instructions = [struct.unpack('<I', data[i:i+4])[0] for i in range(0, len(data), 4)]
     
-    if len(instructions) > 255:
-        print("Program too long! Max 255 instructions.")
+    if len(instructions) > 4095:
+        print("Program too long! Max 4095 instructions.")
         return
         
     print("==================================================")
@@ -42,10 +42,10 @@ def upload_program(port, baudrate, binary_file):
         # Reset the stream (just wait a bit)
         time.sleep(0.1)
         
-        # Send length
+        # Send length (2 bytes, little-endian; up to 4095 instructions)
         length = len(instructions)
         print(f"Uploading {length} instructions...")
-        ser.write(bytes([length]))
+        ser.write(struct.pack('<H', length))
         
         # Send instructions (little-endian)
         for i, instr in enumerate(instructions):

@@ -37,6 +37,7 @@ module tb_lambda;
         #100;
 
         send_uart_byte(8'd25);
+        send_uart_byte(8'd0); // program length hi byte
         send_uart_word(32'h93000005); // 0:  LOADSYM R3, 5   (param name 'x)
         send_uart_word(32'h1400002A); // 1:  LOADI   R4, 42  (arg value)
         send_uart_word(32'h95000009); // 2:  LOADSYM R5, 9   (dummy A)

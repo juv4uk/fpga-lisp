@@ -15,6 +15,7 @@ The full design philosophy, instruction set, memory model, and milestone-by-mile
 - **Word**: 32 bits — 4-bit tag + 28-bit value. Tags implemented so far: `FIXNUM`, `CONS`, `SYMBOL`, `NIL`, `TRUE`.
 - **Heap**: a bump-allocated cons-cell store (parallel `CAR`/`CDR` BRAMs), no garbage collector yet.
 - **ISA**: 16 opcodes, all allocated. `CALL`/`RET` and `GETTAG` reuse the `JMP` and `MOV` opcodes (RISC-V JAL/JALR-style dual-purposing) rather than consuming new instruction slots.
+- **Program memory**: 4096 words (12-bit PC), sized against the board's real BRAM budget (56 blocks on the GW5A-25A; the heap alone uses 16) rather than picked arbitrarily. The UART bootloader protocol length prefix is 2 bytes, little-endian.
 - **Toolchain**: [`assembler.py`](assembler.py) (asm → `.bin`), [`upload.py`](upload.py) (serial bootloader + terminal), [`monitor.py`](monitor.py) (post-`HALT` binary debug REPL: `reg <n>`, `heap <addr>`, `hp`).
 - **Status**: primitives, branching, lists, subroutine calls, environments (alists), closures, and a complete `eval(expr, env)` — atoms, `quote`, `cond`, closure application, and primitive-procedure dispatch (`car`/`cons` bound in a base environment as `TAG_PRIMITIVE` markers) — are all implemented and verified. `(eval '(car (cons 'a 'b)) env) => a` runs through the full evaluator on real hardware, the literal goal of the plan's first phase. See [`docs/testing.md`](docs/testing.md) for the full milestone list. Tagged releases: `lisp-machine-v0.01`–`v0.03`.
 
@@ -62,6 +63,7 @@ python monitor.py COM3 your_program.bin   # upload + post-HALT debug REPL
 - **Слово**: 32 біти — 4-бітний tag + 28-бітне значення. Реалізовані теги: `FIXNUM`, `CONS`, `SYMBOL`, `NIL`, `TRUE`.
 - **Heap**: сховище cons-комірок з bump-allocator (паралельні `CAR`/`CDR` BRAM), garbage collector'а поки немає.
 - **ISA**: 16 опкодів, усі зайняті. `CALL`/`RET` і `GETTAG` перевикористовують опкоди `JMP` і `MOV` (за принципом RISC-V JAL/JALR) замість нових слотів інструкцій.
+- **Пам'ять програми**: 4096 слів (12-бітний PC), розмір обраний під реальний BRAM-бюджет плати (56 блоків на GW5A-25A; сам heap займає 16), а не довільно. Префікс довжини протоколу UART-завантажувача — 2 байти little-endian.
 - **Інструментарій**: [`assembler.py`](assembler.py) (asm → `.bin`), [`upload.py`](upload.py) (серійний завантажувач + термінал), [`monitor.py`](monitor.py) (бінарний debug REPL після `HALT`: `reg <n>`, `heap <addr>`, `hp`).
 - **Стан**: примітиви, розгалуження, списки, виклики підпрограм, середовища (alist), closures і повний `eval(expr, env)` — атоми, `quote`, `cond`, аплікація closure і диспетчеризація примітивних процедур (`car`/`cons` зв'язані в базовому середовищі як маркери `TAG_PRIMITIVE`) — реалізовані й перевірені. `(eval '(car (cons 'a 'b)) env) => a` проходить через повний evaluator на реальному залізі — буквальна мета першого етапу плану. Повний перелік — [`docs/testing.md`](docs/testing.md). Теговані релізи: `lisp-machine-v0.01`–`v0.03`.
 
@@ -109,6 +111,7 @@ Die vollständige Design-Philosophie, der Befehlssatz, das Speichermodell und di
 - **Wort**: 32 Bit — 4-Bit-Tag + 28-Bit-Wert. Bisher implementierte Tags: `FIXNUM`, `CONS`, `SYMBOL`, `NIL`, `TRUE`.
 - **Heap**: ein Bump-Allocator-Cons-Zellen-Speicher (parallele `CAR`/`CDR`-BRAMs), noch kein Garbage Collector.
 - **ISA**: 16 Opcodes, alle belegt. `CALL`/`RET` und `GETTAG` nutzen die Opcodes von `JMP` und `MOV` wieder (RISC-V-JAL/JALR-Stil) statt neue Instruktions-Slots zu verbrauchen.
+- **Programmspeicher**: 4096 Woerter (12-Bit-PC), dimensioniert nach dem realen BRAM-Budget des Boards (56 Bloecke auf dem GW5A-25A; der Heap allein nutzt 16). Das Laengenpraefix des UART-Bootloader-Protokolls ist 2 Byte, Little-Endian.
 - **Toolchain**: [`assembler.py`](assembler.py), [`upload.py`](upload.py), [`monitor.py`](monitor.py) (binäres Debug-REPL nach `HALT`).
 - **Status**: Primitive, Verzweigung, Listen, Unterprogrammaufrufe, Umgebungen (Alists), Closures und ein vollständiges `eval(expr, env)` — Atome, `quote`, `cond`, Closure-Anwendung und Dispatch primitiver Prozeduren (`car`/`cons` als `TAG_PRIMITIVE`-Marker) — sind implementiert und verifiziert. `(eval '(car (cons 'a 'b)) env) => a` läuft auf echter Hardware durch den vollständigen Evaluator. Vollständige Liste in [`docs/testing.md`](docs/testing.md). Getaggte Releases: `lisp-machine-v0.01`–`v0.03`.
 

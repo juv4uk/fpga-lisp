@@ -35,6 +35,7 @@ module tb_env;
         #100;
 
         send_uart_byte(8'd23);
+        send_uart_byte(8'd0); // program length hi byte
         send_uart_word(32'h91000005); // 0:  LOADSYM R1, 5   ('x)
         send_uart_word(32'h1200000A); // 1:  LOADI   R2, 10
         send_uart_word(32'h93000006); // 2:  LOADSYM R3, 6   ('y)

@@ -56,6 +56,7 @@ module tb_eval_all_primitives;
         #100;
 
         send_uart_byte(n_words[7:0]);
+        send_uart_byte(n_words[15:8]); // program length hi byte
         for (int i = 0; i < n_bytes; i = i + 1) begin
             send_uart_byte(prog_bytes[i]);
         end

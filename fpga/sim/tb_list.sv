@@ -33,6 +33,7 @@ module tb_list;
         #100;
 
         send_uart_byte(8'd16);
+        send_uart_byte(8'd0); // program length hi byte
         send_uart_word(32'h91000002); // LOADSYM R1, 2  ('radio)
         send_uart_word(32'h92000003); // LOADSYM R2, 3  ('antenna)
         send_uart_word(32'h93000004); // LOADSYM R3, 4  ('signal)

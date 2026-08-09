@@ -25,8 +25,8 @@ def upload_program(ser, binary_file):
     with open(binary_file, "rb") as f:
         data = f.read()
     instructions = [struct.unpack("<I", data[i:i + 4])[0] for i in range(0, len(data), 4)]
-    if len(instructions) > 255:
-        print("Program too long! Max 255 instructions.")
+    if len(instructions) > 4095:
+        print("Program too long! Max 4095 instructions.")
         sys.exit(1)
 
     print("==================================================")
@@ -37,7 +37,7 @@ def upload_program(ser, binary_file):
     ser.reset_input_buffer()
     length = len(instructions)
     print(f"Uploading {length} instructions from {binary_file}...")
-    ser.write(bytes([length]))
+    ser.write(struct.pack("<H", length))  # 2 bytes, little-endian
     for instr in instructions:
         ser.write(struct.pack("<I", instr))
     print("Upload complete. Waiting for HALT (press Enter once the board should be halted)...")
@@ -74,8 +74,8 @@ def cmd_heap(ser, addr):
 def cmd_err(ser):
     ser.write(bytes([0x04]))
     word = struct.unpack("<I", read_exact(ser, 4))[0]
-    err_flag = (word >> 8) & 1
-    err_pc = word & 0xFF
+    err_flag = (word >> 12) & 1
+    err_pc = word & 0xFFF
     if err_flag:
         print(f"ERR: type error at pc={err_pc} (CAR/CDR/CONS on a non-CONS)")
     else:

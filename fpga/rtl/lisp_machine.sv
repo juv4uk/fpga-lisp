@@ -17,9 +17,9 @@ module lisp_machine (
     logic         reg_we;
     logic [3:0]   reg_wr_addr;
     lisp_word_t   reg_wr_data;
-    logic [7:0]   pc;
+    logic [11:0]  pc;
     logic [31:0]  instr;
-    
+
     // CPU Reset Control
     logic boot_done;
     logic cpu_rst_n;
@@ -27,13 +27,15 @@ module lisp_machine (
 
     // Bootloader FSM
     logic boot_we;
-    logic [7:0] boot_addr;
+    logic [11:0] boot_addr;
     logic [31:0] boot_data;
-    
+
     logic [7:0] uart_rx_data;
     logic uart_rx_valid;
-    
-    bootloader u_boot (
+
+    bootloader #(
+        .ADDR_WIDTH(12)
+    ) u_boot (
         .clk(clk),
         .rst_n(rst_n),
         .rx_valid(uart_rx_valid),
@@ -44,16 +46,16 @@ module lisp_machine (
         .boot_done(boot_done)
     );
 
-    // Instruction Memory (IMEM) - 256 words
-    logic [31:0] imem [0:255];
+    // Instruction Memory (IMEM) - 4096 words (12-bit PC)
+    logic [31:0] imem [0:4095];
     always_ff @(posedge clk) begin
         if (boot_we) begin
             imem[boot_addr] <= boot_data;
         end
     end
-    
+
     // Asynchronous read for control unit
-    assign instr = imem[pc[7:0]];
+    assign instr = imem[pc];
     
     registers u_regs (
         .clk(clk),

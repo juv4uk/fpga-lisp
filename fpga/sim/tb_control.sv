@@ -34,6 +34,7 @@ module tb_control;
         #100;
 
         send_uart_byte(8'd11);
+        send_uart_byte(8'd0); // program length hi byte
         send_uart_word(32'h11000003); // 0: LOADI R1, 3
         send_uart_word(32'h12000000); // 1: LOADI R2, 0
         send_uart_word(32'h13000001); // 2: LOADI R3, 1

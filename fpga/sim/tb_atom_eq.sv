@@ -33,6 +33,7 @@ module tb_atom_eq;
         #100;
 
         send_uart_byte(8'd7);
+        send_uart_byte(8'd0); // program length hi byte
 
         // 0: LOADSYM R1, #2 (symbol A)
         send_uart_word(32'h91000002);

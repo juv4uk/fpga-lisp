@@ -34,6 +34,7 @@ module tb_machine;
         
         // We will send 5 instructions (length = 5)
         send_uart_byte(8'd5);
+        send_uart_byte(8'd0); // program length hi byte
         
         // 0: LOADSYM R1, SYMBOL A (id=2) -> 32'h91000002
         send_uart_word(32'h91000002);
