@@ -15,6 +15,7 @@ OPCODES = {
     'CAR':    4,
     'CDR':    5,
     'ATOM':   6,
+    'SETCDR': 6,  # ATOM with rs2 != 0: internal bootstrap-only cell mutation
     'EQ':     7,
     'JMP':    8,
     'CALL':   8,  # JMP with rd != 0: reg[rd] = return addr, then jump
@@ -157,7 +158,7 @@ def assemble(lines):
                 instr_word |= (rd << 24) | (rs1 << 20) | (mode << 16)
 
 
-            elif op in ['CONS', 'ADD', 'SUB', 'EQ', 'ATOM']:
+            elif op in ['CONS', 'ADD', 'SUB', 'EQ', 'ATOM', 'SETCDR']:
                 # Note: ATOM historically took 2 ops in some designs, but if it takes 1, we handle it
                 rd = parse_reg(parts[1])
                 rs1 = parse_reg(parts[2])

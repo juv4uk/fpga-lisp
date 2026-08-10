@@ -21,6 +21,7 @@ module control (
     output logic         ldu_cmd_cons,
     output logic         ldu_cmd_car,
     output logic         ldu_cmd_cdr,
+    output logic         ldu_cmd_setcdr,
     input  lisp_word_t   ldu_result,
     input  logic         ldu_valid,
     input  logic         ldu_error,
@@ -148,7 +149,7 @@ module control (
                         end else begin
                             pc <= pc + 1;
                         end
-                    end else if (!ldu_cmd_cons && !ldu_cmd_car && !ldu_cmd_cdr && opcode != OP_HALT && opcode != OP_OUT && opcode != OP_IN) begin
+                    end else if (!ldu_cmd_cons && !ldu_cmd_car && !ldu_cmd_cdr && !ldu_cmd_setcdr && opcode != OP_HALT && opcode != OP_OUT && opcode != OP_IN) begin
                         pc <= pc + 1;
                     end
                 end
@@ -216,6 +217,7 @@ module control (
         ldu_cmd_cons = 0;
         ldu_cmd_car = 0;
         ldu_cmd_cdr = 0;
+        ldu_cmd_setcdr = 0;
         
         halted = 0;
         out_valid = 0;
@@ -295,15 +297,37 @@ module control (
                         next_state = ST_WAIT_LDU;
                     end
                     OP_ATOM: begin
-                        reg_we = 1;
-                        if (reg_rd_data_a.tag == TAG_CONS) begin
-                            reg_wr_data.tag = TAG_NIL;
-                            reg_wr_data.value = 28'd0;
+                        // rs2==0 (the assembler's default for plain ATOM
+                        // rd,rs1): ordinary ATOM check on rs1 into rd.
+                        // rs2!=0: SETCDR rd,rs1,rs2 -- an internal,
+                        // bootstrap-only capability (never reachable from
+                        // eval/apply as an ordinary primitive) that
+                        // overwrites an EXISTING cons cell's CDR in place,
+                        // needed for letrec-style self-referential
+                        // closures (see lisp_data_unit.sv's cmd_setcdr).
+                        // rs1 = the cons cell to mutate, rs2 = the new CDR
+                        // value, rd = receives the new CDR value back as
+                        // confirmation. Same "reuse an unused field as a
+                        // mode selector" pattern as OP_MOV's GETTAG/
+                        // MAKEPRIM/GETVAL, with the one caveat that rs2
+                        // doubles as real data here: rs2 can never be R0
+                        // for this instruction (R0 there means "plain
+                        // ATOM", the same accepted constraint CALL/RET
+                        // already place on rd/rs1 being nonzero).
+                        if (rs2 != 0) begin
+                            ldu_cmd_setcdr = 1;
+                            next_state = ST_WAIT_LDU;
                         end else begin
-                            reg_wr_data.tag = TAG_TRUE;
-                            reg_wr_data.value = 28'd1;
+                            reg_we = 1;
+                            if (reg_rd_data_a.tag == TAG_CONS) begin
+                                reg_wr_data.tag = TAG_NIL;
+                                reg_wr_data.value = 28'd0;
+                            end else begin
+                                reg_wr_data.tag = TAG_TRUE;
+                                reg_wr_data.value = 28'd1;
+                            end
+                            next_state = ST_FETCH;
                         end
-                        next_state = ST_FETCH;
                     end
                     OP_OUT: begin
                         next_state = ST_OUT_START;

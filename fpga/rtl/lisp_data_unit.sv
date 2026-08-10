@@ -8,6 +8,7 @@ module lisp_data_unit #(
     input  logic             cmd_cons,
     input  logic             cmd_car,
     input  logic             cmd_cdr,
+    input  logic             cmd_setcdr,
     
     // Inputs (from registers or immediate)
     input  lisp_word_t       op_a,
@@ -35,18 +36,20 @@ module lisp_data_unit #(
     logic is_peek;
 
     // Heap Memory Interface
-    logic                     heap_we;
+    logic                     heap_we_car;
+    logic                     heap_we_cdr;
     logic [HEAP_ADDR_WIDTH-1:0] heap_addr;
     lisp_word_t               heap_car_in;
     lisp_word_t               heap_cdr_in;
     lisp_word_t               heap_car_out;
     lisp_word_t               heap_cdr_out;
-    
+
     heap #(
         .ADDR_WIDTH(HEAP_ADDR_WIDTH)
     ) u_heap (
         .clk(clk),
-        .we(heap_we),
+        .we_car(heap_we_car),
+        .we_cdr(heap_we_cdr),
         .addr(heap_addr),
         .car_in(heap_car_in),
         .cdr_in(heap_cdr_in),
@@ -61,7 +64,8 @@ module lisp_data_unit #(
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             hp <= 0;
-            heap_we <= 0;
+            heap_we_car <= 0;
+            heap_we_cdr <= 0;
             valid <= 0;
             error <= 0;
             reading_state <= 0;
@@ -75,7 +79,8 @@ module lisp_data_unit #(
             peek_car <= '0;
             peek_cdr <= '0;
         end else begin
-            heap_we <= 0;
+            heap_we_car <= 0;
+            heap_we_cdr <= 0;
             valid <= 0;
             error <= 0;
             peek_valid <= 0;
@@ -100,16 +105,41 @@ module lisp_data_unit #(
                 is_peek <= 1;
             end else if (cmd_cons) begin
                 // CONS operation
-                heap_we <= 1;
+                heap_we_car <= 1;
+                heap_we_cdr <= 1;
                 heap_addr <= hp;
                 heap_car_in <= op_a;
                 heap_cdr_in <= op_b;
-                
+
                 result.tag <= TAG_CONS;
                 result.value <= { {(28-HEAP_ADDR_WIDTH){1'b0}}, hp };
                 valid <= 1;
-                
+
                 hp <= hp + 1; // Bump allocator
+            end else if (cmd_setcdr) begin
+                // Internal bootstrap-only capability, never exposed as an
+                // ordinary Lisp primitive through eval: overwrites the CDR
+                // of an EXISTING cons cell (op_a, must already be TAG_CONS)
+                // with op_b, in place. This is the one deliberate exception
+                // to "the heap never mutates a cell after CONS allocates
+                // it" -- needed so a closure can be backpatched to see
+                // itself in its own captured environment (letrec-style
+                // self-reference), the same capability boundary that keeps
+                // def/defmacro in the my-lisp Rust host rather than
+                // expressed in pure immutable-cons my-lisp (see
+                // lib/meta-eval.my's own documented, unresolved gap here --
+                // confirmed with the my-lisp session, 2026-08-10, that this
+                // Rust-host-only mutation is the *only* known working
+                // mechanism, not a shortcut around a solved problem).
+                if (op_a.tag == TAG_CONS) begin
+                    heap_we_cdr <= 1;
+                    heap_addr <= op_a.value[HEAP_ADDR_WIDTH-1:0];
+                    heap_cdr_in <= op_b;
+                    result <= op_b;
+                    valid <= 1;
+                end else begin
+                    error <= 1; // TYPE_ERROR: can't SETCDR a non-cons
+                end
             end else if (cmd_car) begin
                 if (op_a.tag == TAG_CONS) begin
                     heap_addr <= op_a.value[HEAP_ADDR_WIDTH-1:0];

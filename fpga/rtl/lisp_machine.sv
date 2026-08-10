@@ -70,7 +70,7 @@ module lisp_machine (
     );
     
     // --- Lisp Data Unit (Heap + Primitives) ---
-    logic ldu_cmd_cons, ldu_cmd_car, ldu_cmd_cdr;
+    logic ldu_cmd_cons, ldu_cmd_car, ldu_cmd_cdr, ldu_cmd_setcdr;
     lisp_word_t ldu_result;
     logic ldu_valid, ldu_error;
 
@@ -88,6 +88,7 @@ module lisp_machine (
         .cmd_cons(ldu_cmd_cons),
         .cmd_car(ldu_cmd_car),
         .cmd_cdr(ldu_cmd_cdr),
+        .cmd_setcdr(ldu_cmd_setcdr),
 
         .op_a(reg_rd_data_a),
         .op_b(reg_rd_data_b),
@@ -148,6 +149,7 @@ module lisp_machine (
         .ldu_cmd_cons(ldu_cmd_cons),
         .ldu_cmd_car(ldu_cmd_car),
         .ldu_cmd_cdr(ldu_cmd_cdr),
+        .ldu_cmd_setcdr(ldu_cmd_setcdr),
         .ldu_result(ldu_result),
         .ldu_valid(ldu_valid),
         .ldu_error(ldu_error),
