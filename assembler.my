@@ -1,33 +1,28 @@
 ; fpga-lisp's own assembler, written in my-lisp itself -- the "our machine
 ; runs code written in our own language" principle applied to the toolchain,
 ; not just the runtime. Ports assembler.py's parsing/label/.include/.define
-; logic faithfully; two honest, documented differences from the Python
-; version, both real capability gaps found in my-lisp while writing this
-; (see the synergy note sent to the my-lisp session on 2026-08-10):
+; logic faithfully; one honest, documented difference from the Python
+; version, a real capability gap found in my-lisp while writing this (see
+; the synergy note sent to the my-lisp session on 2026-08-10):
 ;
-;   1. No bitwise/mod primitives exist (only + - * / < > = and friends), so
-;      there's no way to mask an immediate to 16 bits the way assembler.py's
-;      `imm & 0xFFFF` does. Since every field occupies its own disjoint bit
-;      range, `+`/`*` alone reconstruct the same 32-bit word as long as the
-;      inputs are already well-formed (true for every .asm file in this
-;      repo) -- masking was defensive in Python, not load-bearing here.
-;   2. write-file can only write UTF-8 text (`std::fs::write(path, &str)`
-;      in the Rust host) -- there's no byte-level file I/O yet, so a raw
-;      .bin (arbitrary bytes 0-255) can't be produced honestly from my-lisp
-;      today. This assembler instead writes one decimal word per line as
-;      plain ASCII text (`.words` extension) -- every digit is ASCII, so
-;      write-file's UTF-8 constraint is a non-issue. A separate, tiny,
-;      *not this file's job* step turns that text into the real .bin
-;      consumed by the UART bootloader and $fread-based testbenches, same
-;      as this repo's Verilog toolchain already needs iverilog/gw_sh
-;      outside my-lisp/Rust. If my-lisp ever gains write-file-bytes (the
-;      recommendation sent upstream), step 2's workaround becomes obsolete
-;      and this file could write a real .bin directly.
+;   No bitwise/mod primitives exist (only + - * / < > = and friends), so
+;   there's no way to mask an immediate to 16 bits the way assembler.py's
+;   `imm & 0xFFFF` does. Since every field occupies its own disjoint bit
+;   range, `+`/`*` alone reconstruct the same 32-bit word as long as the
+;   inputs are already well-formed (true for every .asm file in this
+;   repo) -- masking was defensive in Python, not load-bearing here.
+;
+; Writes a real .bin (little-endian 32-bit words, byte-for-byte identical
+; to assembler.py's output) via write-file-bytes -- added to my-lisp
+; 2026-08-10 in direct response to the recommendation sent upstream from
+; this file's first version, which could only write a decimal-text
+; `.words` intermediate (write-file was UTF-8-text-only at the time).
+; That workaround is gone now that the real primitive exists.
 ;
 ; Usage: my-lisp.exe --allow-process=... is NOT needed (no process-run
 ; here) -- just:
-;   my-lisp.exe assembler.my input.asm output.words
-; *argv* holds ("input.asm" "output.words") when run via my-lisp-cli.
+;   my-lisp.exe assembler.my input.asm output.bin
+; *argv* holds ("input.asm" "output.bin") when run via my-lisp-cli.
 
 (load "docs/reference/my-lisp-lib/core.my")
 
@@ -105,19 +100,42 @@
     (cond ((= n 0) "0")
           (t (number->string-onto n DECIMAL-POWERS "" ())))))
 
-; Tail-recursive for the same reason expand-includes-onto is: a naive
-; (string-append (car strs) (join-with-newlines (cdr strs))) recursion
-; is non-tail and overflowed the stack at 285 elements during testing.
-(def join-with-newlines-onto
-  (lambda (strs acc)
-    (cond
-      ((atom strs) acc)
-      ((string-empty? acc) (join-with-newlines-onto (cdr strs) (car strs)))
-      (t (join-with-newlines-onto (cdr strs) (string-append acc (string-append "
-" (car strs))))))))
+; ---------------------------------------------------------------------
+; Packing 32-bit words into little-endian bytes for write-file-bytes.
+; Same extract-digit trick as number->string, base 256 instead of base
+; 10 -- correct for any base, just more (at most 255, vs. 9) subtractions
+; per digit; a non-issue at ~300 words.
+; ---------------------------------------------------------------------
 
-(def join-with-newlines
-  (lambda (strs) (join-with-newlines-onto strs "")))
+(def BYTE-POWERS (list 16777216 65536 256 1))
+
+(def word->bytes-onto
+  (lambda (n powers acc)
+    (cond
+      ((atom powers) (reverse acc))
+      (t (let ((d+r (extract-digit n (car powers))))
+           (word->bytes-onto (second d+r) (cdr powers) (cons (car d+r) acc)))))))
+
+(def word->bytes-be (lambda (n) (word->bytes-onto n BYTE-POWERS '())))
+(def word->bytes-le (lambda (n) (reverse (word->bytes-be n))))
+
+; Tail-recursive flatten (same reasoning as expand-includes-onto): conses
+; each word's bytes onto acc in forward order, so the whole thing comes
+; out correct after a single reverse at the very end, without ever
+; needing a naive/non-tail append across ~1000+ bytes.
+(def cons-all-onto
+  (lambda (items acc)
+    (cond ((atom items) acc)
+          (t (cons-all-onto (cdr items) (cons (car items) acc))))))
+
+(def words->bytes-onto
+  (lambda (words acc)
+    (cond
+      ((atom words) acc)
+      (t (words->bytes-onto (cdr words) (cons-all-onto (word->bytes-le (car words)) acc))))))
+
+(def words->bytes
+  (lambda (words) (reverse (words->bytes-onto words '()))))
 
 ; ---------------------------------------------------------------------
 ; Line splitting / comment stripping / tokenizing.
@@ -350,11 +368,10 @@
             ; so the three side-effecting steps are chained through
             ; throwaway bindings instead of listed as separate forms.
             (let ((_ (print (string-append "Assembled " (string-append (number->string (length words)) " instructions.")))))
-              (let ((_ (write-file output-path (string-append (join-with-newlines (map number->string words)) "
-"))))
-                (print (string-append "Wrote decimal words to " output-path))))))))))
+              (let ((_ (write-file-bytes output-path (words->bytes words))))
+                (print (string-append "Wrote binary to " output-path))))))))))
 
 (cond
-  ((atom *argv*) (print "Usage: my-lisp.exe assembler.my input.asm output.words"))
-  ((atom (cdr *argv*)) (print "Usage: my-lisp.exe assembler.my input.asm output.words"))
+  ((atom *argv*) (print "Usage: my-lisp.exe assembler.my input.asm output.bin"))
+  ((atom (cdr *argv*)) (print "Usage: my-lisp.exe assembler.my input.asm output.bin"))
   (t (assemble-file (car *argv*) (second *argv*))))
