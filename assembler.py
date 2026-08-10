@@ -2,6 +2,7 @@ import sys
 import argparse
 import struct
 import re
+import os
 
 OPCODES = {
     'NOP':    0,
@@ -26,6 +27,31 @@ OPCODES = {
     'SUB':    14,
     'IN':     15
 }
+
+def expand_includes(lines, base_dir, seen=None):
+    """Recursively inline `.include "path"` directives (relative to the
+    including file's own directory), so shared fragments -- symbol
+    constants, the eval/lookup subroutine body -- don't have to be
+    hand-copied into every .asm file."""
+    if seen is None:
+        seen = set()
+    out = []
+    for line in lines:
+        stripped = line.split(';')[0].split('#')[0].strip()
+        m = re.match(r'\.include\s+"([^"]+)"', stripped)
+        if m:
+            inc_path = os.path.normpath(os.path.join(base_dir, m.group(1)))
+            if inc_path in seen:
+                print(f"Error: circular .include of '{inc_path}'")
+                sys.exit(1)
+            seen.add(inc_path)
+            with open(inc_path, 'r') as f:
+                inc_lines = f.readlines()
+            out.extend(expand_includes(inc_lines, os.path.dirname(inc_path), seen))
+        else:
+            out.append(line)
+    return out
+
 
 def parse_reg(reg_str):
     if not reg_str.startswith('R'):
@@ -60,7 +86,22 @@ def assemble(lines):
         line = line.strip()
         if not line:
             continue
-            
+
+        # .define NAME VALUE -- a named constant (e.g. a symbol id or
+        # primitive id), usable anywhere a label is (LOADSYM/LOADI/JMP
+        # immediates). Unlike a label, it isn't tied to a PC address
+        # and doesn't consume an instruction slot.
+        m = re.match(r'\.define\s+(\S+)\s+(\S+)', line)
+        if m:
+            name, value_str = m.group(1), m.group(2)
+            if value_str.startswith('0x'):
+                labels[name] = int(value_str, 16)
+            elif value_str.startswith('0b'):
+                labels[name] = int(value_str, 2)
+            else:
+                labels[name] = int(value_str)
+            continue
+
         # Check for label
         if line.endswith(':'):
             label = line[:-1].strip()
@@ -170,7 +211,9 @@ def main():
     
     with open(args.input, 'r') as f:
         lines = f.readlines()
-        
+
+    lines = expand_includes(lines, os.path.dirname(os.path.abspath(args.input)))
+
     machine_code = assemble(lines)
     
     out_file = args.output

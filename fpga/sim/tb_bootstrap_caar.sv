@@ -27,7 +27,7 @@ module tb_bootstrap_caar;
 
     integer fd;
     integer n_bytes;
-    byte prog_bytes[0:1023];
+    byte prog_bytes[0:2047];
     integer n_words;
 
     initial begin
@@ -71,7 +71,7 @@ module tb_bootstrap_caar;
     end
 
     initial begin
-        #70_000_000; // watchdog (182-instruction upload alone takes ~63ms)
+        #110_000_000; // watchdog (292-instruction upload alone takes ~101ms)
         $display("WATCHDOG TIMEOUT: test hung");
         $finish;
     end

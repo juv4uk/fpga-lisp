@@ -493,6 +493,8 @@ FPGA фізично: виділяє cons-cell у BRAM, записує A в CAR �
 
 - ✅ **M23 — `caar`**: той самий патерн композиції, що й M20's `second` (два ланцюжкові виклики примітиву), але обидва — `car` замість `car`+`cdr`. `(caar '((x y) z)) => x`. [tb_bootstrap_caar.sv](../fpga/sim/tb_bootstrap_caar.sv), PASS.
 
+- ✅ **Технічний борг: `.include`/`.define` в асемблері**. Кожен bootstrap-тест дублював ~150-200 рядків `eval`+`lookup` і винаходив свої числові ID для `'quote`/`'cond` — саме та причина двох знайдених багів (M19, M22). `assembler.py` тепер підтримує `.include "path"` (рекурсивне вбудовування файлів) і `.define NAME VALUE` (іменована константа без прив'язки до PC-адреси). [fpga/asm/constants.inc](../fpga/asm/constants.inc) централізує `SYM_QUOTE`/`SYM_COND`/`PRIM_*`; [fpga/asm/eval_core.inc](../fpga/asm/eval_core.inc) — канонічна версія `eval`+`lookup` (найповніша, з M22: усі 5 примітивів + 1/2-параметричні closures). `bootstrap_caar_demo.asm` і `bootstrap_second_demo.asm` переписані на `.include` (58-66 рядків замість ~180-230) і досі проходять ті самі тестбенчі — підтверджена регресія.
+
 Кожен крок — окремий тестбенч (M12→M15), як і всі попередні. Після
 M15 маємо мінімальний робочий `eval` для підмножини `my-lisp`
 (atom/quote/cond/apply без `lambda`-визначення через `def`, без macro,

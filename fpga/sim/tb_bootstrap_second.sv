@@ -27,7 +27,7 @@ module tb_bootstrap_second;
 
     integer fd;
     integer n_bytes;
-    byte prog_bytes[0:1023];
+    byte prog_bytes[0:2047];
     integer n_words;
 
     initial begin
@@ -71,7 +71,7 @@ module tb_bootstrap_second;
     end
 
     initial begin
-        #85_000_000; // watchdog (224-instruction upload alone takes ~80ms)
+        #115_000_000; // watchdog (298-instruction upload alone takes ~103ms)
         $display("WATCHDOG TIMEOUT: test hung");
         $finish;
     end
