@@ -39,6 +39,7 @@ vvp tb.vvp
 | M21 | [`tb_bootstrap_not.sv`](../fpga/sim/tb_bootstrap_not.sv) | `not` from `core.my`: a closure body built from `cond` rather than a primitive application. `(not NIL) => TRUE`, `(not (quote a)) => NIL`. |
 | M22 | [`tb_bootstrap_pair.sv`](../fpga/sim/tb_bootstrap_pair.sv) | `pair` from `core.my`: the first two-parameter closure. `params` is a 2-element list, distinguished from the 1-arg shape via `ATOM`. `(pair 'a 'b) => (a b)`. |
 | M23 | [`tb_bootstrap_caar.sv`](../fpga/sim/tb_bootstrap_caar.sv) | `caar` from `core.my`: same chained-primitive shape as M20's `second`, but `car` of `car`. `(caar '((x y) z)) => x`. |
+| M24 | [`tb_bootstrap_triple.sv`](../fpga/sim/tb_bootstrap_triple.sv) | Closures generalized from a hardcoded two-parameter case (M22) to a real N-ary binding loop. `(lambda (a b c) (cons a (cons b c)))` applied to `('x 'y 'z) => (x y . z)` — first proof beyond N=2. |
 
 There is also [`tb_cons.sv`](../fpga/sim/tb_cons.sv), a unit-level test of `lisp_data_unit` alone (no bootloader, no control unit) — the very first thing that ever worked in this project.
 
@@ -49,7 +50,7 @@ No opcode is added lightly: the 4-bit opcode field has been full (16/16) since `
 No CI runs these yet; run the full set locally before trusting a change:
 
 ```bash
-for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair tb_bootstrap_caar; do
+for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair tb_bootstrap_caar tb_bootstrap_triple; do
   iverilog -g2012 -I fpga/rtl -o ${tb}.vvp fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
     fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
     fpga/rtl/control.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
@@ -86,6 +87,7 @@ done
 | M21 | [`tb_bootstrap_not.sv`](../fpga/sim/tb_bootstrap_not.sv) | `not` з `core.my`: тіло closure побудоване з `cond`, а не аплікації примітиву. `(not NIL) => TRUE`, `(not (quote a)) => NIL`. |
 | M22 | [`tb_bootstrap_pair.sv`](../fpga/sim/tb_bootstrap_pair.sv) | `pair` з `core.my`: перша двопараметрична closure. `params` — 2-елементний список, розрізнюваний через `ATOM`. `(pair 'a 'b) => (a b)`. |
 | M23 | [`tb_bootstrap_caar.sv`](../fpga/sim/tb_bootstrap_caar.sv) | `caar` з `core.my`: той самий патерн, що й M20's `second`, але `car` над `car`. `(caar '((x y) z)) => x`. |
+| M24 | [`tb_bootstrap_triple.sv`](../fpga/sim/tb_bootstrap_triple.sv) | Closures узагальнено з жорсткого двопараметричного випадку (M22) до справжнього N-арного циклу зв'язування. `(lambda (a b c) (cons a (cons b c)))`, застосована до `('x 'y 'z)`, дає `(x y . z)` — перше підтвердження для N>2. |
 
 Також є [`tb_cons.sv`](../fpga/sim/tb_cons.sv) — модульний тест лише `lisp_data_unit` (без bootloader, без control unit) — перше, що взагалі запрацювало в цьому проєкті.
 
@@ -121,6 +123,7 @@ Ausführung über [Icarus Verilog](http://iverilog.icarus.com/) — siehe Befehl
 | M21 | [`tb_bootstrap_not.sv`](../fpga/sim/tb_bootstrap_not.sv) | `not` aus `core.my`: ein Closure-Body aus `cond` statt einer Primitiv-Anwendung. |
 | M22 | [`tb_bootstrap_pair.sv`](../fpga/sim/tb_bootstrap_pair.sv) | `pair` aus `core.my`: die erste zweiparametrige Closure. |
 | M23 | [`tb_bootstrap_caar.sv`](../fpga/sim/tb_bootstrap_caar.sv) | `caar` aus `core.my`: gleiche Form wie M20s `second`, aber `car` von `car`. |
+| M24 | [`tb_bootstrap_triple.sv`](../fpga/sim/tb_bootstrap_triple.sv) | Closures von einem hartkodierten Zweiparameterfall (M22) auf eine echte N-äre Bindungsschleife verallgemeinert. `(lambda (a b c) (cons a (cons b c)))` angewandt auf `('x 'y 'z) => (x y . z)` — erster Beweis über N=2 hinaus. |
 
 Auch vorhanden: [`tb_cons.sv`](../fpga/sim/tb_cons.sv), ein reiner Unit-Test von `lisp_data_unit`.
 
