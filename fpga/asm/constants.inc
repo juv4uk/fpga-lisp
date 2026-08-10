@@ -22,3 +22,4 @@
 .define PRIM_CONS 2
 .define PRIM_ATOM 3
 .define PRIM_EQ   4
+.define PRIM_ADD  5
