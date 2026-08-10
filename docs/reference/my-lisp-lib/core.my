@@ -40,6 +40,22 @@
   (lambda (values)
     (car (cdr (cdr values)))))
 
+(def fourth
+  (lambda (values)
+    (car (cdr (cdr (cdr values))))))
+
+; cadddr — the classical car/cdr-composition name for the exact same
+; operation fourth already performs; kept as an alias (same closure
+; object, not a second definition) since real callers already spell it
+; this way (lib/reason.my had its own local (def cadddr ...) before
+; this, character-for-character identical to fourth's body).
+; cadddr — класична car/cdr-композиційна назва для тієї самої операції,
+; що вже виконує fourth; лишено як псевдонім (той самий об'єкт-closure,
+; не друге визначення), бо реальні виклики вже пишуть саме так
+; (lib/reason.my мав власний локальний (def cadddr ...) до цього,
+; посимвольно ідентичний тілу fourth).
+(def cadddr fourth)
+
 (def caar
   (lambda (values)
     (car (car values))))
@@ -47,6 +63,10 @@
 (def cadr
   (lambda (values)
     (car (cdr values))))
+
+(def cddr
+  (lambda (values)
+    (cdr (cdr values))))
 
 ; length/map/filter build their result via a tail-recursive `-onto`
 ; accumulator, same shape as reverse/reverse-onto below, instead of consing
@@ -245,6 +265,42 @@
            ((equal? (car a) (car b)) (equal? (cdr a) (cdr b)))
            (t '()))))))
 
+; nth/member?/assoc (G5 test: already expressible via existing means?)
+; — yes, same recursive-list-walk shape as length/reverse above.
+; Surfaced from the fpga-lisp session's assembler.my (2026-08-10), which
+; had independently reimplemented all three locally (as nth, contains?/
+; any-eq?, and assoc-str) because lib/core.my didn't have them — real,
+; evidenced duplication, not a speculative gap. A generalized assoc here
+; also matches the shape lib/meta-eval.my's own env-lookup already hand-
+; rolls for its specific (symbol . value) alist case.
+; nth/member?/assoc (G5-тест: уже виразне через наявне?) — так, та сама
+; форма рекурсивного обходу списку, що й length/reverse вище. Знахідка
+; з сесії fpga-lisp, assembler.my (2026-08-10), яка незалежно
+; перевинайшла всі три локально (як nth, contains?/any-eq? і assoc-str),
+; бо lib/core.my їх не мав — реальне, доказове дублювання, не
+; спекулятивна прогалина. Узагальнений assoc тут також збігається з
+; формою, яку lib/meta-eval.my's власний env-lookup уже вручну пише для
+; свого специфічного випадку asoc-списку (symbol . value).
+(def nth
+  (lambda (i lst)
+    (cond
+      ((eq i 0) (car lst))
+      (t (nth (- i 1) (cdr lst))))))
+
+(def member?
+  (lambda (item lst)
+    (cond
+      ((atom lst) '())
+      ((equal? item (car lst)) t)
+      (t (member? item (cdr lst))))))
+
+(def assoc
+  (lambda (key alist)
+    (cond
+      ((atom alist) '())
+      ((equal? key (car (car alist))) (car alist))
+      (t (assoc key (cdr alist))))))
+
 (defmacro let* (bindings body)
   (cond
     ((atom bindings) body)
@@ -295,3 +351,43 @@
       ((string-prefix? needle s) t)
       ((string-empty? s) '())
       (t (string-contains? needle (string-rest s))))))
+
+; quotient/mod (G5 test: already expressible via existing means?) — yes.
+; Unlike bitwise operations (AND/OR/XOR/shift — no primitive exposes a
+; number's binary representation at all, so those would genuinely need a
+; new Rust primitive), integer division and remainder for non-negative
+; integers fall straight out of repeated subtraction plus the comparison
+; primitives already here — no new Rust code, same class of gap as
+; string-length before it. Surfaced from the fpga-lisp session's
+; assembler.my (2026-08-10), which flagged the *absence* of bitwise/mod
+; but found it non-load-bearing for its own current needs; added here
+; anyway since it's genuinely useful independent of that one caller and
+; costs nothing new in Rust. Scope: non-negative `a`, positive `b` only —
+; no attempt at negative-number semantics (floor vs. truncate division
+; is a real, unresolved design choice for negatives, deliberately left
+; open rather than guessed at).
+; quotient/mod (G5-тест: уже виразне через наявне?) — так. На відміну
+; від бітових операцій (AND/OR/XOR/зсув — жоден примітив узагалі не
+; відкриває бінарне представлення числа, тож ті справді потребували б
+; нового Rust-примітиву), цілочисельне ділення й остача для
+; невід'ємних чисел випливають напряму з повторюваного віднімання й
+; наявних примітивів порівняння — без нового Rust-коду, той самий клас
+; прогалини, що й string-length раніше. Знахідка з сесії fpga-lisp,
+; assembler.my (2026-08-10), яка позначила ВІДСУТНІСТЬ bitwise/mod, але
+; визнала це не критичним для власних поточних потреб; додано тут усе
+; одно, бо це реально корисне незалежно від того одного викликача й не
+; коштує нічого нового в Rust. Обсяг: лише невід'ємне `a`, додатне `b`
+; — без спроби вгадати семантику для від'ємних чисел (floor чи truncate
+; ділення — реальний, невирішений вибір дизайну для них, свідомо
+; залишений відкритим, не вгаданий навмання).
+(def quotient
+  (lambda (a b)
+    (cond
+      ((< a b) 0)
+      (t (+ 1 (quotient (- a b) b))))))
+
+(def mod
+  (lambda (a b)
+    (cond
+      ((< a b) a)
+      (t (mod (- a b) b)))))
