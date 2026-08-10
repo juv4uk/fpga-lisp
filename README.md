@@ -43,6 +43,19 @@ python upload.py COM3 your_program.bin
 python monitor.py COM3 your_program.bin   # upload + post-HALT debug REPL
 ```
 
+### Resource usage (Gowin GW5A-25A)
+
+Measured from `impl/pnr/project.rpt.txt` after the current build — not estimated:
+
+| Resource | Total on device | Used | % |
+|---|---|---|---|
+| BSRAM (16 Kbit/block) | 56 | 24 (`imem`: 8, `heap`: 16) | 43% |
+| DSP (27×18 multiplier) | 28 | 0 | 0% |
+| LUT | 23,040 | ~1,363 | 6% |
+| Register (FF) | 23,280 | ~952 | 5% |
+
+Program memory (`imem`) and heap size were both chosen against this real BRAM budget, not picked arbitrarily — see [`docs/lisp-machine-plan.md`](docs/lisp-machine-plan.md) for the arithmetic. The 28 unused DSP blocks (each a 27×18 + 12×12 multiplier) are headroom for later work this core doesn't need yet: exact-rational arithmetic (numerator/denominator multiplication) and bignum limb multiplication both map naturally onto them instead of emulating multiplication in LUT logic.
+
 ### Repository layout
 
 - [`fpga/rtl/`](fpga/rtl) — SystemVerilog source: word format, heap, data unit, register file, decoder, control unit, UART, bootloader, top-level integration.
@@ -91,6 +104,19 @@ python upload.py COM3 your_program.bin
 python monitor.py COM3 your_program.bin   # заливка + debug REPL після HALT
 ```
 
+### Використання ресурсів (Gowin GW5A-25A)
+
+Виміряно з `impl/pnr/project.rpt.txt` після поточної збірки — не оцінка:
+
+| Ресурс | Всього на кристалі | Використано | % |
+|---|---|---|---|
+| BSRAM (16 Кбіт/блок) | 56 | 24 (`imem`: 8, `heap`: 16) | 43% |
+| DSP (множник 27×18) | 28 | 0 | 0% |
+| LUT | 23 040 | ~1 363 | 6% |
+| Register (FF) | 23 280 | ~952 | 5% |
+
+Розмір пам'яті програми (`imem`) і heap обрано саме під цей реальний BRAM-бюджет, а не довільно — розрахунок у [`docs/lisp-machine-plan.md`](docs/lisp-machine-plan.md). 28 невикористаних DSP-блоків (кожен — множник 27×18 + 12×12) — запас під те, що цьому ядру поки не потрібне: точна раціональна арифметика (множення чисельника/знаменника) і множення "лімбів" bignum природно лягають саме на них, а не на емуляцію множення через LUT-логіку.
+
 ### Структура репозиторію
 
 - [`fpga/rtl/`](fpga/rtl) — SystemVerilog: формат слова, heap, data unit, регістровий файл, декодер, control unit, UART, bootloader, top-level.
@@ -138,6 +164,19 @@ python assembler.py your_program.asm
 python upload.py COM3 your_program.bin
 python monitor.py COM3 your_program.bin   # Upload + Debug-REPL nach HALT
 ```
+
+### Ressourcennutzung (Gowin GW5A-25A)
+
+Gemessen aus `impl/pnr/project.rpt.txt` nach dem aktuellen Build — keine Schätzung:
+
+| Ressource | Gesamt auf dem Chip | Genutzt | % |
+|---|---|---|---|
+| BSRAM (16 Kbit/Block) | 56 | 24 (`imem`: 8, `heap`: 16) | 43% |
+| DSP (27×18-Multiplizierer) | 28 | 0 | 0% |
+| LUT | 23.040 | ~1.363 | 6% |
+| Register (FF) | 23.280 | ~952 | 5% |
+
+Programmspeicher (`imem`) und Heap-Groesse wurden nach diesem realen BRAM-Budget gewaehlt, nicht willkuerlich — Rechnung in [`docs/lisp-machine-plan.md`](docs/lisp-machine-plan.md). Die 28 ungenutzten DSP-Bloecke sind Reserve fuer spaetere Arbeit: exakte rationale Arithmetik und Bignum-Multiplikation passen natuerlich darauf, statt Multiplikation in LUT-Logik zu emulieren.
 
 ### Repository-Struktur
 
