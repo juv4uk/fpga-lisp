@@ -1,0 +1,360 @@
+; fpga-lisp's own assembler, written in my-lisp itself -- the "our machine
+; runs code written in our own language" principle applied to the toolchain,
+; not just the runtime. Ports assembler.py's parsing/label/.include/.define
+; logic faithfully; two honest, documented differences from the Python
+; version, both real capability gaps found in my-lisp while writing this
+; (see the synergy note sent to the my-lisp session on 2026-08-10):
+;
+;   1. No bitwise/mod primitives exist (only + - * / < > = and friends), so
+;      there's no way to mask an immediate to 16 bits the way assembler.py's
+;      `imm & 0xFFFF` does. Since every field occupies its own disjoint bit
+;      range, `+`/`*` alone reconstruct the same 32-bit word as long as the
+;      inputs are already well-formed (true for every .asm file in this
+;      repo) -- masking was defensive in Python, not load-bearing here.
+;   2. write-file can only write UTF-8 text (`std::fs::write(path, &str)`
+;      in the Rust host) -- there's no byte-level file I/O yet, so a raw
+;      .bin (arbitrary bytes 0-255) can't be produced honestly from my-lisp
+;      today. This assembler instead writes one decimal word per line as
+;      plain ASCII text (`.words` extension) -- every digit is ASCII, so
+;      write-file's UTF-8 constraint is a non-issue. A separate, tiny,
+;      *not this file's job* step turns that text into the real .bin
+;      consumed by the UART bootloader and $fread-based testbenches, same
+;      as this repo's Verilog toolchain already needs iverilog/gw_sh
+;      outside my-lisp/Rust. If my-lisp ever gains write-file-bytes (the
+;      recommendation sent upstream), step 2's workaround becomes obsolete
+;      and this file could write a real .bin directly.
+;
+; Usage: my-lisp.exe --allow-process=... is NOT needed (no process-run
+; here) -- just:
+;   my-lisp.exe assembler.my input.asm output.words
+; *argv* holds ("input.asm" "output.words") when run via my-lisp-cli.
+
+(load "docs/reference/my-lisp-lib/core.my")
+
+; ---------------------------------------------------------------------
+; Small helpers core.my doesn't already provide.
+; ---------------------------------------------------------------------
+
+(def nth
+  (lambda (i lst)
+    (cond ((= i 0) (car lst))
+          (t (nth (- i 1) (cdr lst))))))
+
+(def contains?
+  (lambda (item lst)
+    (cond ((atom lst) ())
+          ((eq (car lst) item) t)
+          (t (contains? item (cdr lst))))))
+
+(def assoc-str
+  (lambda (key alist)
+    (cond ((atom alist) ())
+          ((eq (car (car alist)) key) (car alist))
+          (t (assoc-str key (cdr alist))))))
+
+(def last-char
+  (lambda (s)
+    (cond ((= (string-length s) 1) s)
+          (t (last-char (string-rest s))))))
+
+(def string-drop-last
+  (lambda (s)
+    (cond ((= (string-length s) 1) "")
+          (t (string-append (string-first s) (string-drop-last (string-rest s)))))))
+
+(def ends-with-colon?
+  (lambda (tok) (eq (last-char tok) ":")))
+
+(def starts-with-quote?
+  (lambda (tok) (eq (string-first tok) "\"")))
+
+(def unquote
+  (lambda (tok) (string-drop-last (string-rest tok))))
+
+; ---------------------------------------------------------------------
+; Decimal rendering -- no number->string primitive exists, and no
+; division/mod primitive either, so digits are extracted by counting how
+; many times a power of ten subtracts out of the remainder (at most 9
+; subtractions per digit -- a fixed, small cost, not proportional to n).
+; ---------------------------------------------------------------------
+
+(def extract-digit
+  (lambda (n p)
+    (cond
+      ((< n p) (list 0 n))
+      (t (let ((rest (extract-digit (- n p) p)))
+           (list (+ 1 (car rest)) (second rest)))))))
+
+(def digit->string
+  (lambda (d) (nth d (list "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"))))
+
+(def number->string-onto
+  (lambda (n powers acc started)
+    (cond
+      ((atom powers) acc)
+      (t (let ((d+r (extract-digit n (car powers))))
+           (let ((d (car d+r)) (r (second d+r)))
+             (let ((now-started (cond (started t) ((> d 0) t) (t ()))))
+               (let ((new-acc (cond (now-started (string-append acc (digit->string d))) (t acc))))
+                 (number->string-onto r (cdr powers) new-acc now-started)))))))))
+
+(def DECIMAL-POWERS (list 1000000000 100000000 10000000 1000000 100000 10000 1000 100 10 1))
+
+(def number->string
+  (lambda (n)
+    (cond ((= n 0) "0")
+          (t (number->string-onto n DECIMAL-POWERS "" ())))))
+
+; Tail-recursive for the same reason expand-includes-onto is: a naive
+; (string-append (car strs) (join-with-newlines (cdr strs))) recursion
+; is non-tail and overflowed the stack at 285 elements during testing.
+(def join-with-newlines-onto
+  (lambda (strs acc)
+    (cond
+      ((atom strs) acc)
+      ((string-empty? acc) (join-with-newlines-onto (cdr strs) (car strs)))
+      (t (join-with-newlines-onto (cdr strs) (string-append acc (string-append "
+" (car strs))))))))
+
+(def join-with-newlines
+  (lambda (strs) (join-with-newlines-onto strs "")))
+
+; ---------------------------------------------------------------------
+; Line splitting / comment stripping / tokenizing.
+; ---------------------------------------------------------------------
+
+; Some .asm/.inc files in this repo are CRLF (git's autocrlf touched
+; them at some point), others LF-only -- both must work. A literal "\r"
+; string constant can't be written directly in my-lisp source for this:
+; during testing it triggered what looks like a real my-lisp reader bug
+; where an unrecognized backslash escape in one string literal corrupts
+; a *different*, later string literal's parsed content (single dropped
+; character) -- reported upstream 2026-08-10. Sidestepped by reading the
+; one CR byte needed for comparison from a tiny checked-in file instead
+; of writing "\r" as a literal (read-file's output isn't run through the
+; buggy escape-sequence path at all).
+(def CR (read-file "fpga/asm/.cr-byte"))
+
+(def strip-trailing-cr
+  (lambda (line)
+    (cond
+      ((string-empty? line) line)
+      ((eq (last-char line) CR) (string-drop-last line))
+      (t line))))
+
+(def split-lines-onto
+  (lambda (s cur acc)
+    (cond
+      ((string-empty? s) (cons (strip-trailing-cr cur) acc))
+      ((eq (string-first s) "
+") (split-lines-onto (string-rest s) "" (cons (strip-trailing-cr cur) acc)))
+      (t (split-lines-onto (string-rest s) (string-append cur (string-first s)) acc)))))
+
+(def split-lines
+  (lambda (s) (reverse (split-lines-onto s "" '()))))
+
+(def strip-comment-onto
+  (lambda (line acc)
+    (cond
+      ((string-empty? line) acc)
+      ((eq (string-first line) ";") acc)
+      ((eq (string-first line) "#") acc)
+      (t (strip-comment-onto (string-rest line) (string-append acc (string-first line)))))))
+
+(def strip-comment
+  (lambda (line) (strip-comment-onto line "")))
+
+(def is-delim?
+  (lambda (c) (cond ((eq c " ") t) ((eq c ",") t) (t ()))))
+
+(def flush-token
+  (lambda (cur acc) (cond ((string-empty? cur) acc) (t (cons cur acc)))))
+
+(def tokenize-onto
+  (lambda (line cur acc)
+    (cond
+      ((string-empty? line) (flush-token cur acc))
+      ((is-delim? (string-first line))
+       (tokenize-onto (string-rest line) "" (flush-token cur acc)))
+      (t (tokenize-onto (string-rest line) (string-append cur (string-first line)) acc)))))
+
+(def tokenize
+  (lambda (line) (reverse (tokenize-onto line "" '()))))
+
+; ---------------------------------------------------------------------
+; .include expansion. Paths are read relative to the current working
+; directory (every .asm/.inc file in this repo is written relative to
+; the repo root, and the assembler is always run from there) -- unlike
+; assembler.py's expand_includes, this does not resolve relative to the
+; including file's own directory. True today for every file in this
+; repo; documented here rather than silently assumed.
+; ---------------------------------------------------------------------
+
+(def include-line?
+  (lambda (line)
+    (let ((toks (tokenize (strip-comment line))))
+      (cond ((atom toks) ())
+            ((eq (car toks) ".include") t)
+            (t ())))))
+
+(def include-path
+  (lambda (line) (unquote (second (tokenize (strip-comment line))))))
+
+; Tail-recursive accumulator, same "-onto" shape lib/core.my's own
+; length-onto/map-onto use -- a naive (cons (car lines) (expand-includes
+; (cdr lines) ...)) recursion grows the Rust call stack one frame per
+; source line (non-tail, same anti-pattern core.my's own comments warn
+; about) and reliably overflowed the stack on this repo's real .asm
+; files (~350 lines once fpga/asm/*.inc are inlined) during testing.
+; acc always stays in reversed (most-recent-first) order, including
+; across a recursive descent into an .include'd file's own lines --
+; reversing it *inside* that recursive call (before splicing it back in
+; as the outer call's accumulator) was an earlier bug here: the nested
+; call's own reverse produced forward-order output, which then got
+; treated as a still-reversed accumulator by the caller and consed onto
+; further, corrupting the order of everything after the include. Only
+; the public expand-includes wrapper reverses, exactly once, at the end.
+(def expand-includes-onto
+  (lambda (lines seen acc)
+    (cond
+      ((atom lines) acc)
+      ((include-line? (car lines))
+       (let ((path (include-path (car lines))))
+         (cond
+           ((contains? path seen) (error-circular-include path))
+           (t (expand-includes-onto (cdr lines) seen
+                (expand-includes-onto (split-lines (read-file path)) (cons path seen) acc))))))
+      (t (expand-includes-onto (cdr lines) seen (cons (car lines) acc))))))
+
+(def expand-includes
+  (lambda (lines seen) (reverse (expand-includes-onto lines seen '()))))
+
+; ---------------------------------------------------------------------
+; Pass 1: labels, .define, and the ordered list of instruction token-lists.
+; ---------------------------------------------------------------------
+
+(def pass1-loop
+  (lambda (lines pc labels insns)
+    (cond
+      ((atom lines) (list labels (reverse insns)))
+      (t (let ((toks (tokenize (strip-comment (car lines)))))
+           (cond
+             ((atom toks) (pass1-loop (cdr lines) pc labels insns))
+
+             ((eq (car toks) ".define")
+              (pass1-loop (cdr lines) pc
+                          (cons (cons (second toks) (read (third toks))) labels)
+                          insns))
+
+             ((ends-with-colon? (car toks))
+              (let ((label-name (string-drop-last (car toks))) (rest-toks (cdr toks)))
+                (cond
+                  ((atom rest-toks)
+                   (pass1-loop (cdr lines) pc (cons (cons label-name pc) labels) insns))
+                  (t (pass1-loop (cdr lines) (+ pc 1)
+                                 (cons (cons label-name pc) labels)
+                                 (cons rest-toks insns))))))
+
+             (t (pass1-loop (cdr lines) (+ pc 1) labels (cons toks insns)))))))))
+
+(def pass1
+  (lambda (lines) (pass1-loop lines 0 '() '())))
+
+; ---------------------------------------------------------------------
+; Pass 2: encode each instruction's tokens into a 32-bit word.
+; ---------------------------------------------------------------------
+
+(def OPCODES (list
+  (cons "NOP" 0) (cons "LOADI" 1) (cons "MOV" 2) (cons "GETTAG" 2)
+  (cons "MAKEPRIM" 2) (cons "GETVAL" 2) (cons "CONS" 3) (cons "CAR" 4)
+  (cons "CDR" 5) (cons "ATOM" 6) (cons "EQ" 7) (cons "JMP" 8)
+  (cons "CALL" 8) (cons "RET" 8) (cons "LOADSYM" 9) (cons "JF" 10)
+  (cons "HALT" 11) (cons "OUT" 12) (cons "ADD" 13) (cons "SUB" 14) (cons "IN" 15)))
+
+(def POW16 65536)
+(def POW20 1048576)
+(def POW24 16777216)
+(def POW28 268435456)
+
+(def any-eq?
+  (lambda (v opts)
+    (cond ((atom opts) ())
+          ((eq v (car opts)) t)
+          (t (any-eq? v (cdr opts))))))
+
+(def parse-reg
+  (lambda (tok) (read (string-rest tok))))
+
+(def parse-imm
+  (lambda (tok labels)
+    (let ((found (assoc-str tok labels)))
+      (cond (found (cdr found))
+            (t (read tok))))))
+
+(def fourth
+  (lambda (toks) (car (cdr (cdr (cdr toks))))))
+
+(def encode-instr
+  (lambda (toks labels)
+    (let ((op (car toks)))
+      (let ((opcode (cdr (assoc-str op OPCODES))))
+        (let ((base (* opcode POW28)))
+          (cond
+            ((any-eq? op (list "NOP" "HALT")) base)
+
+            ((any-eq? op (list "LOADI" "LOADSYM"))
+             (+ base (+ (* (parse-reg (second toks)) POW24)
+                        (parse-imm (third toks) labels))))
+
+            ((any-eq? op (list "MOV" "CAR" "CDR"))
+             (+ base (+ (* (parse-reg (second toks)) POW24)
+                        (* (parse-reg (third toks)) POW20))))
+
+            ((any-eq? op (list "GETTAG" "MAKEPRIM" "GETVAL"))
+             (let ((mode (cond ((eq op "GETTAG") 1) ((eq op "MAKEPRIM") 2) (t 3))))
+               (+ base (+ (* (parse-reg (second toks)) POW24)
+                          (+ (* (parse-reg (third toks)) POW20) (* mode POW16))))))
+
+            ((any-eq? op (list "CONS" "ADD" "SUB" "EQ" "ATOM"))
+             (let ((rs2 (cond ((atom (cdr (cdr (cdr toks)))) 0) (t (parse-reg (fourth toks))))))
+               (+ base (+ (* (parse-reg (second toks)) POW24)
+                          (+ (* (parse-reg (third toks)) POW20) (* rs2 POW16))))))
+
+            ((eq op "OUT") (+ base (* (parse-reg (second toks)) POW20)))
+
+            ((eq op "IN") (+ base (* (parse-reg (second toks)) POW24)))
+
+            ((eq op "JMP") (+ base (parse-imm (second toks) labels)))
+
+            ((eq op "CALL")
+             (+ base (+ (* (parse-reg (second toks)) POW24) (parse-imm (third toks) labels))))
+
+            ((eq op "RET") (+ base (* (parse-reg (second toks)) POW20)))
+
+            ((eq op "JF")
+             (+ base (+ (* (parse-reg (second toks)) POW20) (parse-imm (third toks) labels))))
+
+            (t (error-unhandled-opcode op))))))))
+
+; ---------------------------------------------------------------------
+; Top level.
+; ---------------------------------------------------------------------
+
+(def assemble-file
+  (lambda (input-path output-path)
+    (let ((expanded (expand-includes (split-lines (read-file input-path)) '())))
+      (let ((labels+insns (pass1 expanded)))
+        (let ((labels (car labels+insns)) (insns (second labels+insns)))
+          (let ((words (map (lambda (toks) (encode-instr toks labels)) insns)))
+            ; `let`'s body is exactly one expression (no implicit begin),
+            ; so the three side-effecting steps are chained through
+            ; throwaway bindings instead of listed as separate forms.
+            (let ((_ (print (string-append "Assembled " (string-append (number->string (length words)) " instructions.")))))
+              (let ((_ (write-file output-path (string-append (join-with-newlines (map number->string words)) "
+"))))
+                (print (string-append "Wrote decimal words to " output-path))))))))))
+
+(cond
+  ((atom *argv*) (print "Usage: my-lisp.exe assembler.my input.asm output.words"))
+  ((atom (cdr *argv*)) (print "Usage: my-lisp.exe assembler.my input.asm output.words"))
+  (t (assemble-file (car *argv*) (second *argv*))))
