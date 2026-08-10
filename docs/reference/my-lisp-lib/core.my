@@ -356,38 +356,102 @@
 ; Unlike bitwise operations (AND/OR/XOR/shift — no primitive exposes a
 ; number's binary representation at all, so those would genuinely need a
 ; new Rust primitive), integer division and remainder for non-negative
-; integers fall straight out of repeated subtraction plus the comparison
-; primitives already here — no new Rust code, same class of gap as
-; string-length before it. Surfaced from the fpga-lisp session's
-; assembler.my (2026-08-10), which flagged the *absence* of bitwise/mod
-; but found it non-load-bearing for its own current needs; added here
-; anyway since it's genuinely useful independent of that one caller and
-; costs nothing new in Rust. Scope: non-negative `a`, positive `b` only —
-; no attempt at negative-number semantics (floor vs. truncate division
-; is a real, unresolved design choice for negatives, deliberately left
+; integers fall straight out of arithmetic and comparison primitives
+; already here — no new Rust code, same class of gap as string-length
+; before it. Surfaced from the fpga-lisp session's assembler.my
+; (2026-08-10), which flagged the *absence* of bitwise/mod but found it
+; non-load-bearing for its own current needs; added here anyway since
+; it's genuinely useful independent of that one caller and costs
+; nothing new in Rust. Scope: non-negative `a`, positive `b` only — no
+; attempt at negative-number semantics (floor vs. truncate division is
+; a real, unresolved design choice for negatives, deliberately left
 ; open rather than guessed at).
+;
+; First version (same-day, since replaced) recursed via repeated
+; subtraction — recursion depth equal to the *quotient itself*, not
+; its digit count. Fine for small examples (17/5, 100/10) but a real
+; correctness bug: `(number->string 9999999999999)` (below) needs
+; `(quotient 9999999999999 10)` — a quotient near 10^12 — which blew
+; the Rust host's stack outright. `my-lisp` has arbitrary-precision
+; exact integers (`bignum.rs`); a division whose cost scales with the
+; *value* rather than its *size* was never actually general-purpose.
+; Fixed here via doubling (`largest-chunk`: find the largest `b * 2^k`
+; that still fits `a`, subtract it, repeat) — the standard
+; binary-long-division trick, recursion depth O(log(a/b)) in both
+; `largest-chunk` and `quotient` itself, tested against a 13-digit
+; dividend without incident.
 ; quotient/mod (G5-тест: уже виразне через наявне?) — так. На відміну
 ; від бітових операцій (AND/OR/XOR/зсув — жоден примітив узагалі не
 ; відкриває бінарне представлення числа, тож ті справді потребували б
 ; нового Rust-примітиву), цілочисельне ділення й остача для
-; невід'ємних чисел випливають напряму з повторюваного віднімання й
-; наявних примітивів порівняння — без нового Rust-коду, той самий клас
+; невід'ємних чисел випливають напряму з наявних арифметичних і
+; порівняльних примітивів — без нового Rust-коду, той самий клас
 ; прогалини, що й string-length раніше. Знахідка з сесії fpga-lisp,
 ; assembler.my (2026-08-10), яка позначила ВІДСУТНІСТЬ bitwise/mod, але
 ; визнала це не критичним для власних поточних потреб; додано тут усе
 ; одно, бо це реально корисне незалежно від того одного викликача й не
 ; коштує нічого нового в Rust. Обсяг: лише невід'ємне `a`, додатне `b`
-; — без спроби вгадати семантику для від'ємних чисел (floor чи truncate
-; ділення — реальний, невирішений вибір дизайну для них, свідомо
-; залишений відкритим, не вгаданий навмання).
+; — без спроби вгадати семантику для від'ємних чисел.
+;
+; Перша версія (того самого дня, відтоді замінена) рекурсувала через
+; повторюване віднімання — глибина рекурсії дорівнювала САМІЙ ЧАСТЦІ,
+; не кількості її розрядів. Прийнятно для малих прикладів (17/5,
+; 100/10), але справжній баг коректності: `(number->string
+; 9999999999999)` (нижче) вимагав `(quotient 9999999999999 10)` —
+; частку близько 10^12 — що переповнило Rust-стек хоста напряму.
+; `my-lisp` має цілі числа довільної точності (`bignum.rs`); ділення,
+; вартість якого масштабується зі ЗНАЧЕННЯМ, а не РОЗМІРОМ, ніколи не
+; було справді загальноцільовим. Виправлено через подвоєння
+; (`largest-chunk`: знайти найбільше `b * 2^k`, що вміщується в `a`,
+; відняти, повторити) — стандартний трюк бінарного довгого ділення,
+; глибина рекурсії O(log(a/b)) як у `largest-chunk`, так і в самому
+; `quotient`, перевірено на 13-розрядному діленому без проблем.
+(def largest-chunk
+  (lambda (a b chunk mult)
+    (cond
+      ((< a (+ chunk chunk)) (cons chunk mult))
+      (t (largest-chunk a b (+ chunk chunk) (+ mult mult))))))
+
 (def quotient
   (lambda (a b)
     (cond
       ((< a b) 0)
-      (t (+ 1 (quotient (- a b) b))))))
+      (t (let ((chunk+mult (largest-chunk a b b 1)))
+           (+ (cdr chunk+mult) (quotient (- a (car chunk+mult)) b)))))))
 
 (def mod
   (lambda (a b)
+    (- a (* b (quotient a b)))))
+
+; number->string (G5 test: already expressible via existing means?) —
+; yes, now that quotient/mod exist. Surfaced from the fpga-lisp
+; session's assembler.my, which had its own version built on a fixed
+; DECIMAL-POWERS lookup table (limited to ~10 digits by construction —
+; the table itself has a fixed length). This one recurses via
+; quotient/mod instead, the same -onto accumulator shape as
+; length-onto/reverse-onto above, so it has no digit-count ceiling of
+; its own (bounded only by however large an exact integer this
+; implementation can represent at all). Scope: non-negative integers
+; only, same as quotient/mod themselves.
+; number->string (G5-тест: уже виразне через наявне?) — так, тепер,
+; коли є quotient/mod. Знахідка з сесії fpga-lisp, assembler.my, яка
+; мала власну версію на фіксованій таблиці DECIMAL-POWERS (обмежена
+; ~10 розрядами самою побудовою таблиці). Ця рекурсує через
+; quotient/mod, та сама -onto-форма акумулятора, що й length-onto/
+; reverse-onto вище, тож не має власної стелі розрядності. Обсяг:
+; лише невід'ємні цілі, як і самі quotient/mod.
+(def digit->string
+  (lambda (d)
+    (nth d '("0" "1" "2" "3" "4" "5" "6" "7" "8" "9"))))
+
+(def number->string-onto
+  (lambda (n acc)
     (cond
-      ((< a b) a)
-      (t (mod (- a b) b)))))
+      ((eq n 0) acc)
+      (t (number->string-onto (quotient n 10) (string-append (digit->string (mod n 10)) acc))))))
+
+(def number->string
+  (lambda (n)
+    (cond
+      ((eq n 0) "0")
+      (t (number->string-onto n "")))))
