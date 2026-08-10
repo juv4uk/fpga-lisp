@@ -144,13 +144,16 @@
 ; Some .asm/.inc files in this repo are CRLF (git's autocrlf touched
 ; them at some point), others LF-only -- both must work. A literal "\r"
 ; string constant can't be written directly in my-lisp source for this:
-; during testing it triggered what looks like a real my-lisp reader bug
-; where an unrecognized backslash escape in one string literal corrupts
-; a *different*, later string literal's parsed content (single dropped
-; character) -- reported upstream 2026-08-10. Sidestepped by reading the
-; one CR byte needed for comparison from a tiny checked-in file instead
-; of writing "\r" as a literal (read-file's output isn't run through the
-; buggy escape-sequence path at all).
+; my-lisp's reader only treats \n/\t/\"/\\ as real escapes (deliberate,
+; per the my-lisp session, 2026-08-10) -- any other letter after a
+; backslash silently drops the backslash and keeps the letter, so "\r"
+; parses as the ordinary one-character string "r", not carriage-return.
+; (First suspected this was a reader position/corruption bug -- it
+; wasn't; every "r" in the source, including the one in "core", was
+; being compared equal to what should have been CR and dropped. Traced
+; and corrected by the my-lisp session, not guessed here.) Sidestepped
+; by reading the one real CR byte needed for comparison from a tiny
+; checked-in file via read-file instead of writing "\r" as a literal.
 (def CR (read-file "fpga/asm/.cr-byte"))
 
 (def strip-trailing-cr
