@@ -11,3 +11,5 @@ docs/TangPrimer-25K-example/
 impl/
 
 fpga/boot/*.mem
+
+my-lisp.exe
