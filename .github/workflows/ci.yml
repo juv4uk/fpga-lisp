@@ -1,0 +1,69 @@
+name: Simulate testbenches
+
+# Runs every fpga/sim/tb_*.sv testbench listed in docs/testing.md's local
+# regression loop through Icarus Verilog on a real CI runner, instead of
+# relying on hand-tracing when a contributor's machine can't build the
+# toolchain locally (see the M28/M29 asm headers). Mirrors the pattern
+# my-lisp's cml sibling project already has running in GitHub Actions.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out fpga-lisp
+        uses: actions/checkout@v4
+
+      - name: Install Icarus Verilog
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Assemble programs that testbenches load via $fread
+        run: |
+          set -euo pipefail
+          for asm in bootstrap_add_demo bootstrap_caar_demo bootstrap_length_demo \
+                     bootstrap_length_onto_demo bootstrap_not_demo bootstrap_nullp_demo \
+                     bootstrap_pair_demo bootstrap_second_demo bootstrap_third_demo \
+                     bootstrap_triple_demo eval_all_primitives_demo eval_primitive_demo \
+                     setcdr_demo; do
+            python assembler.py "${asm}.asm"
+          done
+
+      - name: Build and run every testbench
+        run: |
+          set -euo pipefail
+          fail=0
+          for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call \
+                    tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply \
+                    tb_eval_primitive tb_error_recovery tb_eval_all_primitives \
+                    tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair \
+                    tb_bootstrap_caar tb_bootstrap_triple tb_bootstrap_third tb_setcdr \
+                    tb_bootstrap_add tb_bootstrap_length tb_bootstrap_length_onto; do
+            echo "::group::${tb}"
+            iverilog -g2012 -I fpga/rtl -o "${tb}.vvp" fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
+              fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
+              fpga/rtl/control.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
+              "fpga/sim/${tb}.sv"
+            out="$(vvp "${tb}.vvp")"
+            echo "$out"
+            if echo "$out" | grep -q "FAILED"; then
+              echo "::error::${tb} FAILED"
+              fail=1
+            elif ! echo "$out" | grep -qE "PASSED|Machine Halted"; then
+              echo "::error::${tb} produced no PASSED/FAILED verdict -- treating as failed"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$fail"
