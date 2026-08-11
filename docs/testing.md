@@ -17,6 +17,14 @@ iverilog -g2012 -I fpga/rtl -o tb.vvp \
 vvp tb.vvp
 ```
 
+By default no `.vcd` waveform is written — every testbench's
+`$dumpfile`/`$dumpvars` is gated behind a `+vcd` plusarg (`vvp tb.vvp
++vcd`). Added 2026-08-11 after measuring VCD writes (the full heap array
+dumped every cycle) as the dominant cost in every run, ~500KB-2MB/s,
+turning routine runs that should take seconds into minutes and making a
+slow-but-progressing run hard to distinguish from an actual hang. Pass
+`+vcd` only when you actually need the waveform for debugging.
+
 | Milestone | Testbench | What it proves |
 |---|---|---|
 | M03 | [`tb_machine.sv`](../fpga/sim/tb_machine.sv) | `(car (cons 'a 'b)) => a` through the full bootloader + control unit — the original "physical Lisp machine" milestone. |
