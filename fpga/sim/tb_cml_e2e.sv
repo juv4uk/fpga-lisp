@@ -25,17 +25,24 @@ module tb_cml_e2e;
     integer n_bytes;
     byte prog_bytes[0:1023];
     integer n_words;
+    string bin_file;
 
     initial begin
-        fd = $fopen("cml_e2e.bin", "rb");
+        // One generic testbench serves both the fixed smoke test and CML's
+        // fixture runner. · Один testbench для smoke і fixtures.
+        // Eine Testbench fuer Smoke-Test und Fixtures.
+        if (!$value$plusargs("bin_file=%s", bin_file)) begin
+            bin_file = "cml_e2e.bin";
+        end
+        fd = $fopen(bin_file, "rb");
         if (fd == 0) begin
-            $display("FAILED: could not open cml_e2e.bin");
+            $display("FAILED: could not open %s", bin_file);
             $finish;
         end
         n_bytes = $fread(prog_bytes, fd);
         $fclose(fd);
         n_words = n_bytes / 4;
-        $display("Loaded %0d bytes (%0d instructions) from cml_e2e.bin", n_bytes, n_words);
+        $display("Loaded %0d bytes (%0d instructions) from %s", n_bytes, n_words, bin_file);
 
         uart_rx = 1; // IDLE
         rst_n = 0;
@@ -53,6 +60,8 @@ module tb_cml_e2e;
 
         $display("Machine Halted.");
         $display("R15 = TAG:%0d VAL:%0d", u_mac.u_regs.regs[15][31:28], u_mac.u_regs.regs[15][27:0]);
+        $display("RESULT_TAG:%0d", u_mac.u_regs.regs[15][31:28]);
+        $display("RESULT_VAL:%0d", u_mac.u_regs.regs[15][27:0]);
 
         // TEST is defined as 7 in our compiler test
         if (u_mac.u_regs.regs[15][31:28] == TAG_SYMBOL && u_mac.u_regs.regs[15][27:0] == 28'd7) begin
