@@ -25,6 +25,7 @@ module tb_cml_e2e;
     integer n_bytes;
     byte prog_bytes[0:1023];
     integer n_words;
+    integer heap_i;
     string bin_file;
 
     initial begin
@@ -62,6 +63,18 @@ module tb_cml_e2e;
         $display("R15 = TAG:%0d VAL:%0d", u_mac.u_regs.regs[15][31:28], u_mac.u_regs.regs[15][27:0]);
         $display("RESULT_TAG:%0d", u_mac.u_regs.regs[15][31:28]);
         $display("RESULT_VAL:%0d", u_mac.u_regs.regs[15][27:0]);
+        $display("HEAP_COUNT:%0d", u_mac.u_ldu.hp);
+        // Stable host-facing heap dump for canonical structured decoding.
+        // Стабільний dump купи для канонічного декодування структур.
+        // Stabiler Heap-Dump fuer kanonische Strukturdekodierung.
+        for (heap_i = 0; heap_i < u_mac.u_ldu.hp; heap_i = heap_i + 1) begin
+            $display("HEAP:%0d:%0d:%0d:%0d:%0d",
+                     heap_i,
+                     u_mac.u_ldu.u_heap.car_ram[heap_i][31:28],
+                     u_mac.u_ldu.u_heap.car_ram[heap_i][27:0],
+                     u_mac.u_ldu.u_heap.cdr_ram[heap_i][31:28],
+                     u_mac.u_ldu.u_heap.cdr_ram[heap_i][27:0]);
+        end
 
         // TEST is defined as 7 in our compiler test
         if (u_mac.u_regs.regs[15][31:28] == TAG_SYMBOL && u_mac.u_regs.regs[15][27:0] == 28'd7) begin

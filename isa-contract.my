@@ -7,7 +7,7 @@
 ; releases and implementation-only RTL changes are independent.
 
 ((kind . fpga-lisp-isa)
- (version . (0 1))
+ (version . (0 2))
  (word . ((bits . 32) (tag-bits . 4) (payload-bits . 28)))
  (tags . ((fixnum . 0) (cons . 1) (symbol . 2) (nil . 3)
           (true . 4) (primitive . 5)))
@@ -28,7 +28,7 @@
     (setcdr . ((opcode . atom) (rs2 . nonzero) (scope . bootstrap-internal)))
     (call . ((opcode . jmp) (rd . nonzero) (rs1 . 0)))
     (ret . ((opcode . jmp) (rd . 0) (rs1 . nonzero)))))
- (registers . ((count . 16) (environment . 4) (stack . 11)
+ (registers . ((count . 16) (arguments . 0) (environment . 4) (stack . 11)
                (link . 14) (value . 15)))
  (primitive-ids . ((car . 0) (cdr . 1) (cons . 2)
                    (atom . 3) (eq . 4) (add . 5)))
@@ -41,4 +41,4 @@
  (truth . ((false-tags . (nil))
            (jf-also-treats-zero-fixnum-as-false . t)))
  (errors . ((ldu-error . halt-and-record-pc)))
- (notes . "LOADI and LOADSYM currently zero-extend a 16-bit immediate; SETCDR is not an eval-visible Lisp primitive."))
+ (notes . "Since ISA 0.2 R0 carries the complete evaluated argument list for dotted and bare-symbol lambda parameters. LOADI and LOADSYM zero-extend a 16-bit immediate; SETCDR is not an eval-visible Lisp primitive."))

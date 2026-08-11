@@ -2,7 +2,7 @@
 
 ## English
 
-[`isa-contract.my`](../isa-contract.my) is the machine-readable boundary owned by `fpga-lisp`. It records what assemblers and compilers may rely on without depending on RTL layout or a repository release number. Version `0.1` describes the already implemented ISA; introducing the manifest does not change machine behavior.
+[`isa-contract.my`](../isa-contract.my) is the machine-readable boundary owned by `fpga-lisp`. It records what assemblers and compilers may rely on without depending on RTL layout or a repository release number. Version `0.2` adds the backward-compatible `R0` complete-argument-list convention used by variadic compiled lambdas.
 
 A major version changes the meaning of an existing valid image or calling sequence. A minor version adds a backward-compatible tag, instruction mode, primitive ID, or capability. Refactoring RTL, changing synthesis constraints, or optimizing the heap without observable ISA change does not bump it.
 
@@ -12,7 +12,7 @@ The 16 physical opcodes are not the whole interface. `GETTAG`, `MAKEPRIM`, and `
 
 ## Українська
 
-[`isa-contract.my`](../isa-contract.my) — машинно-читана межа, якою володіє `fpga-lisp`. Вона фіксує, на що можуть покладатися assembler і compiler без залежності від внутрішнього RTL layout чи номера релізу репозиторію. Версія `0.1` описує вже реалізовану ISA; поява manifest не змінює поведінку машини.
+[`isa-contract.my`](../isa-contract.my) — машинно-читана межа, якою володіє `fpga-lisp`. Вона фіксує, на що можуть покладатися assembler і compiler без залежності від внутрішнього RTL layout чи номера релізу репозиторію. Версія `0.2` сумісно додає convention повного списку аргументів у `R0` для compiled variadic lambdas.
 
 Major-версія змінює значення раніше валідного image або calling sequence. Minor додає сумісний tag, instruction mode, primitive ID чи capability. Рефакторинг RTL, зміна synthesis constraints або оптимізація heap без спостережуваної зміни ISA версію не піднімає.
 
@@ -22,7 +22,7 @@ Major-версія змінює значення раніше валідного
 
 ## Deutsch
 
-[`isa-contract.my`](../isa-contract.my) ist die maschinenlesbare, von `fpga-lisp` verantwortete Grenze. Sie hält fest, worauf Assembler und Compiler bauen dürfen, ohne von internem RTL-Layout oder einer Repository-Releaseversion abzuhängen. Version `0.1` beschreibt die bereits implementierte ISA; das Manifest ändert kein Maschinenverhalten.
+[`isa-contract.my`](../isa-contract.my) ist die maschinenlesbare, von `fpga-lisp` verantwortete Grenze. Sie hält fest, worauf Assembler und Compiler bauen dürfen, ohne von internem RTL-Layout oder einer Repository-Releaseversion abzuhängen. Version `0.2` ergänzt kompatibel die vollständige Argumentliste in `R0` für kompilierte variadische Lambdas.
 
 Eine Major-Version ändert die Bedeutung eines zuvor gültigen Images oder einer Aufrufsequenz. Eine Minor-Version ergänzt kompatibel ein Tag, einen Instruktionsmodus, eine Primitive-ID oder Fähigkeit. RTL-Refactoring, geänderte Synthese-Constraints oder Heap-Optimierung ohne beobachtbare ISA-Änderung erhöhen sie nicht.
 
