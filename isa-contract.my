@@ -39,6 +39,7 @@
            (boot-length-byte-order . little-endian)
            (maximum-boot-words . 4095)))
  (truth . ((false-tags . (nil))
-           (jf-also-treats-zero-fixnum-as-false . t)))
+           (jf-also-treats-zero-fixnum-as-false . t)
+           (deviation-from-my-lisp-g8 . "my-lisp's G8 axiom (docs/language-core-axioms.md) says only NIL is falsy -- fixnum 0 is truthy. fpga-lisp's hardware JF opcode (fpga/rtl/control.sv, OP_JF branch) checks `tag==NIL || (tag==FIXNUM && value==0)`, so a `cond`/`if` test that evaluates to fixnum 0 is treated as false here, contrary to G8. Confirmed present as of fpga-lisp 447ee0e (2026-08-11); not yet fixed. Any compiler (cml) or interpreter targeting this ISA must not assume G8 holds for JF-driven branches -- either avoid emitting fixnum-0-as-truthy-condition code, or treat this as a known gap.")))
  (errors . ((ldu-error . halt-and-record-pc)))
  (notes . "Since ISA 0.2 R0 carries the complete evaluated argument list for dotted and bare-symbol lambda parameters. LOADI and LOADSYM zero-extend a 16-bit immediate; SETCDR is not an eval-visible Lisp primitive."))
