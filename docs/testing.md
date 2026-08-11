@@ -23,6 +23,7 @@ vvp tb.vvp
 | M05 | [`tb_atom_eq.sv`](../fpga/sim/tb_atom_eq.sv) | `ATOM` and `EQ`: `(atom 'a)`, `(atom (cons 'a 'a))`, `(eq 'a 'a)`. |
 | M06 | [`tb_list.sv`](../fpga/sim/tb_list.sv) | A 3-element list built as a `CONS` chain and walked back to `NIL` with `CAR`/`CDR`. |
 | M07 | [`tb_control.sv`](../fpga/sim/tb_control.sv) | `JMP`/`JF` branching: a countdown/count-up loop using `SUB`/`ADD`/`EQ`. |
+| G8 | [`tb_jf_truthiness.sv`](../fpga/sim/tb_jf_truthiness.sv) | ISA 1.0 truth contract: `JF` falls through for fixnum `0` and branches for `NIL`. |
 | M08 | [`tb_monitor.sv`](../fpga/sim/tb_monitor.sv) | The post-`HALT` binary debug monitor: `REG`, `HEAP`, `HP` commands over UART. |
 | M09 | [`tb_call.sv`](../fpga/sim/tb_call.sv) | `CALL`/`RET` subroutine calls (`JAL`/`JALR`-style reuse of `OP_JMP`). |
 | M10 | [`tb_env.sv`](../fpga/sim/tb_env.sv) | An alist environment `((x . 10) (y . 20))` and a hand-assembled `lookup` subroutine. |
@@ -52,10 +53,10 @@ There is also [`tb_cons.sv`](../fpga/sim/tb_cons.sv), a unit-level test of `lisp
 
 No opcode is added lightly: the 4-bit opcode field has been full (16/16) since `LOADSYM` claimed the unused `OP_JT` slot. `CALL`/`RET` (M09) and `GETTAG` (M12) both extend existing opcodes (`JMP`, `MOV`) by giving meaning to previously-ignored instruction fields, rather than consuming new slots — check the commit history and `lisp-machine-plan.md`'s status section before assuming a new instruction is the only way to add a capability.
 
-No CI runs these yet; run the full set locally before trusting a change:
+CI runs this regression set on every push and pull request. Run it locally before trusting a change:
 
 ```bash
-for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair tb_bootstrap_caar tb_bootstrap_triple tb_bootstrap_third tb_setcdr tb_bootstrap_add tb_bootstrap_length tb_bootstrap_length_onto; do
+for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_jf_truthiness tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair tb_bootstrap_caar tb_bootstrap_triple tb_bootstrap_third tb_setcdr tb_bootstrap_add tb_bootstrap_length tb_bootstrap_length_onto; do
   iverilog -g2012 -I fpga/rtl -o ${tb}.vvp fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
     fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
     fpga/rtl/control.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
@@ -76,6 +77,7 @@ done
 | M05 | [`tb_atom_eq.sv`](../fpga/sim/tb_atom_eq.sv) | `ATOM` і `EQ`: `(atom 'a)`, `(atom (cons 'a 'a))`, `(eq 'a 'a)`. |
 | M06 | [`tb_list.sv`](../fpga/sim/tb_list.sv) | 3-елементний список як ланцюжок `CONS`, пройдений назад до `NIL` через `CAR`/`CDR`. |
 | M07 | [`tb_control.sv`](../fpga/sim/tb_control.sv) | Розгалуження `JMP`/`JF`: цикл лічби вниз/вгору через `SUB`/`ADD`/`EQ`. |
+| G8 | [`tb_jf_truthiness.sv`](../fpga/sim/tb_jf_truthiness.sv) | Контракт істинності ISA 1.0: `JF` не переходить для fixnum `0`, але переходить для `NIL`. |
 | M08 | [`tb_monitor.sv`](../fpga/sim/tb_monitor.sv) | Бінарний debug-monitor після `HALT`: команди `REG`, `HEAP`, `HP` через UART. |
 | M09 | [`tb_call.sv`](../fpga/sim/tb_call.sv) | Виклики підпрограм `CALL`/`RET` (перевикористання `OP_JMP` у стилі `JAL`/`JALR`). |
 | M10 | [`tb_env.sv`](../fpga/sim/tb_env.sv) | Середовище-alist `((x . 10) (y . 20))` і рукописна підпрограма `lookup`. |
@@ -117,6 +119,7 @@ Ausführung über [Icarus Verilog](http://iverilog.icarus.com/) — siehe Befehl
 | M05 | [`tb_atom_eq.sv`](../fpga/sim/tb_atom_eq.sv) | `ATOM` und `EQ`. |
 | M06 | [`tb_list.sv`](../fpga/sim/tb_list.sv) | Eine 3-elementige Liste als `CONS`-Kette. |
 | M07 | [`tb_control.sv`](../fpga/sim/tb_control.sv) | `JMP`/`JF`-Verzweigung: eine Countdown/Count-up-Schleife. |
+| G8 | [`tb_jf_truthiness.sv`](../fpga/sim/tb_jf_truthiness.sv) | ISA-1.0-Wahrheitsvertrag: `JF` fällt bei Fixnum `0` durch und verzweigt bei `NIL`. |
 | M08 | [`tb_monitor.sv`](../fpga/sim/tb_monitor.sv) | Der binäre Debug-Monitor nach `HALT`. |
 | M09 | [`tb_call.sv`](../fpga/sim/tb_call.sv) | `CALL`/`RET`-Unterprogrammaufrufe. |
 | M10 | [`tb_env.sv`](../fpga/sim/tb_env.sv) | Eine Alist-Umgebung und eine `lookup`-Subroutine. |

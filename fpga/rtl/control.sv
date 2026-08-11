@@ -144,7 +144,7 @@ module control (
                             pc <= imm[11:0];
                         end
                     end else if (opcode == OP_JF) begin
-                        if (reg_rd_data_a.tag == TAG_NIL || (reg_rd_data_a.tag == TAG_FIXNUM && reg_rd_data_a.value == 0)) begin
+                        if (reg_rd_data_a.tag == TAG_NIL) begin
                             pc <= imm[11:0];
                         end else begin
                             pc <= pc + 1;

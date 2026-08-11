@@ -12,7 +12,7 @@ first — it saves you from re-deriving context another agent already has.
   else in the ecosystem may drift from what that repo says the language
   means.
 - **fpga-lisp** (this repo) — hardware implementation of the same language
-  on an FPGA. Tracks an ISA contract (`isa-contract.my`, version 0.2)
+  on an FPGA. Tracks an ISA contract (`isa-contract.my`, version 1.0)
   against my-lisp's semantics. Plan queue: `docs/lisp-machine-plan.md`'s
   item 24 "recursion" (letrec-in-closures) is currently in progress and
   comes *before* item 25 "rational/bignum" — not a separate later item.
@@ -45,15 +45,11 @@ Read it before assuming anything here is stale or unverified. my-lisp's own
 `ecosystem-status.my` (a flat alist, `(read-file "ecosystem-status.my")`) is
 the equivalent machine-readable view for the whole ecosystem.
 
-## Known deviation from my-lisp's G8 axiom
+## my-lisp G8 truth semantics
 
-G8 says only `Nil` is falsy — fixnum `0` is truthy. fpga-lisp's hardware
-`JF` opcode (`fpga/rtl/control.sv`'s `OP_JF` branch) instead treats
-`tag==NIL || (tag==FIXNUM && value==0)` as false — see
-`isa-contract.my`'s `truth.deviation-from-my-lisp-g8` and
-`docs/isa-contract.md`. Confirmed present as of `447ee0e`, not yet fixed.
-Any `cond`/`if` test evaluating to fixnum `0` branches incorrectly relative
-to G8 — account for this rather than assuming G8 holds end to end.
+ISA 1.0 makes `JF` branch only on `NIL`, matching my-lisp's G8 axiom.
+Fixnum `0` is truthy. [`fpga/sim/tb_jf_truthiness.sv`](fpga/sim/tb_jf_truthiness.sv)
+checks both sides of this contract directly through the bootloader and RTL.
 
 ## Conventions worth knowing before editing
 
