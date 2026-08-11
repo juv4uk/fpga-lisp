@@ -26,8 +26,10 @@ module tb_env;
     end
 
     initial begin
-        $dumpfile("tb_env.vcd");
-        $dumpvars(0, tb_env);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_env.vcd");
+            $dumpvars(0, tb_env);
+        end
 
         uart_rx = 1; // IDLE
         rst_n = 0;

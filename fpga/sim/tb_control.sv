@@ -25,8 +25,10 @@ module tb_control;
     end
 
     initial begin
-        $dumpfile("tb_control.vcd");
-        $dumpvars(0, tb_control);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_control.vcd");
+            $dumpvars(0, tb_control);
+        end
 
         uart_rx = 1; // IDLE
         rst_n = 0;

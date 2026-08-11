@@ -31,8 +31,10 @@ module tb_bootstrap_second;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_bootstrap_second.vcd");
-        $dumpvars(0, tb_bootstrap_second);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_bootstrap_second.vcd");
+            $dumpvars(0, tb_bootstrap_second);
+        end
 
         fd = $fopen("bootstrap_second_demo.bin", "rb");
         if (fd == 0) begin

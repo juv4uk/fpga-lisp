@@ -28,8 +28,10 @@ module tb_lambda;
     end
 
     initial begin
-        $dumpfile("tb_lambda.vcd");
-        $dumpvars(0, tb_lambda);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_lambda.vcd");
+            $dumpvars(0, tb_lambda);
+        end
 
         uart_rx = 1; // IDLE
         rst_n = 0;

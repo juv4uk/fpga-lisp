@@ -32,8 +32,10 @@ module tb_bootstrap_not;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_bootstrap_not.vcd");
-        $dumpvars(0, tb_bootstrap_not);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_bootstrap_not.vcd");
+            $dumpvars(0, tb_bootstrap_not);
+        end
 
         fd = $fopen("bootstrap_not_demo.bin", "rb");
         if (fd == 0) begin

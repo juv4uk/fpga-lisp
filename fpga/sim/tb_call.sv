@@ -26,8 +26,10 @@ module tb_call;
     end
 
     initial begin
-        $dumpfile("tb_call.vcd");
-        $dumpvars(0, tb_call);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_call.vcd");
+            $dumpvars(0, tb_call);
+        end
 
         uart_rx = 1; // IDLE
         rst_n = 0;

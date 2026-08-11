@@ -33,8 +33,10 @@ module tb_eval_apply;
     end
 
     initial begin
-        $dumpfile("tb_eval_apply.vcd");
-        $dumpvars(0, tb_eval_apply);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_eval_apply.vcd");
+            $dumpvars(0, tb_eval_apply);
+        end
 
         uart_rx = 1; // IDLE
         rst_n = 0;

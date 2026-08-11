@@ -31,8 +31,10 @@ module tb_bootstrap_third;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_bootstrap_third.vcd");
-        $dumpvars(0, tb_bootstrap_third);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_bootstrap_third.vcd");
+            $dumpvars(0, tb_bootstrap_third);
+        end
 
         fd = $fopen("bootstrap_third_demo.bin", "rb");
         if (fd == 0) begin

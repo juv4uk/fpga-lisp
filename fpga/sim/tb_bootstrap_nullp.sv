@@ -36,8 +36,10 @@ module tb_bootstrap_nullp;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_bootstrap_nullp.vcd");
-        $dumpvars(0, tb_bootstrap_nullp);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_bootstrap_nullp.vcd");
+            $dumpvars(0, tb_bootstrap_nullp);
+        end
 
         fd = $fopen("bootstrap_nullp_demo.bin", "rb");
         if (fd == 0) begin

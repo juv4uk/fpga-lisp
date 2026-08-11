@@ -37,8 +37,10 @@ module tb_eval_all_primitives;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_eval_all_primitives.vcd");
-        $dumpvars(0, tb_eval_all_primitives);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_eval_all_primitives.vcd");
+            $dumpvars(0, tb_eval_all_primitives);
+        end
 
         fd = $fopen("eval_all_primitives_demo.bin", "rb");
         if (fd == 0) begin

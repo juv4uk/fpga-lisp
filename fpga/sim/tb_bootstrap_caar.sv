@@ -31,8 +31,10 @@ module tb_bootstrap_caar;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_bootstrap_caar.vcd");
-        $dumpvars(0, tb_bootstrap_caar);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_bootstrap_caar.vcd");
+            $dumpvars(0, tb_bootstrap_caar);
+        end
 
         fd = $fopen("bootstrap_caar_demo.bin", "rb");
         if (fd == 0) begin

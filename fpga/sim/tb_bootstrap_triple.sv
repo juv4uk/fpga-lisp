@@ -34,8 +34,10 @@ module tb_bootstrap_triple;
     lisp_word_t outer_car, outer_cdr, inner_car, inner_cdr;
 
     initial begin
-        $dumpfile("tb_bootstrap_triple.vcd");
-        $dumpvars(0, tb_bootstrap_triple);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_bootstrap_triple.vcd");
+            $dumpvars(0, tb_bootstrap_triple);
+        end
 
         fd = $fopen("bootstrap_triple_demo.bin", "rb");
         if (fd == 0) begin

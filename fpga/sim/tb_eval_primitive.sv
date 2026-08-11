@@ -37,8 +37,10 @@ module tb_eval_primitive;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_eval_primitive.vcd");
-        $dumpvars(0, tb_eval_primitive);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_eval_primitive.vcd");
+            $dumpvars(0, tb_eval_primitive);
+        end
 
         fd = $fopen("eval_primitive_demo.bin", "rb");
         if (fd == 0) begin

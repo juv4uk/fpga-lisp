@@ -35,8 +35,10 @@ module tb_bootstrap_length;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_bootstrap_length.vcd");
-        $dumpvars(0, tb_bootstrap_length);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_bootstrap_length.vcd");
+            $dumpvars(0, tb_bootstrap_length);
+        end
 
         fd = $fopen("bootstrap_length_demo.bin", "rb");
         if (fd == 0) begin

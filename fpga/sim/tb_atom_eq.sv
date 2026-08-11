@@ -23,8 +23,10 @@ module tb_atom_eq;
     end
 
     initial begin
-        $dumpfile("tb_atom_eq.vcd");
-        $dumpvars(0, tb_atom_eq);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_atom_eq.vcd");
+            $dumpvars(0, tb_atom_eq);
+        end
 
         uart_rx = 1; // IDLE
         rst_n = 0;

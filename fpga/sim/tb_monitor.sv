@@ -27,8 +27,10 @@ module tb_monitor;
     integer errors;
 
     initial begin
-        $dumpfile("tb_monitor.vcd");
-        $dumpvars(0, tb_monitor);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_monitor.vcd");
+            $dumpvars(0, tb_monitor);
+        end
 
         errors = 0;
         uart_rx = 1; // IDLE

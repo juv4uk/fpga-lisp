@@ -32,8 +32,10 @@ module tb_error_recovery;
     integer errors;
 
     initial begin
-        $dumpfile("tb_error_recovery.vcd");
-        $dumpvars(0, tb_error_recovery);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_error_recovery.vcd");
+            $dumpvars(0, tb_error_recovery);
+        end
 
         errors = 0;
         uart_rx = 1; // IDLE

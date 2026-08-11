@@ -37,8 +37,10 @@ module tb_cons;
     
     // Test sequence
     initial begin
-        $dumpfile("tb_cons.vcd");
-        $dumpvars(0, tb_cons);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_cons.vcd");
+            $dumpvars(0, tb_cons);
+        end
         
         rst_n = 0;
         cmd_cons = 0;

@@ -31,8 +31,10 @@ module tb_bootstrap_add;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_bootstrap_add.vcd");
-        $dumpvars(0, tb_bootstrap_add);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_bootstrap_add.vcd");
+            $dumpvars(0, tb_bootstrap_add);
+        end
 
         fd = $fopen("bootstrap_add_demo.bin", "rb");
         if (fd == 0) begin

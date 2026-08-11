@@ -38,8 +38,10 @@ module tb_bootstrap_length_onto;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_bootstrap_length_onto.vcd");
-        $dumpvars(0, tb_bootstrap_length_onto);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_bootstrap_length_onto.vcd");
+            $dumpvars(0, tb_bootstrap_length_onto);
+        end
 
         fd = $fopen("bootstrap_length_onto_demo.bin", "rb");
         if (fd == 0) begin

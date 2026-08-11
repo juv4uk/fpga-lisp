@@ -24,8 +24,10 @@ module tb_list;
     end
 
     initial begin
-        $dumpfile("tb_list.vcd");
-        $dumpvars(0, tb_list);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_list.vcd");
+            $dumpvars(0, tb_list);
+        end
 
         uart_rx = 1; // IDLE
         rst_n = 0;

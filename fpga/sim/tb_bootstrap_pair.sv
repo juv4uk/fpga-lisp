@@ -37,8 +37,10 @@ module tb_bootstrap_pair;
     lisp_word_t outer_car, outer_cdr, inner_car, inner_cdr;
 
     initial begin
-        $dumpfile("tb_bootstrap_pair.vcd");
-        $dumpvars(0, tb_bootstrap_pair);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_bootstrap_pair.vcd");
+            $dumpvars(0, tb_bootstrap_pair);
+        end
 
         fd = $fopen("bootstrap_pair_demo.bin", "rb");
         if (fd == 0) begin

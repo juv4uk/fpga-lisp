@@ -22,8 +22,10 @@ module tb_machine;
     end
     
     initial begin
-        $dumpfile("tb_machine.vcd");
-        $dumpvars(0, tb_machine);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_machine.vcd");
+            $dumpvars(0, tb_machine);
+        end
         
         uart_rx = 1; // Default to IDLE state
         rst_n = 0;

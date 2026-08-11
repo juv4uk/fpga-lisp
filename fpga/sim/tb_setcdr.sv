@@ -43,8 +43,10 @@ module tb_setcdr;
     integer n_words;
 
     initial begin
-        $dumpfile("tb_setcdr.vcd");
-        $dumpvars(0, tb_setcdr);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_setcdr.vcd");
+            $dumpvars(0, tb_setcdr);
+        end
 
         fd = $fopen("setcdr_demo.bin", "rb");
         if (fd == 0) begin

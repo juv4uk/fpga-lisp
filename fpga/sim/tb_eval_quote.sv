@@ -28,8 +28,10 @@ module tb_eval_quote;
     end
 
     initial begin
-        $dumpfile("tb_eval_quote.vcd");
-        $dumpvars(0, tb_eval_quote);
+        if ($test$plusargs("vcd")) begin
+            $dumpfile("tb_eval_quote.vcd");
+            $dumpvars(0, tb_eval_quote);
+        end
 
         uart_rx = 1; // IDLE
         rst_n = 0;
