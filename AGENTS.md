@@ -16,11 +16,17 @@ first — it saves you from re-deriving context another agent already has.
   against my-lisp's semantics. Plan queue: `docs/lisp-machine-plan.md`'s
   item 24 "recursion" (letrec-in-closures) is currently in progress and
   comes *before* item 25 "rational/bignum" — not a separate later item.
-  M28 (`447ee0e`) proved the `letrec` mechanism itself (placeholder-pair +
-  `SETCDR` backpatch) with a simplified non-tail-recursive `length`. M29
-  (WIP, `cec7889`) is bootstrapping the canonical tail-recursive,
-  mutually-recursive `length`/`length-onto` pair `core.my` actually uses —
-  needed before `reverse`/`append`/`map` can bootstrap. CI
+  M28 (`447ee0e`) was claimed to prove the `letrec` mechanism
+  (placeholder-pair + `SETCDR` backpatch) via a simplified non-tail-recursive
+  `length`, but that was based on hand-tracing only. **The first real
+  `iverilog` run (2026-08-11) shows M28 actually FAILS**: it halts (not a
+  hang) but `R9` leaks the param symbol `'lst` instead of `FIXNUM 3`, and
+  the software call stack (`R11`) is non-`NIL` at halt — an unbalanced
+  push/pop only reachable at real 3-deep recursion, root cause not yet
+  found. See `docs/lisp-machine-plan.md`'s M28 entry before trusting
+  anything about `letrec` working here. M29 (WIP, `cec7889`, canonical
+  tail-recursive `length`/`length-onto`) is unverified and blocked on the
+  same underlying bug. CI
   (`.github/workflows/ci.yml`) runs every `fpga/sim/tb_*.sv` testbench
   through real `iverilog` on push/PR, mirroring cml's setup.
 - **cml** — an AOT compiler from my-lisp source to fpga-lisp's ISA. Tracks

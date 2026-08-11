@@ -35,3 +35,15 @@ an error; add a new entry instead of restating one.
   answerable from committed files; anchor claims to commit sha/file:line
   instead of restating content; don't block on a reply unless there's a
   real dependency.
+- **CORRECTION to the M28 entry above**: installed Python + `iverilog`
+  locally this session (disk space, previously the blocker, turned out
+  to be resolved — 465GB free) and ran M28 for real for the first time.
+  It does NOT pass: halts normally (not a hang, `$finish` at simulated
+  time 113021940, well under the 150M watchdog) but `R9` = `TAG:SYMBOL
+  VAL:920` (leaked param symbol `'lst`) instead of `TAG:FIXNUM VAL:3`.
+  A full 16-register dump at halt shows `R11` (software call stack) is
+  non-`NIL` — an unbalanced push/pop, only reachable at real 3-deep
+  self-recursion (no earlier milestone exercised that depth). Root
+  cause not yet isolated. Treat the earlier "M28: letrec mechanism
+  proven" entry as retracted until a real passing run is recorded here
+  with a commit sha. M29 is blocked on the same bug.
