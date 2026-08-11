@@ -41,8 +41,11 @@ vvp tb.vvp
 | M23 | [`tb_bootstrap_caar.sv`](../fpga/sim/tb_bootstrap_caar.sv) | `caar` from `core.my`: same chained-primitive shape as M20's `second`, but `car` of `car`. `(caar '((x y) z)) => x`. |
 | M24 | [`tb_bootstrap_triple.sv`](../fpga/sim/tb_bootstrap_triple.sv) | Closures generalized from a hardcoded two-parameter case (M22) to a real N-ary binding loop. `(lambda (a b c) (cons a (cons b c)))` applied to `('x 'y 'z) => (x y . z)` — first proof beyond N=2. |
 | M25 | [`tb_bootstrap_third.sv`](../fpga/sim/tb_bootstrap_third.sv) | `third` from `core.my`: same chained-primitive shape as M20's `second`/M23's `caar`, one level deeper (`car` of `cdr` of `cdr`). `(third '(w x y z)) => x` (third element). |
+| M26 | [`tb_setcdr.sv`](../fpga/sim/tb_setcdr.sv) | `SETCDR` (`ATOM` with `rs2 != 0`): an internal, bootstrap-only capability that mutates an existing cons cell's cdr in place rather than allocating a new one — the one deliberate exception to "the heap never mutates a cell after `CONS` allocates it." Confirms the mutated field changes on the heap (not just a register) and the untouched field doesn't. |
+| M27 | [`tb_bootstrap_add.sv`](../fpga/sim/tb_bootstrap_add.sv) | Exposes hardware `ADD` as a callable primitive through `eval`, the same pattern as M16/M18's `car`/`cdr`/`cons`/`atom`/`eq` — a prerequisite for any self-recursive `core.my` function using `+`. `(plus 3 4) => 7`. |
+| M28 | [`tb_bootstrap_length.sv`](../fpga/sim/tb_bootstrap_length.sv) | The first self-referential closure, proving the `letrec`-style mechanism (placeholder-pair-then-`SETCDR`-backpatch: a placeholder `(name . NIL)` is extended into a fresh env frame, a closure is built capturing that same frame, then `SETCDR` backpatches the placeholder's cdr to the closure — producing a deliberate `ph_pair -> closure -> new_env -> ph_pair` cycle so the body's own `lookup` finds itself), closing the gap M25 flagged. Uses a simplified non-tail-recursive `length` (not the canonical `core.my` tail-recursive `length`/`length-onto` pair — see the `.asm` header). `(length '(a b c)) => 3`, matching `conformance.my` fixture #37. |
 
-There is also [`tb_cons.sv`](../fpga/sim/tb_cons.sv), a unit-level test of `lisp_data_unit` alone (no bootloader, no control unit) — the very first thing that ever worked in this project.
+There is also [`tb_cons.sv`](../fpga/sim/tb_cons.sv), a unit-level test of `lisp_data_unit` alone (no bootloader, no control unit) — the very first thing that ever worked in this project. [`tb_cml_e2e.sv`](../fpga/sim/tb_cml_e2e.sv) is a separate general-purpose E2E harness for the external CML compiler project, not tied to a single milestone: it loads an arbitrary `.bin` via `+bin_file=`, runs it to `halted`, and prints `RESULT_TAG`/`RESULT_VAL`/`RESULT_ERROR`/`RESULT_ERROR_PC` plus a full `HEAP:` dump for canonical result decoding on CML's side.
 
 `tb_eval_primitive.sv` is the one exception to "hand-transcribed hex words in the testbench": at 190 instructions, hand-transcription was too error-prone, so it reads `eval_primitive_demo.bin` directly via `$fread`. Assemble it first: `python assembler.py eval_primitive_demo.asm` (the `.bin` is a gitignored build artifact, not committed).
 
@@ -51,7 +54,7 @@ No opcode is added lightly: the 4-bit opcode field has been full (16/16) since `
 No CI runs these yet; run the full set locally before trusting a change:
 
 ```bash
-for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair tb_bootstrap_caar tb_bootstrap_triple tb_bootstrap_third; do
+for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair tb_bootstrap_caar tb_bootstrap_triple tb_bootstrap_third tb_setcdr tb_bootstrap_add tb_bootstrap_length; do
   iverilog -g2012 -I fpga/rtl -o ${tb}.vvp fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
     fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
     fpga/rtl/control.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
@@ -90,8 +93,11 @@ done
 | M23 | [`tb_bootstrap_caar.sv`](../fpga/sim/tb_bootstrap_caar.sv) | `caar` з `core.my`: той самий патерн, що й M20's `second`, але `car` над `car`. `(caar '((x y) z)) => x`. |
 | M24 | [`tb_bootstrap_triple.sv`](../fpga/sim/tb_bootstrap_triple.sv) | Closures узагальнено з жорсткого двопараметричного випадку (M22) до справжнього N-арного циклу зв'язування. `(lambda (a b c) (cons a (cons b c)))`, застосована до `('x 'y 'z)`, дає `(x y . z)` — перше підтвердження для N>2. |
 | M25 | [`tb_bootstrap_third.sv`](../fpga/sim/tb_bootstrap_third.sv) | `third` з `core.my`: той самий патерн, що й M20's `second`/M23's `caar`, ще на крок глибший (`car` над `cdr` над `cdr`). `(third '(w x y z)) => x` (третій елемент). |
+| M26 | [`tb_setcdr.sv`](../fpga/sim/tb_setcdr.sv) | `SETCDR` (`ATOM` з `rs2 != 0`): внутрішня, лише для bootstrap, здатність мутувати cdr наявної cons-комірки на місці, замість виділення нової — єдиний свідомий виняток з правила "heap ніколи не мутується після виділення `CONS`". |
+| M27 | [`tb_bootstrap_add.sv`](../fpga/sim/tb_bootstrap_add.sv) | Апаратний `ADD` як callable-примітив через `eval`, той самий патерн, що й M16/M18 для `car`/`cdr`/`cons`/`atom`/`eq` — передумова для будь-якої самореференційної функції `core.my`, що використовує `+`. `(plus 3 4) => 7`. |
+| M28 | [`tb_bootstrap_length.sv`](../fpga/sim/tb_bootstrap_length.sv) | Перша самореференційна closure: `length` з `core.my`, побудована через `letrec`-подібний механізм placeholder-пари + `SETCDR`-backpatch (placeholder `(name . NIL)` розширює нову env-рамку, closure будується з цією рамкою як captured env, тоді `SETCDR` дозаписує placeholder на реальну closure — свідомий цикл `ph_pair -> closure -> new_env -> ph_pair`, завдяки якому тіло знаходить саме себе через `lookup`). Закриває прогалину, позначену в M25. `(length '(a b c)) => 3`. |
 
-Також є [`tb_cons.sv`](../fpga/sim/tb_cons.sv) — модульний тест лише `lisp_data_unit` (без bootloader, без control unit) — перше, що взагалі запрацювало в цьому проєкті.
+Також є [`tb_cons.sv`](../fpga/sim/tb_cons.sv) — модульний тест лише `lisp_data_unit` (без bootloader, без control unit) — перше, що взагалі запрацювало в цьому проєкті. [`tb_cml_e2e.sv`](../fpga/sim/tb_cml_e2e.sv) — окремий загальний E2E-харнес для зовнішнього проєкту CML, не прив'язаний до конкретного milestone: приймає довільний `.bin` через `+bin_file=`, ганяє до `halted` і друкує `RESULT_TAG`/`RESULT_VAL`/`RESULT_ERROR`/`RESULT_ERROR_PC` і повний `HEAP:` дамп для канонічного декодування на боці CML.
 
 Жоден опкод не додається легковажно: 4-бітне поле опкоду зайняте (16/16) з моменту, коли `LOADSYM` зайняв вільний слот `OP_JT`. `CALL`/`RET` (M09) і `GETTAG` (M12) розширюють наявні опкоди (`JMP`, `MOV`), надаючи сенс раніше ігнорованим полям інструкції, а не займають нові слоти — перевір історію комітів і розділ статусу в `lisp-machine-plan.md`, перш ніж припускати, що новий опкод — єдиний спосіб додати можливість.
 
@@ -127,6 +133,9 @@ Ausführung über [Icarus Verilog](http://iverilog.icarus.com/) — siehe Befehl
 | M23 | [`tb_bootstrap_caar.sv`](../fpga/sim/tb_bootstrap_caar.sv) | `caar` aus `core.my`: gleiche Form wie M20s `second`, aber `car` von `car`. |
 | M24 | [`tb_bootstrap_triple.sv`](../fpga/sim/tb_bootstrap_triple.sv) | Closures von einem hartkodierten Zweiparameterfall (M22) auf eine echte N-äre Bindungsschleife verallgemeinert. `(lambda (a b c) (cons a (cons b c)))` angewandt auf `('x 'y 'z) => (x y . z)` — erster Beweis über N=2 hinaus. |
 | M25 | [`tb_bootstrap_third.sv`](../fpga/sim/tb_bootstrap_third.sv) | `third` aus `core.my`: gleiche Form wie M20s `second`/M23s `caar`, eine Ebene tiefer (`car` von `cdr` von `cdr`). `(third '(w x y z)) => x` (drittes Element). |
+| M26 | [`tb_setcdr.sv`](../fpga/sim/tb_setcdr.sv) | `SETCDR` (`ATOM` mit `rs2 != 0`): eine interne, nur fuer Bootstrap gedachte Faehigkeit, das cdr einer bestehenden Cons-Zelle in-place zu mutieren. |
+| M27 | [`tb_bootstrap_add.sv`](../fpga/sim/tb_bootstrap_add.sv) | Hardware-`ADD` als aufrufbares Primitiv durch `eval`. `(plus 3 4) => 7`. |
+| M28 | [`tb_bootstrap_length.sv`](../fpga/sim/tb_bootstrap_length.sv) | Die erste selbstreferenzielle Closure: `length` aus `core.my`, via `letrec`-artigem Platzhalter-Paar + `SETCDR`-Backpatch gebootstrapt. `(length '(a b c)) => 3`. |
 
 Auch vorhanden: [`tb_cons.sv`](../fpga/sim/tb_cons.sv), ein reiner Unit-Test von `lisp_data_unit`.
 
