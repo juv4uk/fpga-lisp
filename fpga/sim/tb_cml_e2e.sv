@@ -63,6 +63,10 @@ module tb_cml_e2e;
         $display("R15 = TAG:%0d VAL:%0d", u_mac.u_regs.regs[15][31:28], u_mac.u_regs.regs[15][27:0]);
         $display("RESULT_TAG:%0d", u_mac.u_regs.regs[15][31:28]);
         $display("RESULT_VAL:%0d", u_mac.u_regs.regs[15][27:0]);
+        if (u_mac.u_ctrl.err_flag) begin
+            $display("RESULT_ERROR:Type");
+            $display("RESULT_ERROR_PC:%0d", u_mac.u_ctrl.err_pc);
+        end
         $display("HEAP_COUNT:%0d", u_mac.u_ldu.hp);
         // Stable host-facing heap dump for canonical structured decoding.
         // Стабільний dump купи для канонічного декодування структур.
