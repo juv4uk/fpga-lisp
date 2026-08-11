@@ -47,3 +47,25 @@ an error; add a new entry instead of restating one.
   cause not yet isolated. Treat the earlier "M28: letrec mechanism
   proven" entry as retracted until a real passing run is recorded here
   with a commit sha. M29 is blocked on the same bug.
+- **SECOND CORRECTION — root cause found, both M28 and M29 now PASS for
+  real**: the "unbalanced R11" symptom was a red herring from reading
+  garbage state after an unrelated failure, not an actual push/pop bug
+  in `eval_core.inc`. Root cause: `bootstrap_length_demo.asm` (and
+  `bootstrap_length_onto_demo.asm`, copied from it) passed the literal
+  test list `(a b c)` as a call argument WITHOUT `(quote ...)`. Call
+  arguments are always evaluated, so `(a b c)` was evaluated as code —
+  applying the symbol `'a` as an operator, whose unbound `lookup` walks
+  off into `NIL`, and `CAR` of `NIL` is an LDU type error, which halts
+  the machine (cleanly, per M17) but leaves registers holding whatever
+  they last held — hence the misleading `R9 = symbol 'lst`. Every
+  earlier bootstrap demo (`bootstrap_second_demo.asm`,
+  `bootstrap_pair_demo.asm`, `bootstrap_triple_demo.asm`) quotes its
+  literal-list test data for exactly this reason; M28/M29 didn't. Fixed
+  by wrapping the test list in `(quote (a b c))` in both files. Reran
+  both locally with real `iverilog`: **M28 PASSED** (`R9 = TAG:FIXNUM
+  VAL:3`, `$finish` at simulated time 115224960) and **M29 PASSED**
+  (`R9 = TAG:FIXNUM VAL:3`, `$finish` at simulated time 121180340). The
+  `letrec`/`SETCDR` self-recursion mechanism was correct from the start
+  in both files — the bug was entirely in how test data was passed, not
+  in the mechanism the milestones exist to prove. Fix commit: (pending —
+  see the next commit on `master` after this entry lands).

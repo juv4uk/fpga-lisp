@@ -126,13 +126,30 @@ CONS R6, R3, R6              ; (c)
 CONS R6, R2, R6              ; (b c)
 CONS R6, R1, R6              ; (a b c)
 
-; --- expr = (length (a b c)) ---
+; --- wrap in (quote (a b c)): call arguments are evaluated (do_closure_apply's
+;     bare-symbol path CALLs eval on arg1_expr), so passing the bare list here
+;     would eval it as code, i.e. apply the symbol 'a to (b c) -- an unbound
+;     lookup that (silently, without a clean HALT) runs off the end of every
+;     env chain into CAR of NIL, an LDU type error. Every earlier bootstrap
+;     demo (bootstrap_second_demo.asm, bootstrap_pair_demo.asm,
+;     bootstrap_triple_demo.asm, ...) quotes its literal-list test data for
+;     exactly this reason; this demo didn't, and that omission -- not the
+;     letrec/SETCDR mechanism itself -- was the actual bug behind M28's
+;     first real (non-hand-traced) run producing garbage instead of FIXNUM 3.
+LOADSYM R2, 900
+LOADSYM R3, 901
+EQ R2, R2, R3                  ; fresh NIL
+CONS R2, R6, R2                  ; ((a b c))
+LOADSYM R1, SYM_QUOTE
+CONS R6, R1, R2                    ; q_list = (quote (a b c))
+
+; --- expr = (length (quote (a b c))) ---
 LOADSYM R1, 913
 LOADSYM R2, 900
 LOADSYM R3, 901
 EQ R2, R2, R3                  ; fresh NIL for the args-list tail
-CONS R2, R6, R2                  ; ((a b c))
-CONS R3, R1, R2                    ; expr = (length (a b c))
+CONS R2, R6, R2                  ; ((quote (a b c)))
+CONS R3, R1, R2                    ; expr = (length (quote (a b c)))
 MOV R4, R7                           ; env = new_env (where 'length now resolves via the backpatched ph_pair)
 CALL R5, eval
 

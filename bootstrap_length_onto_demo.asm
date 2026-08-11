@@ -159,13 +159,24 @@ CONS R6, R3, R6              ; (c)
 CONS R6, R2, R6              ; (b c)
 CONS R6, R1, R6              ; (a b c)
 
-; --- expr = (length (a b c)) ---
+; --- wrap in (quote (a b c)): call arguments are evaluated, so the bare list
+;     would itself be eval'd as code (apply 'a to (b c)) -- see
+;     bootstrap_length_demo.asm's header for the full postmortem of this
+;     exact mistake in M28's first version. ---
+LOADSYM R2, 900
+LOADSYM R3, 901
+EQ R2, R2, R3                  ; fresh NIL
+CONS R2, R6, R2                  ; ((a b c))
+LOADSYM R1, SYM_QUOTE
+CONS R6, R1, R2                    ; q_list = (quote (a b c))
+
+; --- expr = (length (quote (a b c))) ---
 LOADSYM R1, 913
 LOADSYM R2, 900
 LOADSYM R3, 901
 EQ R2, R2, R3                  ; fresh NIL for the args-list tail
-CONS R2, R6, R2                  ; ((a b c))
-CONS R3, R1, R2                    ; expr = (length (a b c))
+CONS R2, R6, R2                  ; ((quote (a b c)))
+CONS R3, R1, R2                    ; expr = (length (quote (a b c)))
 MOV R4, R7                           ; env = new_env (both 'length and 'length-onto now resolve
                                       ; via their backpatched placeholders)
 
