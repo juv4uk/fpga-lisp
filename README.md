@@ -24,7 +24,11 @@ The full design philosophy, instruction set, memory model, and milestone-by-mile
 Simulate a testbench with [Icarus Verilog](http://iverilog.icarus.com/):
 
 ```bash
-iverilog -g2012 -I fpga/rtl -o tb.vvp fpga/rtl/*.sv fpga/sim/tb_machine.sv
+iverilog -g2012 -I fpga/rtl -o tb.vvp \
+  fpga/rtl/lisp_word.sv fpga/rtl/heap.sv fpga/rtl/lisp_data_unit.sv \
+  fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv fpga/rtl/control.sv \
+  fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
+  fpga/sim/tb_machine.sv
 vvp tb.vvp
 ```
 
@@ -62,6 +66,7 @@ Program memory (`imem`) and heap size were both chosen against this real BRAM bu
 - [`fpga/sim/`](fpga/sim) — one testbench per milestone (`tb_cons.sv`, `tb_atom_eq.sv`, `tb_list.sv`, `tb_control.sv`, `tb_call.sv`, `tb_env.sv`, `tb_lambda.sv`, `tb_eval_atom.sv`, `tb_monitor.sv`, `tb_machine.sv`).
 - [`fpga/synth/`](fpga/synth) — Gowin synthesis script and pin constraints.
 - [`docs/lisp-machine-plan.md`](docs/lisp-machine-plan.md) — the full roadmap and current status against it.
+- [`isa-contract.my`](isa-contract.my) / [`docs/isa-contract.md`](docs/isa-contract.md) — the versioned machine-readable ISA boundary and its rationale.
 - [`docs/testing.md`](docs/testing.md) — the milestone/testbench inventory.
 - [`docs/reference/conformance.my`](docs/reference/conformance.my) — the implementation-independent contract from `my-lisp` that this core will eventually need to match.
 
@@ -85,7 +90,11 @@ Program memory (`imem`) and heap size were both chosen against this real BRAM bu
 Симуляція тестбенчу через [Icarus Verilog](http://iverilog.icarus.com/):
 
 ```bash
-iverilog -g2012 -I fpga/rtl -o tb.vvp fpga/rtl/*.sv fpga/sim/tb_machine.sv
+iverilog -g2012 -I fpga/rtl -o tb.vvp \
+  fpga/rtl/lisp_word.sv fpga/rtl/heap.sv fpga/rtl/lisp_data_unit.sv \
+  fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv fpga/rtl/control.sv \
+  fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
+  fpga/sim/tb_machine.sv
 vvp tb.vvp
 ```
 
@@ -123,6 +132,7 @@ python monitor.py COM3 your_program.bin   # заливка + debug REPL післ
 - [`fpga/sim/`](fpga/sim) — по одному тестбенчу на milestone.
 - [`fpga/synth/`](fpga/synth) — скрипт синтезу Gowin і pin-обмеження.
 - [`docs/lisp-machine-plan.md`](docs/lisp-machine-plan.md) — повний roadmap і поточний стан.
+- [`isa-contract.my`](isa-contract.my) / [`docs/isa-contract.md`](docs/isa-contract.md) — версіонована машинно-читана межа ISA та її обґрунтування.
 - [`docs/testing.md`](docs/testing.md) — перелік milestone/тестбенчів.
 - [`docs/reference/conformance.my`](docs/reference/conformance.my) — контракт сумісності з `my-lisp`.
 
@@ -146,7 +156,11 @@ Die vollständige Design-Philosophie, der Befehlssatz, das Speichermodell und di
 Testbench mit [Icarus Verilog](http://iverilog.icarus.com/) simulieren:
 
 ```bash
-iverilog -g2012 -I fpga/rtl -o tb.vvp fpga/rtl/*.sv fpga/sim/tb_machine.sv
+iverilog -g2012 -I fpga/rtl -o tb.vvp \
+  fpga/rtl/lisp_word.sv fpga/rtl/heap.sv fpga/rtl/lisp_data_unit.sv \
+  fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv fpga/rtl/control.sv \
+  fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
+  fpga/sim/tb_machine.sv
 vvp tb.vvp
 ```
 
@@ -184,5 +198,6 @@ Programmspeicher (`imem`) und Heap-Groesse wurden nach diesem realen BRAM-Budget
 - [`fpga/sim/`](fpga/sim) — eine Testbench pro Meilenstein.
 - [`fpga/synth/`](fpga/synth) — Gowin-Syntheseskript und Pin-Constraints.
 - [`docs/lisp-machine-plan.md`](docs/lisp-machine-plan.md) — vollständige Roadmap und aktueller Status.
+- [`isa-contract.my`](isa-contract.my) / [`docs/isa-contract.md`](docs/isa-contract.md) — die versionierte maschinenlesbare ISA-Grenze und ihre Begründung.
 - [`docs/testing.md`](docs/testing.md) — Meilenstein-/Testbench-Inventar.
 - [`docs/reference/conformance.my`](docs/reference/conformance.my) — Konformitätsvertrag mit `my-lisp`.

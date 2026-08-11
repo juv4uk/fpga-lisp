@@ -1,0 +1,44 @@
+; isa-contract.my — machine-readable fpga-lisp ISA contract
+; Машинно-читаний контракт ISA fpga-lisp.
+; Maschinenlesbarer ISA-Vertrag von fpga-lisp.
+;
+; Versioning: major changes invalidate previously valid machine images or
+; calling code; minor changes add backward-compatible meanings. Repository
+; releases and implementation-only RTL changes are independent.
+
+((kind . fpga-lisp-isa)
+ (version . (0 1))
+ (word . ((bits . 32) (tag-bits . 4) (payload-bits . 28)))
+ (tags . ((fixnum . 0) (cons . 1) (symbol . 2) (nil . 3)
+          (true . 4) (primitive . 5)))
+ (instruction . ((bits . 32)
+                 (opcode . (31 28))
+                 (rd . (27 24))
+                 (rs1 . (23 20))
+                 (rs2 . (19 16))
+                 (immediate . (15 0))))
+ (opcodes . ((nop . 0) (loadi . 1) (mov . 2) (cons . 3)
+             (car . 4) (cdr . 5) (atom . 6) (eq . 7)
+             (jmp . 8) (loadsym . 9) (jf . 10) (halt . 11)
+             (out . 12) (add . 13) (sub . 14) (in . 15)))
+ (encoded-modes .
+   ((gettag . ((opcode . mov) (rs2 . 1)))
+    (makeprim . ((opcode . mov) (rs2 . 2)))
+    (getval . ((opcode . mov) (rs2 . 3)))
+    (setcdr . ((opcode . atom) (rs2 . nonzero) (scope . bootstrap-internal)))
+    (call . ((opcode . jmp) (rd . nonzero) (rs1 . 0)))
+    (ret . ((opcode . jmp) (rd . 0) (rs1 . nonzero)))))
+ (registers . ((count . 16) (environment . 4) (stack . 11)
+               (link . 14) (value . 15)))
+ (primitive-ids . ((car . 0) (cdr . 1) (cons . 2)
+                   (atom . 3) (eq . 4) (add . 5)))
+ (memory . ((program-address-bits . 12) (program-words . 4096)
+            (heap-address-bits . 12) (heap-cons-cells . 4096)))
+ (image . ((word-byte-order . little-endian)
+           (boot-length-bytes . 2)
+           (boot-length-byte-order . little-endian)
+           (maximum-boot-words . 4095)))
+ (truth . ((false-tags . (nil))
+           (jf-also-treats-zero-fixnum-as-false . t)))
+ (errors . ((ldu-error . halt-and-record-pc)))
+ (notes . "LOADI and LOADSYM currently zero-extend a 16-bit immediate; SETCDR is not an eval-visible Lisp primitive."))
