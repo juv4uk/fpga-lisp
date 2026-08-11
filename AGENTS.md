@@ -74,6 +74,21 @@ checks both sides of this contract directly through the bootloader and RTL.
   until the process exits or the buffer fills. Check VCD file growth as a
   progress signal before concluding something is stuck.
 
+## Environment: WSL2 + Guix
+
+Work in this repo from inside WSL2, under the Linux user named after this
+repo (`fpga-lisp`), not directly from Windows. Enter the declared
+environment before running anything:
+
+```
+wsl -u fpga-lisp
+cd /mnt/c/GitHub/fpga-lisp
+guix shell -m manifest.scm
+```
+
+`manifest.scm` pins `iverilog`/`yosys`/etc. to known-good versions; don't
+rely on whatever happens to be on `$PATH` outside the shell.
+
 ## Cross-session coordination protocol (agreed with cml/my-lisp)
 
 1. Durable facts go in `ecosystem-status.md` (this repo) /
