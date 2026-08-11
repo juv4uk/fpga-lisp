@@ -35,9 +35,9 @@ jobs:
           set -euo pipefail
           for asm in bootstrap_add_demo bootstrap_caar_demo bootstrap_length_demo \
                      bootstrap_length_onto_demo bootstrap_not_demo bootstrap_nullp_demo \
-                     bootstrap_pair_demo bootstrap_second_demo bootstrap_third_demo \
-                     bootstrap_triple_demo eval_all_primitives_demo eval_primitive_demo \
-                     setcdr_demo; do
+                     bootstrap_pair_demo bootstrap_reverse_demo bootstrap_second_demo \
+                     bootstrap_third_demo bootstrap_triple_demo eval_all_primitives_demo \
+                     eval_primitive_demo setcdr_demo; do
             python assembler.py "${asm}.asm"
           done
 
@@ -50,7 +50,8 @@ jobs:
                     tb_eval_primitive tb_error_recovery tb_eval_all_primitives \
                     tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair \
                     tb_bootstrap_caar tb_bootstrap_triple tb_bootstrap_third tb_setcdr \
-                    tb_bootstrap_add tb_bootstrap_length tb_bootstrap_length_onto; do
+                    tb_bootstrap_add tb_bootstrap_length tb_bootstrap_length_onto \
+                    tb_bootstrap_reverse; do
             echo "::group::${tb}"
             iverilog -g2012 -I fpga/rtl -o "${tb}.vvp" fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
               fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
