@@ -1,0 +1,14 @@
+; Data only, per evidence/README.md's schema (my-lisp, f96936d). Read via
+; (read-file ...), never (load ...).
+
+(evidence
+  (fixture . "(length '(a b c))")
+  (requirement . G5)
+  (implementation . fpga-lisp)
+  (commit . "3673875")
+  (runner . iverilog)
+  (expected . 3)
+  (actual . 3)
+  (result . pass)
+  (timestamp . "2026-08-11")
+  (note . "Regression check: reran both length testbenches (see evidence/G5/fpga-lisp/7542682.my) after the ISA 1.0 JF fix (evidence/G8/fpga-lisp/3673875.my) to confirm the G8 truthiness change didn't break cond-dependent bootstrap demos. Both still TAG:FIXNUM VAL:3, unchanged from before the JF fix -- JF's behavior only differs for fixnum-0-as-a-cond-test, which neither length testbench evaluates."))
