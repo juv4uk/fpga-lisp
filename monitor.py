@@ -2,6 +2,7 @@ import sys
 import time
 import struct
 import argparse
+import os
 
 import serial
 
@@ -13,11 +14,33 @@ TAG_NAMES = {
     4: "TRUE",
 }
 
+# Populated from symbol_table.py if --symbols names a known program;
+# symbol ids are per-program, not globally interned (see
+# gen_symbol_table.py's header) -- this is deliberately one flat dict
+# per monitor.py run, scoped to whichever single program was uploaded,
+# not a merge across every bootstrap demo.
+CURRENT_SYMBOLS = {}
+
+
+def load_symbols(program_name):
+    try:
+        from symbol_table import PROGRAM_SYMBOLS
+    except ImportError:
+        print("Warning: symbol_table.py not found; run gen_symbol_table.py first. Symbol names disabled.", file=sys.stderr)
+        return {}
+    table = PROGRAM_SYMBOLS.get(program_name)
+    if table is None:
+        print(f"Warning: no symbol table entry for {program_name!r} (regenerate symbol_table.py if this is a new .asm file). Symbol names disabled.", file=sys.stderr)
+        return {}
+    return table
+
 
 def fmt_word(word):
     tag = (word >> 28) & 0xF
     value = word & 0x0FFFFFFF
     tag_name = TAG_NAMES.get(tag, f"TAG{tag}")
+    if tag == 2 and value in CURRENT_SYMBOLS:  # TAG_SYMBOL
+        return f"{tag_name}({value} = '{CURRENT_SYMBOLS[value]})  [0x{word:08X}]"
     return f"{tag_name}({value})  [0x{word:08X}]"
 
 
@@ -115,7 +138,16 @@ def main():
     parser.add_argument("port", help="COM port (e.g. COM3)")
     parser.add_argument("file", nargs="?", help="Optional .bin to upload before entering the monitor")
     parser.add_argument("--baud", type=int, default=115200)
+    parser.add_argument("--symbols", metavar="NAME",
+                         help="Program name for symbol-name display (matches an "
+                              "entry in symbol_table.py, e.g. 'bootstrap_equal_demo'). "
+                              "Defaults to file's basename when --file is given.")
     args = parser.parse_args()
+
+    global CURRENT_SYMBOLS
+    symbols_name = args.symbols or (os.path.splitext(os.path.basename(args.file))[0] if args.file else None)
+    if symbols_name:
+        CURRENT_SYMBOLS = load_symbols(symbols_name)
 
     with serial.Serial(args.port, args.baud, timeout=2) as ser:
         if args.file:
