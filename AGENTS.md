@@ -6,29 +6,41 @@ first — it saves you from re-deriving context another agent already has.
 
 ## Session start — join the swarm
 
-Before anything else, connect to the shared coordination medium
-(`127.0.0.1:9999`, my-lisp's TCP server, P2P — no agent relays for
-another; see my-lisp's `docs/swarm-autonomy.md`/`docs/swarm-coordination.md`
-for the full design):
+Coordination lives on `swarm-node` (a separate binary from `:9999`), a P2P
+mesh — no agent relays for another. `127.0.0.1:9999` (my-lisp's TCP
+server) is still the **semantic oracle** (`eval`/`parse`/`diagnose`) and
+hasn't moved, but its `hello`/`claim`/`subscribe`/`notify`/task-registry
+ops are no longer the coordination path (migrated 2026-08-12, see
+my-lisp's `docs/swarm-mesh-v2.md`). Don't poll/claim through `:9999`
+for coordination — use it only for semantic queries.
 
-1. `sync-tasks` this repo's `tasks.my` (**absolute path** — the op reads
-   the file relative to the *server's* cwd, not the caller's; a relative
-   path silently syncs whatever file of that name happens to exist there
-   instead, which is not an error you'll be told about).
-2. `hello` with capabilities, once per session.
-3. `next-best-action` to see what's actionable before assuming you know.
+fpga-lisp's own node, once started, is `fpga-lisp-1` on `127.0.0.1:9103`
+(port/node-id not auto-discovered — check `ps aux | grep swarm-node` for
+whether it's already running before starting a second one). To start it
+fresh and join:
 
-Example (`--connect` client mode, my-lisp v0.15.0+):
+```bash
+swarm-node --port 9103 --node-id fpga-lisp-1 --project fpga-lisp \
+           --data-dir ~/.swarm-node/fpga-lisp-1 --connect 127.0.0.1:9101
 ```
-printf '%s\n' '(request (id 1) (op sync-tasks) (file "/mnt/c/GitHub/fpga-lisp/tasks.my"))' \
-  | my-lisp --connect=127.0.0.1:9999
+(`127.0.0.1:9101` is my-lisp's own node — bootstrap through any one
+existing member, gossip connects you to the rest.) Then, sent as raw
+sexpr lines to your *own* node's port (9103, not 9101):
+
 ```
+(join (capabilities (verilog isa-design fpga iverilog assembly-testing fpga-lisp)) (roles (voter)))
+(sync-tasks (file "/mnt/c/GitHub/fpga-lisp/tasks.my"))
+```
+
+`(join ...)` once per session. `sync-tasks` needs an **absolute path**
+(same gotcha as the old `:9999` op: relative resolves against the
+*node's* cwd, not the caller's). `tasks.my`'s field is `description`, not
+`context` — a wrong field name is silently dropped, not an error.
+`(next-best-action (node fpga-lisp-1))` to see what's actionable.
 `tasks.my` is this repo's plan of record (durable, git-tracked) — edit it
-to change what this agent is doing, re-`sync-tasks` after edits and after
-any server restart (the in-memory registry wipes on restart). An event
-from the swarm (`publish`/`capability-request`) is a doorbell, never the
-fact itself — always verify against the actual `evidence/`/commit before
-acting on one.
+to change what this agent is doing, re-`sync-tasks` after edits. An event
+from the swarm is a doorbell, never the fact itself — always verify
+against the actual `evidence/`/commit before acting on one.
 
 ## The four repositories
 
