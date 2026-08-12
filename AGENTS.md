@@ -13,23 +13,13 @@ first — it saves you from re-deriving context another agent already has.
   means.
 - **fpga-lisp** (this repo) — hardware implementation of the same language
   on an FPGA. Tracks an ISA contract (`isa-contract.my`, version 1.0)
-  against my-lisp's semantics. Plan queue: `docs/lisp-machine-plan.md`'s
-  item 24 "recursion" (letrec-in-closures) is currently in progress and
-  comes *before* item 25 "rational/bignum" — not a separate later item.
-  M28 (`447ee0e`) proves the `letrec` mechanism (placeholder-pair +
-  `SETCDR` backpatch) via a simplified non-tail-recursive `length`; M29
-  (`cec7889`) bootstraps the canonical tail-recursive, mutually-recursive
-  `length`/`length-onto` pair `core.my` actually uses. Both are now
-  confirmed by a real `iverilog` run (2026-08-11, `R9 = TAG:FIXNUM
-  VAL:3`) — an earlier same-day attempt at this claim was wrong (based on
-  hand-tracing only) and briefly retracted after a real run surfaced a
-  bug, but the bug turned out to be a missing `(quote ...)` around the
-  demo's literal test-list argument (evaluated as code instead of data),
-  not the `letrec` mechanism itself. See `docs/lisp-machine-plan.md`'s
-  M28/M29 entries for the full postmortem before assuming anything about
-  this history from memory. CI
+  against my-lisp's semantics. Milestone-by-milestone bootstrap history and
+  the current plan queue position live in `docs/lisp-machine-plan.md` —
+  that file is the current, authoritative status; don't infer progress
+  from this one, which only describes timeless roles and conventions. CI
   (`.github/workflows/ci.yml`) runs every `fpga/sim/tb_*.sv` testbench
-  through real `iverilog` on push/PR, mirroring cml's setup.
+  through real `iverilog` on push/PR, mirroring cml's setup; the exact
+  list is kept in sync with `docs/testing.md`.
 - **cml** — an AOT compiler from my-lisp source to fpga-lisp's ISA. Tracks
   conformance against both other repos (`compatibility.my`). Has CI
   (`.github/workflows/`) running real `iverilog` E2E simulation.
@@ -63,7 +53,15 @@ checks both sides of this contract directly through the bootloader and RTL.
   add a capability.
 - Every `.asm` bootstrap demo has a corresponding `fpga/sim/tb_*.sv`
   testbench that `$fread`s its assembled `.bin` (gitignored build
-  artifact — assemble first with `python assembler.py <name>.asm`).
+  artifact — assemble first with `python3 assembler.py <name>.asm`; the
+  Guix `manifest.scm` environment has no `python` alias, only `python3`).
+- Two assemblers exist: `assembler.py` (authoritative today, what CI and
+  every testbench actually use) and `assembler.my` (a from-scratch
+  reimplementation in the language itself, not yet wired into CI or any
+  testbench). Until `assembler.my` replaces `assembler.py` outright, treat
+  any divergence between them as a bug to fix, not two valid encoders —
+  don't let `assembler.my` silently become a second source of truth for
+  what a given `.asm` file assembles to.
 - `docs/testing.md` documents the full local test-running command and the
   per-milestone table; keep it in sync with `docs/lisp-machine-plan.md`
   when a milestone lands.
