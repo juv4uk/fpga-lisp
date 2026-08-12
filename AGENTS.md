@@ -110,6 +110,14 @@ checks both sides of this contract directly through the bootloader and RTL.
   own logic. Until root-caused and fixed, treat `assembler.my` as **not
   usable at all**, not as "a second encoder to cross-check against" --
   there is currently nothing working to compare.
+- Only `assembler.py` is a migration-to-Lisp candidate, not
+  `upload.py`/`monitor.py`. See `docs/tooling-language-priority.md` for
+  the full reasoning before proposing otherwise -- short version: Lisp
+  migration makes sense for tools that transform Lisp data (assembling
+  text into the machine's own tagged words), not for tools that operate
+  physical UART hardware (`my-lisp` deliberately has no serial-I/O
+  primitives, and adding them just for this repo's tooling would be
+  extending the language's scope for the wrong reason).
 - `docs/testing.md` documents the full local test-running command and the
   per-milestone table; keep it in sync with `docs/lisp-machine-plan.md`
   when a milestone lands.
