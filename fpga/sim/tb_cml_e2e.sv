@@ -90,6 +90,7 @@ module tb_cml_e2e;
         $finish;
     end
 
+    integer max_time;
     initial begin
         // UART bit time is 8680 time units and load dominates total run
         // time for any real program, not execution -- a ~200-instruction
@@ -101,9 +102,15 @@ module tb_cml_e2e;
         // completes with the correct RESULT_VAL. Every other testbench in
         // this repo already uses 150M; this one, being cml's E2E harness
         // for arbitrary-sized compiled programs (potentially larger than
-        // any hand-assembled bootstrap demo), gets extra headroom.
-        #300_000_000;
-        $display("WATCHDOG TIMEOUT: test hung");
+        // any hand-assembled bootstrap demo), gets extra headroom by
+        // default -- and since "arbitrary-sized" can still outgrow any
+        // fixed default, +max_time=<time units> overrides it without
+        // editing this file (same pattern as the existing +vcd plusarg).
+        if (!$value$plusargs("max_time=%d", max_time)) begin
+            max_time = 300_000_000;
+        end
+        #max_time;
+        $display("WATCHDOG TIMEOUT: test hung (max_time=%0d; override with +max_time=<time units> for larger programs)", max_time);
         $finish;
     end
 
