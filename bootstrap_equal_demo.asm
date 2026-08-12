@@ -29,10 +29,11 @@
 ; Learned from M28/M29's first real run: a literal list passed as a call
 ; argument MUST be quoted. Applied here from the start for both operands.
 ;
-; STATUS: assembled locally; iverilog/vvp run deferred (cml reported
-; concurrent-simulation resource contention on this shared WSL machine,
-; 2026-08-12) -- see docs/lisp-machine-plan.md's M32 entry for the actual
-; run result before trusting this comment alone.
+; STATUS: assembled and run locally with real iverilog (2026-08-12,
+; after cml's concurrent-simulation resource contention cleared) --
+; PASSED on first real run: R9 = TAG:2 VAL:934 (non-NIL), see
+; docs/lisp-machine-plan.md's M32 entry for the actual result before
+; trusting this comment alone.
 
 .include "fpga/asm/constants.inc"
 
