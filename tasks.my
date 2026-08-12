@@ -10,7 +10,7 @@
 
 ((kind . tasks-my)
  (tasks .
-  (("FPGA-NEXT-MILESTONE" . ((priority . 0.8) (capabilities . (verilog isa-design fpga))
-                             (context . "M32 equal? just landed (32/32 milestones); next is item 25 rational/bignum — see docs/rational-bignum-representation.md draft")))
-   ("MILESTONE:pinned-end-to-end-length:fpga-lisp" . ((priority . 5.0) (capabilities . (verilog isa-design fpga)) (done . t)
-                             (context . "cml's first real my-lisp -> cml -> fpga-lisp length E2E run looked hung; root cause was tb_cml_e2e.sv's 70M watchdog too tight for UART load time of real programs, not a bug. Fixed to 300M, commit 735e7c4."))))))
+  (("MILESTONE:pinned-end-to-end-length:fpga-lisp" . ((priority . 5.0) (capabilities . (verilog isa-design fpga)) (done . t)
+                             (context . "cml's first real my-lisp -> cml -> fpga-lisp length E2E run looked hung; root cause was tb_cml_e2e.sv's 70M watchdog too tight for UART load time of real programs, not a bug. Fixed to 300M, commit 735e7c4.")))
+   ("ISA-RATIONAL" . ((priority . 0.9) (capabilities . (verilog isa-design))
+                             (context . "Draft representation contract written: docs/rational-bignum-representation.md (TAG_BIGNUM=6, TAG_RATIONAL=7, heap-boxed). Blocked on my-lisp confirming normalization/exactness invariants match language-contract.my before any RTL. cml's dependent CML-RATIONAL should depends-on this."))))))
