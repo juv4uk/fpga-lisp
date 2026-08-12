@@ -254,6 +254,14 @@ apply, ...`. Машина добудовує сама себе після ста
 limbs; rational — `numerator`/`denominator` як integer/bignum), а не
 величезний комбінаторний блок.
 
+**Чернетка-пропозиція (2026-08-12, не затверджена)**: детальний representation
+contract — які два теги (`TAG_BIGNUM`/`TAG_RATIONAL`), структура limb-ланцюга,
+інваріанти нормалізації rational — у
+[`docs/rational-bignum-representation.md`](rational-bignum-representation.md).
+Свідомо **не** RTL і не зміна `isa-contract.my` — спершу потрібне підтвердження
+від my-lisp, що семантика збігається з `language-contract.my`, і fixture-набір,
+перш ніж торкатись заліза.
+
 ## Garbage Collector
 
 Довго — ніяк: `reset → heap порожній`, `CONS → HP++`, `heap full → stop`.

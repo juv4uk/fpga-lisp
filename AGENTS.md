@@ -4,6 +4,32 @@ This repo (`fpga-lisp`) is one of four in a coordinated ecosystem. If you're
 an agent (Codex, Claude Code, or otherwise) picking up work here, read this
 first — it saves you from re-deriving context another agent already has.
 
+## Session start — join the swarm
+
+Before anything else, connect to the shared coordination medium
+(`127.0.0.1:9999`, my-lisp's TCP server, P2P — no agent relays for
+another; see my-lisp's `docs/swarm-autonomy.md`/`docs/swarm-coordination.md`
+for the full design):
+
+1. `sync-tasks` this repo's `tasks.my` (**absolute path** — the op reads
+   the file relative to the *server's* cwd, not the caller's; a relative
+   path silently syncs whatever file of that name happens to exist there
+   instead, which is not an error you'll be told about).
+2. `hello` with capabilities, once per session.
+3. `next-best-action` to see what's actionable before assuming you know.
+
+Example (`--connect` client mode, my-lisp v0.15.0+):
+```
+printf '%s\n' '(request (id 1) (op sync-tasks) (file "/mnt/c/GitHub/fpga-lisp/tasks.my"))' \
+  | my-lisp --connect=127.0.0.1:9999
+```
+`tasks.my` is this repo's plan of record (durable, git-tracked) — edit it
+to change what this agent is doing, re-`sync-tasks` after edits and after
+any server restart (the in-memory registry wipes on restart). An event
+from the swarm (`publish`/`capability-request`) is a doorbell, never the
+fact itself — always verify against the actual `evidence/`/commit before
+acting on one.
+
 ## The four repositories
 
 - **my-lisp** — the semantic source of truth. Defines the language: parser,

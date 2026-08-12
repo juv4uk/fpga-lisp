@@ -1,0 +1,16 @@
+; tasks.my — durable task plan for the fpga-lisp agent, per my-lisp
+; docs/swarm-autonomy.md (P2P on one server: this file is this repo's
+; plan of record; sync it into the shared 127.0.0.1:9999 registry with
+; the sync-tasks op after edits and after any server restart).
+;
+; Seed derived from the ecosystem-status.my current-task board; refine
+; freely — this file is the plan of record for this repo. Data only,
+; same flat-alist convention as ecosystem-status.my. `done . t` only
+; when real in-repo evidence exists.
+
+((kind . tasks-my)
+ (tasks .
+  (("FPGA-NEXT-MILESTONE" . ((priority . 0.8) (capabilities . (verilog isa-design fpga))
+                             (context . "M32 equal? just landed (32/32 milestones); next is item 25 rational/bignum — see docs/rational-bignum-representation.md draft")))
+   ("MILESTONE:pinned-end-to-end-length:fpga-lisp" . ((priority . 5.0) (capabilities . (verilog isa-design fpga)) (done . t)
+                             (context . "cml's first real my-lisp -> cml -> fpga-lisp length E2E run looked hung; root cause was tb_cml_e2e.sv's 70M watchdog too tight for UART load time of real programs, not a bug. Fixed to 300M, commit 735e7c4."))))))
