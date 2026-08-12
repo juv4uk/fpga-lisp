@@ -46,7 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           fail=0
-          for tb in tb_cons tb_atom_eq tb_machine tb_monitor tb_control tb_jf_truthiness tb_list tb_call \
+          for tb in tb_cons tb_heap tb_car_cdr tb_atom_eq tb_machine tb_monitor tb_control tb_jf_truthiness tb_list tb_call \
                     tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply \
                     tb_eval_primitive tb_error_recovery tb_eval_all_primitives \
                     tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair \
