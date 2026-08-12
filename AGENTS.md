@@ -57,11 +57,21 @@ checks both sides of this contract directly through the bootloader and RTL.
   Guix `manifest.scm` environment has no `python` alias, only `python3`).
 - Two assemblers exist: `assembler.py` (authoritative today, what CI and
   every testbench actually use) and `assembler.my` (a from-scratch
-  reimplementation in the language itself, not yet wired into CI or any
-  testbench). Until `assembler.my` replaces `assembler.py` outright, treat
-  any divergence between them as a bug to fix, not two valid encoders —
-  don't let `assembler.my` silently become a second source of truth for
-  what a given `.asm` file assembles to.
+  reimplementation in the language itself, not wired into CI or any
+  testbench). **`assembler.my` is currently non-functional, not just
+  unverified**: a differential test against `assembler.py` (2026-08-12,
+  see `ecosystem-status.md`) found it produces inconsistent results on
+  the exact same trivial input (`call_demo.asm`, 8 lines) across two
+  otherwise-identical invocations -- once a silent 0-byte output
+  claiming "Assembled 0 instructions" (wrong; the file has real
+  instructions), once a native stack overflow crash. Every other tested
+  `.asm` file (including every `bootstrap_*_demo.asm`) crashed the same
+  way. Root cause not isolated -- plausibly a my-lisp interpreter
+  stack-depth issue triggered by `assembler.my`'s own non-tail-recursive
+  helpers (`nth`, `contains?`), not necessarily a bug in the assembler's
+  own logic. Until root-caused and fixed, treat `assembler.my` as **not
+  usable at all**, not as "a second encoder to cross-check against" --
+  there is currently nothing working to compare.
 - `docs/testing.md` documents the full local test-running command and the
   per-milestone table; keep it in sync with `docs/lisp-machine-plan.md`
   when a milestone lands.

@@ -69,3 +69,26 @@ an error; add a new entry instead of restating one.
   in both files — the bug was entirely in how test data was passed, not
   in the mechanism the milestones exist to prove. Fix commit: (pending —
   see the next commit on `master` after this entry lands).
+
+## 2026-08-12
+
+- **M31 (`append`) and M32 (`equal?`) PASSED**, both on first real
+  `iverilog` run (`4a4f032`, `4a218fb`). `append` built on M30's
+  `reverse`/`reverse-onto` letrec pair, not self-referential, no third
+  placeholder needed. `equal?` is self-referential (single letrec
+  placeholder, like M28) and is the first bootstrap demo with a
+  three-clause top-level `cond` (M28-M31 all had two). Both cross-checked
+  against my-lisp's TCP `--protocol=sexpr` oracle before/after writing
+  the asm.
+- **`assembler.my` found non-functional** (differential test against
+  `assembler.py`, not committed): the exact same command
+  (`my-lisp assembler.my call_demo.asm out.bin`) produced a silent
+  0-byte output claiming "Assembled 0 instructions" on one invocation
+  and a native stack overflow crash on another, for the same trivial
+  8-line input. Every other `.asm` tested (all `bootstrap_*_demo.asm`)
+  crashed with stack overflow. Not isolated to a root cause yet —
+  plausibly a my-lisp interpreter stack-depth issue from
+  `assembler.my`'s own non-tail-recursive helpers, not necessarily a bug
+  in the assembler's encoding logic. `assembler.py` remains the sole
+  working assembler; `assembler.my` is not currently a valid
+  cross-check target (see `AGENTS.md`'s note on this).
