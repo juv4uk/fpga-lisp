@@ -91,7 +91,18 @@ module tb_cml_e2e;
     end
 
     initial begin
-        #70_000_000;
+        // UART bit time is 8680 time units and load dominates total run
+        // time for any real program, not execution -- a ~200-instruction
+        // binary (800+ bytes) takes ~69.6M time units just to shift in
+        // over the bit-banged link, right at the old 70M watchdog. cml's
+        // first real end-to-end `length` run (my-lisp -> cml -> fpga-lisp,
+        // mailbox 2026-08-12) hit exactly this and was misreported as a
+        // hang -- it wasn't; a local 200M-watchdog copy confirmed it
+        // completes with the correct RESULT_VAL. Every other testbench in
+        // this repo already uses 150M; this one, being cml's E2E harness
+        // for arbitrary-sized compiled programs (potentially larger than
+        // any hand-assembled bootstrap demo), gets extra headroom.
+        #300_000_000;
         $display("WATCHDOG TIMEOUT: test hung");
         $finish;
     end

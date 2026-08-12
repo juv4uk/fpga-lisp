@@ -92,3 +92,18 @@ an error; add a new entry instead of restating one.
   in the assembler's encoding logic. `assembler.py` remains the sole
   working assembler; `assembler.my` is not currently a valid
   cross-check target (see `AGENTS.md`'s note on this).
+- **First real end-to-end `length` PASSED** (reported by cml via mailbox,
+  confirmed here): the full `my-lisp -> cml -> fpga-lisp` pipeline ran
+  `(length '(a b c))` and got `RESULT_VAL:3` through `tb_cml_e2e.sv`,
+  matching the my-lisp TCP oracle exactly. This is the milestone the
+  cross-repo coordination was originally set up to prove. It had looked
+  like a hang in earlier runs — root cause found and fixed here:
+  `tb_cml_e2e.sv`'s watchdog was still `70_000_000` (every other
+  testbench in this repo already uses `150_000_000`), and UART load time
+  for a ~200+-instruction binary (~69.6M time units to shift in over the
+  bit-banged link, before execution even starts) landed right at that
+  ceiling. Bumped to `300_000_000` for headroom against larger
+  cml-compiled programs. Not a hardware or compiler bug — evidence should
+  still be filed per my-lisp's proposal (`evidence/length/cml/<sha>.my`,
+  `evidence/length/fpga-lisp/<sha>.my`) once cml re-confirms with the
+  fixed watchdog.
