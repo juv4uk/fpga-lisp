@@ -107,3 +107,23 @@ an error; add a new entry instead of restating one.
   still be filed per my-lisp's proposal (`evidence/length/cml/<sha>.my`,
   `evidence/length/fpga-lisp/<sha>.my`) once cml re-confirms with the
   fixed watchdog.
+
+- **FPGA-HARDWARE-VERIFY-M17-M32: synthesis/timing re-checked, actual
+  board flash still pending.** Owner installed Gowin IDE + Programmer
+  (`C:\Gowin\Gowin_V1.9.12.03_x64`). Ran `fpga/synth/build.tcl` via
+  `gw_sh.exe` (headless) against the current RTL (everything through
+  M32) — synthesis, place-and-route, and bitstream generation all
+  completed with no errors. Resource usage: BSRAM 24/56 (43%), matches
+  the number the plan doc already derived from real synthesis at M18's
+  imem expansion. Timing: `Fmax = 60.801 MHz` against the `50 MHz`
+  constraint (`lisp_machine.sdc`), **Total Negative Slack: none** — no
+  timing violations. Down from M16's `64.6 MHz` measurement (expected:
+  design grew substantially, M17-M32's eval/letrec/bootstrap logic all
+  added since), but still well clear of the 50 MHz requirement. Actual
+  flash-and-run verification on the physical Tang Primer 25K is still
+  outstanding — no board detected on any USB-serial COM port as of this
+  entry (only `COM1`, the legacy motherboard port), and the reset-button
+  step in `upload.py`/`monitor.py`'s flow needs a human regardless of
+  whether the board is connected. Once the board is plugged in, running
+  M28-M32's bootstrap demos through `monitor.py` for real is the
+  remaining half of this task.
