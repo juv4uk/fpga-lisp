@@ -6,6 +6,7 @@
    "verilator"
    "yosys"
    "python"
+   "python-pyserial"
    "rust"
    "rust:cargo"
    "nss-certs"
