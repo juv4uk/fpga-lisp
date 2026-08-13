@@ -41,6 +41,8 @@ car: sign     -- TAG_TRUE (negative) or TAG_NIL (non-negative), reusing
 cdr: TAG_CONS -> (car: TAG_FIXNUM limb_0, cdr: next_cell | TAG_NIL)
 ```
 
+Confirmed 2026-08-13 against `crates/my-lisp/src/bignum.rs`: my-lisp's own arbitrary-precision integer is **sign-magnitude** (a `negative: bool` plus an unsigned little-endian limb magnitude), not two's complement -- matches this proposal directly, not an independent invention. One more invariant worth carrying over verbatim: **zero is always canonically non-negative** (`bignum.rs`'s own doc comment: "there's no separate 'negative zero' this type could accidentally produce") -- fpga-lisp's `TAG_BIGNUM` zero must always use the `TAG_NIL` (non-negative) sign cell, never `TAG_TRUE`, so `eq`/`equal?` never has to special-case comparing a `-0` against a `+0`.
+
 Each limb is a `TAG_FIXNUM` payload, i.e. 28 bits — but `ADD`'s hardware
 carry logic works on the full 28-bit field, so the *usable* limb base
 should be smaller (e.g. base 2^24) to leave headroom for a carry bit
@@ -61,15 +63,39 @@ car: numerator   -- TAG_FIXNUM or TAG_BIGNUM
 cdr: denominator -- TAG_FIXNUM or TAG_BIGNUM, always > 0
 ```
 
-Invariant (must match `my-lisp`'s exactness model exactly, not be
-invented independently): always stored in lowest terms, denominator
-always positive (sign lives on the numerator). A rational whose
-denominator reduces to 1 is **not** a valid `TAG_RATIONAL` — it must
-collapse to a plain `TAG_FIXNUM`/`TAG_BIGNUM`. This makes `equal?`
-correct for free (M32's structural comparison doesn't need a special
-case) and matches the checklist's already-confirmed rule that exactness
-kind is part of value identity (`(equal? 1 1/1) => ()` per
-`docs/equal-oracle-checklist.my`).
+Invariant (verified 2026-08-13 directly against my-lisp's Rust source,
+`crates/my-lisp/src/value.rs`, after a written confirmation request
+went unanswered for a full session — the reference implementation is
+itself authoritative, so this is grounded in code, not a guess):
+**always stored in lowest terms, denominator always positive** (sign
+lives on the numerator, `Rational::from_big`'s gcd-reduction). But —
+correcting an earlier draft of this document, which had this backwards
+— **a rational whose denominator reduces to 1 does NOT collapse to a
+plain integer type.** `Value::Rational` stays `Value::Rational` even
+when whole-valued; only `Display` cosmetically omits the `/1` when
+printing (`Rational::is_integer`/`fmt::Display` in `value.rs`). The
+one narrow exception is `Rational::as_precise_i64`, used internally by
+`arithmetic.rs`'s `exact_value` to *print* through `Value::Number`
+instead when the value fits `i64` within `f64`'s 2^53 exact range —
+described in that method's own doc comment as purely cosmetic, never
+losing precision, not a type-identity rule.
+
+This matches, not contradicts, the checklist's `(equal? 1 1/1) => ()`
+fact — it's evidence *for* keeping them distinct types, not for
+collapsing one into the other. A bare integer literal (`1`) parses
+directly as an exact-integer value (whatever fpga-lisp's `TAG_FIXNUM`/
+`TAG_BIGNUM` are for); anything that went through actual division
+(`/`) stays tagged rational forever, even at denominator 1 -- `eq`/
+`equal?` treat these as different values by design (exactness kind is
+part of identity), so fpga-lisp's `TAG_RATIONAL` must **never**
+collapse into `TAG_FIXNUM`/`TAG_BIGNUM` on the hardware side either,
+or `equal?` extended to handle rationals would silently disagree with
+the reference. **Practical consequence for RTL, once written:** no
+"collapse to fixnum" step is needed after rational arithmetic --
+simpler than originally proposed -- but `equal?`'s dispatch must gate
+on tag identity first (`TAG_RATIONAL` vs `TAG_FIXNUM`/`TAG_BIGNUM` are
+never equal, regardless of numeric value), the same tag-first
+discipline M32's `equal?` already uses.
 
 ## What this does NOT decide yet
 
