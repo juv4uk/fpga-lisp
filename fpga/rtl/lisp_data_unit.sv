@@ -104,18 +104,26 @@ module lisp_data_unit #(
                 reading_state <= 1;
                 is_peek <= 1;
             end else if (cmd_cons) begin
-                // CONS operation
-                heap_we_car <= 1;
-                heap_we_cdr <= 1;
-                heap_addr <= hp;
-                heap_car_in <= op_a;
-                heap_cdr_in <= op_b;
+                // CONS operation — check heap overflow first
+                if (hp == (1 << HEAP_ADDR_WIDTH) - 1) begin
+                    // Heap is full: cannot allocate. Raise error so
+                    // control.sv halts the machine with err_flag set,
+                    // instead of silently wrapping hp to 0 and
+                    // corrupting live cons cells.
+                    error <= 1; // HEAP_FULL
+                end else begin
+                    heap_we_car <= 1;
+                    heap_we_cdr <= 1;
+                    heap_addr <= hp;
+                    heap_car_in <= op_a;
+                    heap_cdr_in <= op_b;
 
-                result.tag <= TAG_CONS;
-                result.value <= { {(28-HEAP_ADDR_WIDTH){1'b0}}, hp };
-                valid <= 1;
+                    result.tag <= TAG_CONS;
+                    result.value <= { {(28-HEAP_ADDR_WIDTH){1'b0}}, hp };
+                    valid <= 1;
 
-                hp <= hp + 1; // Bump allocator
+                    hp <= hp + 1; // Bump allocator
+                end
             end else if (cmd_setcdr) begin
                 // Internal bootstrap-only capability, never exposed as an
                 // ordinary Lisp primitive through eval: overwrites the CDR
