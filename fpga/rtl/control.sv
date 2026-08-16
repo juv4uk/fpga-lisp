@@ -221,7 +221,8 @@ module control (
                     end
                 end
                 ST_WRITE_PAIR_CDR: begin
-                    pc <= pc + 1;
+                    // PC already incremented in ST_WAIT_LDU.
+                    // This state only writes the second register (CDR).
                 end
                 ST_MON_ERR_SEND: begin
                     mon_tx_buf <= {32'd0, 19'd0, err_flag, err_pc};
