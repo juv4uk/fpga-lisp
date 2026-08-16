@@ -81,8 +81,11 @@ module tb_fetch_pair;
         dut.imem[5] = encode_3r(OP_HALT, 4'd0, 4'd0, 4'd0);   // HALT
 
         // Reset PC to 0
+        // ST_FETCH = 0 in the state_t enum (control.sv).
+        // Cannot use dut.u_ctrl.ST_FETCH — iverilog does not support
+        // hierarchical access to enum/localparam members.
         dut.u_ctrl.pc = 0;
-        dut.u_ctrl.state = dut.u_ctrl.ST_FETCH;
+        dut.u_ctrl.state = 5'd0;
 
         // Run
         #5000;
