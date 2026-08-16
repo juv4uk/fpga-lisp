@@ -1,50 +1,12 @@
-; tasks.my — durable task plan for the fpga-lisp agent, per my-lisp
-; docs/swarm-autonomy.md (P2P on one server: this file is this repo's
-; plan of record; sync it into the shared 127.0.0.1:9999 registry with
-; the sync-tasks op after edits and after any server restart).
-;
-; Seed derived from the ecosystem-status.my current-task board; refine
-; freely — this file is the plan of record for this repo. Data only,
-; same flat-alist convention as ecosystem-status.my. `done . t` only
-; when real in-repo evidence exists.
-
-((kind . tasks-my)
- (tasks .
-  (("MILESTONE:pinned-end-to-end-length:fpga-lisp" . ((priority . 5.0) (capabilities . (verilog isa-design fpga fpga-lisp)) (done . t)
-                             (description . "done — cml's first real my-lisp -> cml -> fpga-lisp length E2E run looked hung; root cause was tb_cml_e2e.sv's 70M watchdog too tight for UART load time of real programs, not a bug. Fixed to 300M, commit 735e7c4.")))
-   ("ISA-RATIONAL" . ((priority . 0.9) (capabilities . (verilog isa-design))
-                             (description . "Representation invariants self-verified against my-lisp's actual Rust source (value.rs/bignum.rs) after a written confirmation request went unanswered a full session -- found and fixed a real error in the original draft (rational-with-denominator-1 does NOT collapse to plain integer, confirmed the opposite). Sign-magnitude and canonical-non-negative-zero also confirmed. docs/rational-bignum-representation.md updated (commit 3677228). Still awaiting a human/my-lisp sanity check before RTL -- source-verification is strong but not the same as an explicit sign-off. cml's dependent CML-RATIONAL should depends-on this.")))
-   ("FPGA-COVERAGE-M02-M04" . ((priority . 0.6) (capabilities . (verilog fpga)) (done . t)
-                             (description . "done — tb_heap.sv (M02) and tb_car_cdr.sv (M04), closing the coverage gap noted in lisp-machine-plan.md's status section. Both PASSED first real run. Commit d5f33c4.")))
-   ("FPGA-ASSEMBLER-DIFF-TEST" . ((priority . 0.5) (capabilities . (verilog fpga))
-                             (description . "Commit a repeatable differential test between assembler.py (authoritative) and assembler.my (broken as of 2026-08-12 -- stack overflow / silent 0-byte output on every input, see ecosystem-status.md). Currently only ran ad-hoc, not a committed script or CI step. Blocked on assembler.my actually working before its output can be compared -- this is assembler.my/my-lisp interpreter side work, not fpga-lisp RTL.")))
-   ("FPGA-GC-DESIGN-DOC" . ((priority . 0.4) (capabilities . (verilog isa-design fpga)) (depends-on . ("ISA-RATIONAL"))
-                             (description . "Item 26 (GC). Decision already fixed: trace-based mark-and-sweep, never refcounting, since SETCDR-built letrec closures (M28-M32) can form real reference cycles. Missing: actual design doc -- mark-bit storage, root set (16 registers + R11 software call stack), sweep pass mechanics, trigger condition. Sequenced after ISA-RATIONAL since rational/bignum heap structures change what a sweep pass walks.")))
-   ("FPGA-HARDWARE-VERIFY-M17-M32" . ((priority . 0.7) (capabilities . (verilog fpga))
-                             (description . "Last real-board flash verification was M16 -- three real bugs (SDC timing, pyserial buffer, reset button) simulation alone missed. M17-M32, including the entire v0.04 recursion mechanism, has only ever run in iverilog simulation, never on the actual Tang Primer 25K. Also re-check Fmax/timing closure hasn't regressed since imem grew 256->4096 words and the design grew substantially past the M16 measurement (64.6MHz).")))
-   ("FPGA-CONFORMANCE-SUITE" . ((priority . 0.5) (capabilities . (verilog fpga)) (done . t)
-                             (description . "done — fixture_coverage.py (commit fc81145). Classifies all 121 conformance.my fixtures: 18 hardware-equivalent (milestone cited), 71 not-applicable (reason cited: rationals/floats/strings/tcp/process/macros/let/unify/reason/persistent-map not on hardware), 32 unclassified (flagged, not hidden). Does not fabricate automated pass/fail where literal test data differs from fpga-lisp's demos -- oracle_crosscheck.py covers exact-match automation.")))
-   ("FPGA-SYMBOL-TABLE-HOST-TOOL" . ((priority . 0.4) (capabilities . (verilog fpga)) (done . t)
-                             (description . "done — gen_symbol_table.py + monitor.py --symbols (commit e480ea5). Per-program symbol tables, not global -- ids aren't interned across .asm files, same id can mean a real symbol in one program and a NIL-derivation helper in another. Unblocks FPGA-REPL-DESIGN.")))
-   ("FPGA-TB-WATCHDOG-PLUSARG" . ((priority . 0.4) (capabilities . (verilog fpga)) (done . t)
-                             (description . "done — generalized the 735e7c4 fix (tb_cml_e2e.sv watchdog 70M->300M) into a +max_time=<time units> plusarg override, same pattern as the existing +vcd plusarg, since cml's E2E harness runs arbitrary-sized compiled programs that could still outgrow any fixed default. Commit e25dd3a.")))
-   ("SANSKRIT-P9-FPGA-OPCODE-BOUNDARY" . ((priority . 0.6) (capabilities . (verilog isa-design fpga)) (done . t)
-                             (description . "done — docs/sanskrit-fpga-opcode-boundary.md (commit bb98a35). fpga-lisp ISA needs no opcode changes for the dhatu/karaka semantic layer; opcode space (16/16) vs primitive-id space (6/2^28) distinction resolves the concern. No opcode changes needed for P1-P8 as scoped.")))
-   ("FPGA-REPL-DESIGN" . ((priority . 0.4) (capabilities . (verilog isa-design fpga)) (depends-on . ("FPGA-SYMBOL-TABLE-HOST-TOOL"))
-                             (description . "Item 27: full interactive REPL. Only UART bootloader (upload-once-run-halt) + monitor.py's post-halt peek exist, no live read-eval-print loop. Needs symbol names printed first to be usable by a human, not just the machine's own author.")))
-   ("FPGA-EXTERNAL-MEMORY-SDRAM" . ((priority . 0.2) (capabilities . (verilog fpga))
-                             (description . "Long-term, from lisp-machine-plan.md's memory section: BRAM -> cache/young-heap -> external SDRAM/PSRAM. Entire heap currently lives in internal BRAM (4096 cons cells). Not urgent -- no evidence of hitting the ceiling yet -- but worth scoping before it blocks some future milestone.")))
-   ("FPGA-BOOT-MY-FORMAT" . ((priority . 0.3) (capabilities . (verilog fpga))
-                             (description . "Target repo structure (lisp-machine-plan.md) lists fpga/boot/boot.my, doesn't exist yet -- only raw .bin uploaded fresh over UART each run. A Lisp-native boot image format would move closer to the 'my-lisp <-> FPGA' vision than a hand-assembled binary blob.")))
-   ("FPGA-ORACLE-CROSSCHECK-SCRIPT" . ((priority . 0.5) (capabilities . (verilog fpga)) (done . t)
-                             (description . "done — oracle_crosscheck.py (commit fb31f16). Verified end-to-end against the live oracle: length/length_onto/equal all MATCH. Scoped to fixnum/truthy results; CONS-structure results (M30/M31) need a heap-walk decode not yet attempted, documented as a gap.")))
-   ("FPGA-ISA-CONTRACT-VERSION-BUMP-PREP" . ((priority . 0.3) (capabilities . (verilog isa-design fpga)) (depends-on . ("ISA-RATIONAL"))
-                             (description . "Once ISA-RATIONAL lands (new tags), isa-contract.my needs a version bump per its own versioning note. Prep: decide major-vs-minor before the RTL work needs to reference the new version, not as an afterthought.")))
-   ("FPGA-JTAG-UART-DRIVER-SETUP-DOCS" . ((priority . 0.5) (capabilities . (verilog fpga)) (done . t)
-                             (description . "done — docs/hardware-setup.md (commit 17aa797). Records the VCP-vs-D2XX JTAG conflict, what's been tried (whole-device disable, child-COM3-only disable, neither fully worked live) and what hasn't (reboot), plus working UART setup and real synthesis Fmax/BSRAM results. JTAG itself still unresolved -- see FPGA-HARDWARE-VERIFY-M17-M32.")))
-   ("FPGA-BOOT-MY-FORMAT" . ((priority . 0.4) (capabilities . (verilog fpga)) (done . t)
-                             (description . "done — docs/boot-my-format.md (commit f7d33a4). Proposes the boot.my (real core.my-syntax source) / boot.mem (assembled binary) split from lisp-machine-plan.md's own target structure, bundling M19-M32's verified functions into one shared letrec frame. Identifies the real gap: boot.my needs an actual reader/compiler, not another hand-translated .asm -- flagged as likely a separate task, not solved here. Original task description unavailable (no per-task describe op yet), grounded in the plan doc's own words instead.")))
-   ("FPGA-REPL-DESIGN" . ((priority . 0.3) (capabilities . (verilog fpga)) (done . t)
-                             (description . "done — docs/repl-design.md (commit 3a3de62). Item 27. Three real gaps identified: no reader, no persistent-session bootloader protocol (today's UART always means cold-load-and-reset), no env handle surviving past HALT. Proposes host-side reader + hardware-side warm-eval command, distinct from today's cold-load. Cross-references FPGA-BOOT-MY-FORMAT's likely-shared reader without deciding which comes first.")))
-   ("FPGA-EXTERNAL-MEMORY-SDRAM" . ((priority . 0.2) (capabilities . (verilog fpga)) (done . t)
-                             (description . "done — docs/external-memory-scoping.md (commit cdaa740). Deliberately conservative: the board's actual SDRAM/PSRAM chip specifics aren't available on this machine (referenced TangPrimer-25K-example clone is gitignored, not present locally), so this scopes what's missing rather than fabricating pin/timing specs. Notes current heap (4096 cells, 16/56 BSRAM blocks) has no observed ceiling-hit yet -- forward capacity planning, not a fix for a real failure. Flags a soft sequencing preference with FPGA-GC-DESIGN-DOC (single-tier GC design before two-tier)."))))))
+((tasks . (
+  ("FPGA-SWARM-CONTRACT-01" . (
+    (priority . 9.0)
+    (description . "Adopt Swarm Contract v0.1: setup repo.my and ecosystem/ folders.")
+    (done . ())
+  ))
+  ("FPGA-CONFORMANCE-TESTING" . (
+    (priority . 9.5)
+    (description . "Act as adversarial verifier: test conformance.my against Rust implementation. Flag ambiguous semantics.")
+    (done . ())
+  ))
+)))
