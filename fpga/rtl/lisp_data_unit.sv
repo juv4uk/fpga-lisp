@@ -9,6 +9,7 @@ module lisp_data_unit #(
     input  logic             cmd_car,
     input  logic             cmd_cdr,
     input  logic             cmd_setcdr,
+    input  logic             cmd_fetch_pair,
     
     // Inputs (from registers or immediate)
     input  lisp_word_t       op_a,
@@ -16,6 +17,7 @@ module lisp_data_unit #(
     
     // Output (to registers)
     output lisp_word_t       result,
+    output lisp_word_t       result_cdr,
     output logic             valid,
     output logic             error,
 
@@ -59,7 +61,7 @@ module lisp_data_unit #(
     
     // Basic state logic for reads
     logic [1:0] reading_state; // 0: IDLE, 1: ADDR_SET, 2: DATA_READY
-    logic [1:0] read_type; // 0: CAR, 1: CDR
+    logic [1:0] read_type; // 0: CAR, 1: CDR, 2: FETCH_PAIR
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -70,6 +72,7 @@ module lisp_data_unit #(
             error <= 0;
             reading_state <= 0;
             result <= '0;
+            result_cdr <= '0;
             heap_addr <= 0;
             heap_car_in <= 0;
             heap_cdr_in <= 0;
@@ -97,7 +100,13 @@ module lisp_data_unit #(
                     peek_cdr <= heap_cdr_out;
                 end else begin
                     valid <= 1;
-                    result <= (read_type == 0) ? heap_car_out : heap_cdr_out;
+                    if (read_type == 2) begin
+                        // FETCH_PAIR: return both CAR and CDR
+                        result <= heap_car_out;
+                        result_cdr <= heap_cdr_out;
+                    end else begin
+                        result <= (read_type == 0) ? heap_car_out : heap_cdr_out;
+                    end
                 end
             end else if (cmd_peek) begin
                 heap_addr <= peek_addr;
@@ -106,10 +115,6 @@ module lisp_data_unit #(
             end else if (cmd_cons) begin
                 // CONS operation — check heap overflow first
                 if (hp == (1 << HEAP_ADDR_WIDTH) - 1) begin
-                    // Heap is full: cannot allocate. Raise error so
-                    // control.sv halts the machine with err_flag set,
-                    // instead of silently wrapping hp to 0 and
-                    // corrupting live cons cells.
                     error <= 1; // HEAP_FULL
                 end else begin
                     heap_we_car <= 1;
@@ -125,20 +130,6 @@ module lisp_data_unit #(
                     hp <= hp + 1; // Bump allocator
                 end
             end else if (cmd_setcdr) begin
-                // Internal bootstrap-only capability, never exposed as an
-                // ordinary Lisp primitive through eval: overwrites the CDR
-                // of an EXISTING cons cell (op_a, must already be TAG_CONS)
-                // with op_b, in place. This is the one deliberate exception
-                // to "the heap never mutates a cell after CONS allocates
-                // it" -- needed so a closure can be backpatched to see
-                // itself in its own captured environment (letrec-style
-                // self-reference), the same capability boundary that keeps
-                // def/defmacro in the my-lisp Rust host rather than
-                // expressed in pure immutable-cons my-lisp (see
-                // lib/meta-eval.my's own documented, unresolved gap here --
-                // confirmed with the my-lisp session, 2026-08-10, that this
-                // Rust-host-only mutation is the *only* known working
-                // mechanism, not a shortcut around a solved problem).
                 if (op_a.tag == TAG_CONS) begin
                     heap_we_cdr <= 1;
                     heap_addr <= op_a.value[HEAP_ADDR_WIDTH-1:0];
@@ -146,7 +137,21 @@ module lisp_data_unit #(
                     result <= op_b;
                     valid <= 1;
                 end else begin
-                    error <= 1; // TYPE_ERROR: can't SETCDR a non-cons
+                    error <= 1;
+                end
+            end else if (cmd_fetch_pair) begin
+                // FETCH_PAIR: read both CAR and CDR in a single heap
+                // access cycle. Same latency as CAR or CDR alone (~3
+                // cycles), but returns both halves — useful for eval,
+                // equal?, lookup, unify, and any traversal that needs
+                // both car and cdr of a cons cell.
+                if (op_a.tag == TAG_CONS) begin
+                    heap_addr <= op_a.value[HEAP_ADDR_WIDTH-1:0];
+                    reading_state <= 1;
+                    read_type <= 2; // FETCH_PAIR
+                    is_peek <= 0;
+                end else begin
+                    error <= 1; // TYPE_ERROR
                 end
             end else if (cmd_car) begin
                 if (op_a.tag == TAG_CONS) begin
