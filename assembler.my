@@ -116,7 +116,7 @@
       (t (let ((d+r (extract-digit n (car powers))))
            (word->bytes-onto (second d+r) (cdr powers) (cons (car d+r) acc)))))))
 
-(def word->bytes-be (lambda (n) (word->bytes-onto n BYTE-POWERS '())))
+(def word->bytes-be (lambda (n) (word->bytes-onto n BYTE-POWERS (quote ()))))
 (def word->bytes-le (lambda (n) (reverse (word->bytes-be n))))
 
 ; Tail-recursive flatten (same reasoning as expand-includes-onto): conses
@@ -135,7 +135,7 @@
       (t (words->bytes-onto (cdr words) (cons-all-onto (word->bytes-le (car words)) acc))))))
 
 (def words->bytes
-  (lambda (words) (reverse (words->bytes-onto words '()))))
+  (lambda (words) (reverse (words->bytes-onto words (quote ())))))
 
 ; ---------------------------------------------------------------------
 ; Line splitting / comment stripping / tokenizing.
@@ -166,7 +166,7 @@
       (t (split-lines-onto (string-rest s) (string-append cur (string-first s)) acc)))))
 
 (def split-lines
-  (lambda (s) (reverse (split-lines-onto s "" '()))))
+  (lambda (s) (reverse (split-lines-onto s "" (quote ())))))
 
 (def strip-comment-onto
   (lambda (line acc)
@@ -194,7 +194,7 @@
       (t (tokenize-onto (string-rest line) (string-append cur (string-first line)) acc)))))
 
 (def tokenize
-  (lambda (line) (reverse (tokenize-onto line "" '()))))
+  (lambda (line) (reverse (tokenize-onto line "" (quote ())))))
 
 ; ---------------------------------------------------------------------
 ; .include expansion. Paths are read relative to the current working
@@ -242,7 +242,7 @@
       (t (expand-includes-onto (cdr lines) seen (cons (car lines) acc))))))
 
 (def expand-includes
-  (lambda (lines seen) (reverse (expand-includes-onto lines seen '()))))
+  (lambda (lines seen) (reverse (expand-includes-onto lines seen (quote ())))))
 
 ; ---------------------------------------------------------------------
 ; Pass 1: labels, .define, and the ordered list of instruction token-lists.
@@ -273,7 +273,7 @@
              (t (pass1-loop (cdr lines) (+ pc 1) labels (cons toks insns)))))))))
 
 (def pass1
-  (lambda (lines) (pass1-loop lines 0 '() '())))
+  (lambda (lines) (pass1-loop lines 0 (quote ()) (quote ()))))
 
 ; ---------------------------------------------------------------------
 ; Pass 2: encode each instruction's tokens into a 32-bit word.
@@ -357,7 +357,7 @@
 
 (def assemble-file
   (lambda (input-path output-path)
-    (let ((expanded (expand-includes (split-lines (read-file input-path)) '())))
+    (let ((expanded (expand-includes (split-lines (read-file input-path)) (quote ()))))
       (let ((labels+insns (pass1 expanded)))
         (let ((labels (car labels+insns)) (insns (second labels+insns)))
           (let ((words (map (lambda (toks) (encode-instr toks labels)) insns)))

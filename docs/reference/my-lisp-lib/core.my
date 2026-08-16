@@ -25,12 +25,12 @@
 (def not
   (lambda (value)
     (cond
-      (value '())
+      (value (quote ()))
       (t t))))
 
 (def pair
   (lambda (left right)
-    (cons left (cons right '()))))
+    (cons left (cons right (quote ())))))
 
 (def second
   (lambda (values)
@@ -128,7 +128,7 @@
 
 (def reverse
   (lambda (values)
-    (reverse-onto values '())))
+    (reverse-onto values (quote ()))))
 
 ; (reverse-onto (reverse left) right): reversing left first and then
 ; consing it back onto right, one element at a time, rebuilds
@@ -156,7 +156,7 @@
 
 (def map
   (lambda (f values)
-    (map-onto f values '())))
+    (map-onto f values (quote ()))))
 
 (def filter-onto
   (lambda (predicate values acc)
@@ -167,7 +167,7 @@
 
 (def filter
   (lambda (predicate values)
-    (filter-onto predicate values '())))
+    (filter-onto predicate values (quote ()))))
 
 (def reduce
   (lambda (f acc values)
@@ -210,7 +210,7 @@
 ; könnte. Für eine Folge von Ausdrücken genauso einpacken, wie es der
 ; Rest dieses Codes bereits tut — `(let (...) ((lambda () ausdruck1 ausdruck2)))`.
 (defmacro let (bindings body)
-  (cons (list 'lambda (map (lambda (binding) (car binding)) bindings) body)
+  (cons (list (quote lambda) (map (lambda (binding) (car binding)) bindings) body)
         (map (lambda (binding) (second binding)) bindings)))
 
 ; `let*` is `let` with sequential (not parallel) dependency: each binding's
@@ -273,11 +273,11 @@
 (def equal?
   (lambda (a b)
     (cond
-      ((atom a) (cond ((atom b) (eq a b)) (t '())))
-      ((atom b) '())
+      ((atom a) (cond ((atom b) (eq a b)) (t (quote ()))))
+      ((atom b) (quote ()))
       (t (cond
            ((equal? (car a) (car b)) (equal? (cdr a) (cdr b)))
-           (t '()))))))
+           (t (quote ())))))))
 
 ; nth/member?/assoc (G5 test: already expressible via existing means?)
 ; — yes, same recursive-list-walk shape as length/reverse above.
@@ -304,23 +304,23 @@
 (def member?
   (lambda (item lst)
     (cond
-      ((atom lst) '())
+      ((atom lst) (quote ()))
       ((equal? item (car lst)) t)
       (t (member? item (cdr lst))))))
 
 (def assoc
   (lambda (key alist)
     (cond
-      ((atom alist) '())
+      ((atom alist) (quote ()))
       ((equal? key (car (car alist))) (car alist))
       (t (assoc key (cdr alist))))))
 
 (defmacro let* (bindings body)
   (cond
     ((atom bindings) body)
-    (t (list 'let
+    (t (list (quote let)
              (list (car bindings))
-             (list 'let* (cdr bindings) body)))))
+             (list (quote let*) (cdr bindings) body)))))
 
 ; string-length/string-empty?/string-prefix?/string-contains? (PLAN.md
 ; item 14, item 20's G5 audit test applied live) — none of these need a
@@ -354,16 +354,16 @@
   (lambda (prefix s)
     (cond
       ((string-empty? prefix) t)
-      ((string-empty? s) '())
+      ((string-empty? s) (quote ()))
       ((eq (string-first prefix) (string-first s))
        (string-prefix? (string-rest prefix) (string-rest s)))
-      (t '()))))
+      (t (quote ())))))
 
 (def string-contains?
   (lambda (needle s)
     (cond
       ((string-prefix? needle s) t)
-      ((string-empty? s) '())
+      ((string-empty? s) (quote ()))
       (t (string-contains? needle (string-rest s))))))
 
 ; quotient/mod (G5 test: already expressible via existing means?) — yes.
@@ -474,7 +474,7 @@
 ; лише невід'ємні цілі, як і самі quotient/mod.
 (def digit->string
   (lambda (d)
-    (nth d '("0" "1" "2" "3" "4" "5" "6" "7" "8" "9"))))
+    (nth d (quote ("0" "1" "2" "3" "4" "5" "6" "7" "8" "9")))))
 
 (def number->string-onto
   (lambda (n acc)

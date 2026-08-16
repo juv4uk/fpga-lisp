@@ -2,7 +2,7 @@
 ; (read-file ...), never (load ...).
 
 (evidence
-  (fixture . "(length '(a b c))")
+  (fixture . "(length (quote (a b c)))")
   (requirement . G5)
   (implementation . fpga-lisp)
   (commit . "7542682")

@@ -2,7 +2,7 @@
 ; (read-file ...), never (load ...).
 
 (evidence
-  (fixture . "(reverse '(a b c))")
+  (fixture . "(reverse (quote (a b c)))")
   (requirement . G5)
   (implementation . fpga-lisp)
   (commit . "ae3fbbe")

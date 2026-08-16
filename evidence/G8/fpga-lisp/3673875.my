@@ -2,7 +2,7 @@
 ; (read-file ...), never (load ...).
 
 (evidence
-  (fixture . "(cond (0 'zero-is-truthy) (t 'wrong))")
+  (fixture . "(cond (0 (quote zero-is-truthy)) (t (quote wrong)))")
   (requirement . G8)
   (implementation . fpga-lisp)
   (commit . "3673875")

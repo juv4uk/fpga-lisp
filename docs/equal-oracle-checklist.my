@@ -3,8 +3,8 @@
 ; Each line: expr -> expected. Hardware equal? must match these.
 ;
 ; ATOMS
-(equal? 'a 'a)                 -> t
-(equal? 'a 'b)                 -> ()
+(equal? (quote a) (quote a))                 -> t
+(equal? (quote a) (quote b))                 -> ()
 ; NUMBERS (exactness matters!)
 (equal? 1 1)                   -> t
 (equal? 1 2)                   -> ()
@@ -13,29 +13,29 @@
 ; STRINGS
 (equal? "ab" "ab")             -> t
 (equal? "ab" "ac")             -> ()
-(equal? "a" 'a)                -> ()   ; string != symbol
+(equal? "a" (quote a))                -> ()   ; string != symbol
 ; DOTTED PAIRS
-(equal? '(1 . 2) '(1 . 2))     -> t
-(equal? '(1 . 2) '(1 . 3))     -> ()
-(equal? '(1 . 2) '(1 2))       -> ()   ; dotted pair != proper list, same spine
+(equal? (quote (1 . 2)) (quote (1 . 2)))     -> t
+(equal? (quote (1 . 2)) (quote (1 . 3)))     -> ()
+(equal? (quote (1 . 2)) (quote (1 2)))       -> ()   ; dotted pair != proper list, same spine
 ; PROPER LISTS
-(equal? '(1 2) '(1 2))         -> t
-(equal? '(1 2) '(1 3))         -> ()
-(equal? '(1 2) '(1 2 3))       -> ()   ; length matters
-(equal? '(a (b c)) '(a (b c))) -> t    ; nested
-(equal? '(a (b c)) '(a (b d))) -> ()
-(equal? '(a (b (c))) '(a (b (d)))) -> () ; deep
+(equal? (quote (1 2)) (quote (1 2)))         -> t
+(equal? (quote (1 2)) (quote (1 3)))         -> ()
+(equal? (quote (1 2)) (quote (1 2 3)))       -> ()   ; length matters
+(equal? (quote (a (b c))) (quote (a (b c)))) -> t    ; nested
+(equal? (quote (a (b c))) (quote (a (b d)))) -> ()
+(equal? (quote (a (b (c)))) (quote (a (b (d))))) -> () ; deep
 ; NIL
-(equal? '() '())               -> t
-(equal? '() '(()))             -> ()
-(equal? '() 'nil)              -> ()   ; NIL != symbol nil
+(equal? (quote ()) (quote ()))               -> t
+(equal? (quote ()) (quote (())))             -> ()
+(equal? (quote ()) (quote nil))              -> ()   ; NIL != symbol nil
 ; MIXED TYPES
-(equal? 'a 1)                  -> ()
-(equal? '(1 2) '(1 . 2))       -> ()   ; structure differs
+(equal? (quote a) 1)                  -> ()
+(equal? (quote (1 2)) (quote (1 . 2)))       -> ()   ; structure differs
 ; CLOSURES
 (equal? (lambda (x) x) (lambda (x) x)) -> () ; identity, not structure (G1)
 ; BOOLEAN SYMBOLS
-(equal? 't 't)                 -> t
+(equal? (quote t) (quote t))                 -> t
 ;
 ; CYCLES: out of scope -- the language cannot construct self-referential
 ; cons (no set-car!/set-cdr!/mutation primitives; verified unknown-symbol

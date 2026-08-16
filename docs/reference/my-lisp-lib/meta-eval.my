@@ -122,17 +122,17 @@
       ((atom expr) (env-lookup expr env))
       ((atom (car expr))
        (cond
-         ((eq (car expr) 'quote) (second expr))
-         ((eq (car expr) 'cond) (my-eval-cond (cdr expr) env))
-         ((eq (car expr) 'lambda) (list 'closure (second expr) (cdr (cdr expr)) env))
-         ((eq (car expr) 'atom) (atom (my-eval (second expr) env)))
-         ((eq (car expr) 'eq) (eq (my-eval (second expr) env) (my-eval (third expr) env)))
-         ((eq (car expr) 'car) (car (my-eval (second expr) env)))
-         ((eq (car expr) 'cdr) (cdr (my-eval (second expr) env)))
-         ((eq (car expr) 'cons) (cons (my-eval (second expr) env) (my-eval (third expr) env)))
-         ((eq (car expr) '+) (+ (my-eval (second expr) env) (my-eval (third expr) env)))
-         ((eq (car expr) '-) (- (my-eval (second expr) env) (my-eval (third expr) env)))
-         ((eq (car expr) '*) (* (my-eval (second expr) env) (my-eval (third expr) env)))
+         ((eq (car expr) (quote quote)) (second expr))
+         ((eq (car expr) (quote cond)) (my-eval-cond (cdr expr) env))
+         ((eq (car expr) (quote lambda)) (list (quote closure) (second expr) (cdr (cdr expr)) env))
+         ((eq (car expr) (quote atom)) (atom (my-eval (second expr) env)))
+         ((eq (car expr) (quote eq)) (eq (my-eval (second expr) env) (my-eval (third expr) env)))
+         ((eq (car expr) (quote car)) (car (my-eval (second expr) env)))
+         ((eq (car expr) (quote cdr)) (cdr (my-eval (second expr) env)))
+         ((eq (car expr) (quote cons)) (cons (my-eval (second expr) env) (my-eval (third expr) env)))
+         ((eq (car expr) (quote +)) (+ (my-eval (second expr) env) (my-eval (third expr) env)))
+         ((eq (car expr) (quote -)) (- (my-eval (second expr) env) (my-eval (third expr) env)))
+         ((eq (car expr) (quote *)) (* (my-eval (second expr) env) (my-eval (third expr) env)))
          ((my-macro? (env-lookup (car expr) env))
           (my-eval (my-apply (env-lookup (car expr) env) (cdr expr)) env))
          (t (my-apply (my-eval (car expr) env) (my-eval-list (cdr expr) env)))))
@@ -151,20 +151,20 @@
 (def my-macro?
   (lambda (value)
     (cond
-      ((atom value) '())
-      (t (eq (car value) 'macro)))))
+      ((atom value) (quote ()))
+      (t (eq (car value) (quote macro))))))
 
 (def my-eval-cond
   (lambda (clauses env)
     (cond
-      ((atom clauses) '())
+      ((atom clauses) (quote ()))
       ((my-eval (car (car clauses)) env) (my-eval (second (car clauses)) env))
       (t (my-eval-cond (cdr clauses) env)))))
 
 (def my-eval-list
   (lambda (exprs env)
     (cond
-      ((atom exprs) '())
+      ((atom exprs) (quote ()))
       (t (cons (my-eval (car exprs) env) (my-eval-list (cdr exprs) env))))))
 
 (def bind-params
@@ -183,11 +183,11 @@
 (def my-apply
   (lambda (fn args)
     (cond
-      ((eq (car fn) 'closure)
+      ((eq (car fn) (quote closure))
        (my-eval-body (third fn) (bind-params (second fn) args (car (cdr (cdr (cdr fn)))))))
-      ((eq (car fn) 'macro)
+      ((eq (car fn) (quote macro))
        (my-eval-body (third fn) (bind-params (second fn) args (car (cdr (cdr (cdr fn)))))))
-      (t (list 'not-callable fn)))))
+      (t (list (quote not-callable) fn)))))
 
 (def env-lookup
   (lambda (name env)
@@ -212,11 +212,11 @@
   (lambda (form env)
     (cond
       ((atom form) (cons env (my-eval form env)))
-      ((eq (car form) 'def)
+      ((eq (car form) (quote def))
        (let ((value (my-eval (third form) env)))
          (cons (cons (cons (second form) value) env) value)))
-      ((eq (car form) 'defmacro)
-       (let ((macro-val (list 'macro (third form) (cdr (cdr (cdr form))) env)))
+      ((eq (car form) (quote defmacro))
+       (let ((macro-val (list (quote macro) (third form) (cdr (cdr (cdr form))) env)))
          (cons (cons (cons (second form) macro-val) env) macro-val)))
       (t (cons env (my-eval form env))))))
 
