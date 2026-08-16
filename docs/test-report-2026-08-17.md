@@ -6,15 +6,16 @@
 
 ## Epistemic State
 
-| Component | PATCHED | SIM-PASS | COMMITTED | CI-PASS | SYNTH-PASS | HW-PASS |
-|-----------|---------|----------|------------|---------|-------------|---------|
-| PC++ fix (control.sv) | ✅ | ✅ Python | ✅ `5bcc99c` | — | — | — |
-| Heap off-by-one (lisp_data_unit.sv) | ✅ | ✅ Python | ✅ `2d4a455` | — | — | — |
+| Component | PATCHED | MODEL-PASS | COMMITTED | CI-PASS | SYNTH-PASS | HW-PASS |
+|-----------|---------|-------------|------------|---------|-------------|---------|
+| PC++ fix (control.sv) | ✅ | ✅ | ✅ `5bcc99c` | — | — | — |
+| Heap off-by-one (lisp_data_unit.sv) | ✅ | ✅ | ✅ `2d4a455` | — | — | — |
 | tb_fetch_pair.sv | ✅ | — | ✅ `8c4a12b` | — | — | — |
 
-**Important:** SIM-PASS is based on a Python behavioral model that reproduces
+**Important:** MODEL-PASS is based on a Python behavioral model that reproduces
 the FSM from `control.sv` and the heap logic from `lisp_data_unit.sv`. This is
-NOT a full RTL simulation. A proper `iverilog` or `verilator` run is still needed.
+NOT an RTL simulation. `RTL-SIM-PASS` requires a proper `iverilog` or `verilator`
+run, which is still needed.
 
 ## Test 1: FETCH_PAIR happy path
 
@@ -90,7 +91,7 @@ All counters match expected values for the test program.
 
 ## What is NOT tested
 
-1. **RTL simulation** — no iverilog/verilator in sandbox
+1. **RTL simulation** — no iverilog/verilator in sandbox (MODEL-PASS only, not RTL-SIM-PASS)
 2. **Synthesis** — no Yosys/Gowin toolchain
 3. **Hardware** — no Tang Primer 25K board
 4. **Edge case: rd == rs2** — FETCH_PAIR with identical destinations
