@@ -22,7 +22,9 @@ module control (
     output logic         ldu_cmd_car,
     output logic         ldu_cmd_cdr,
     output logic         ldu_cmd_setcdr,
+    output logic         ldu_cmd_fetch_pair,
     input  lisp_word_t   ldu_result,
+    input  lisp_word_t   ldu_result_cdr,
     input  logic         ldu_valid,
     input  logic         ldu_error,
     
@@ -49,21 +51,12 @@ module control (
     output logic         halted
 );
 
-    // Post-HALT diagnostic monitor protocol (binary, one command at a time):
-    //   0x01 <reg>        -> replies with the 4-byte register word (LE)
-    //   0x02 <lo> <hi>    -> replies with CAR (4B LE) then CDR (4B LE) at heap[addr]
-    //   0x03              -> replies with the 4-byte heap pointer (LE)
-    //   0x04              -> replies with {19'd0, err_flag, err_pc} (LE): a
-    //                        CAR/CDR/CONS type error (e.g. CAR of a non-CONS)
-    //                        halts the machine like HALT rather than hanging
-    //                        forever in ST_WAIT_LDU; this command tells you
-    //                        whether that happened and at which PC.
-    // Unknown command bytes are ignored (monitor keeps waiting for the next byte).
     typedef enum logic [4:0] {
         ST_FETCH,
         ST_DECODE,
         ST_EXECUTE,
         ST_WAIT_LDU,
+        ST_WRITE_PAIR_CDR,
         ST_OUT_START,
         ST_OUT_WAIT,
         ST_IN_WAIT,
@@ -104,10 +97,14 @@ module control (
     logic [63:0] mon_tx_buf;
     logic [3:0]  mon_tx_remaining;
 
-    // Latched by a CAR/CDR/CONS type error (see ST_WAIT_LDU below), read
-    // back via monitor command 0x04 instead of hanging forever.
+    // Latched by a CAR/CDR/CONS type error
     logic        err_flag;
     logic [11:0] err_pc;
+
+    // FETCH_PAIR: registered flag + latched CDR for second write
+    logic        is_fetch_pair;
+    lisp_word_t  pair_cdr_buf;
+    logic [3:0]  pair_cdr_addr;
 
     assign imem_addr = pc;
     assign reg_rd_addr_a = (state == ST_MON_REG_SEND) ? mon_arg1[3:0] : rs1;
@@ -126,6 +123,9 @@ module control (
             mon_tx_remaining <= 0;
             err_flag <= 0;
             err_pc <= 0;
+            is_fetch_pair <= 0;
+            pair_cdr_buf <= '0;
+            pair_cdr_addr <= 0;
         end else begin
             state <= next_state;
             
@@ -135,9 +135,6 @@ module control (
                 end
                 ST_EXECUTE: begin
                     if (opcode == OP_JMP) begin
-                        // rd=0,rs1=0: plain JMP addr.
-                        // rd!=0,rs1=0: CALL rd,addr (reg[rd] <= return addr, jump).
-                        // rd=0,rs1!=0: RET rs1 (jump to address held in rs1).
                         if (rs1 != 0) begin
                             pc <= reg_rd_data_a.value[11:0];
                         end else begin
@@ -149,8 +146,14 @@ module control (
                         end else begin
                             pc <= pc + 1;
                         end
-                    end else if (!ldu_cmd_cons && !ldu_cmd_car && !ldu_cmd_cdr && !ldu_cmd_setcdr && opcode != OP_HALT && opcode != OP_OUT && opcode != OP_IN) begin
+                    end else if (!ldu_cmd_cons && !ldu_cmd_car && !ldu_cmd_cdr && !ldu_cmd_setcdr && !ldu_cmd_fetch_pair && opcode != OP_HALT && opcode != OP_OUT && opcode != OP_IN) begin
                         pc <= pc + 1;
+                    end
+                    // Latch is_fetch_pair when entering ST_WAIT_LDU via FETCH_PAIR
+                    if (ldu_cmd_fetch_pair) begin
+                        is_fetch_pair <= 1;
+                    end else begin
+                        is_fetch_pair <= 0;
                     end
                 end
                 ST_WAIT_LDU: begin
@@ -158,8 +161,18 @@ module control (
                         err_flag <= 1;
                         err_pc <= pc;
                     end else if (ldu_valid) begin
+                        // If FETCH_PAIR, latch CDR for the second register write
+                        if (is_fetch_pair) begin
+                            pair_cdr_buf <= ldu_result_cdr;
+                            pair_cdr_addr <= rs2;
+                        end
                         pc <= pc + 1;
                     end
+                end
+                ST_WRITE_PAIR_CDR: begin
+                    // Second half of FETCH_PAIR: CDR write happens in
+                    // always_comb, just advance PC.
+                    pc <= pc + 1;
                 end
                 ST_MON_ERR_SEND: begin
                     mon_tx_buf <= {32'd0, 19'd0, err_flag, err_pc};
@@ -218,6 +231,7 @@ module control (
         ldu_cmd_car = 0;
         ldu_cmd_cdr = 0;
         ldu_cmd_setcdr = 0;
+        ldu_cmd_fetch_pair = 0;
         
         halted = 0;
         out_valid = 0;
@@ -225,8 +239,6 @@ module control (
         in_ack = 0;
         mon_peek_cmd = 0;
 
-        // Machine reports halted from the moment HALT executes through the
-        // whole post-halt monitor session (the monitor never resumes ST_FETCH).
         if (state == ST_HALT || state == ST_MON_CMD || state == ST_MON_ARG1 ||
             state == ST_MON_ARG2 || state == ST_MON_HEAP_WAIT ||
             state == ST_MON_REG_SEND || state == ST_MON_HP_SEND ||
@@ -247,23 +259,19 @@ module control (
                     OP_NOP: begin
                         next_state = ST_FETCH;
                     end
-                    OP_LOADI: begin // Load immediate as FIXNUM
+                    OP_LOADI: begin
                         reg_we = 1;
                         reg_wr_data.tag = TAG_FIXNUM;
                         reg_wr_data.value = {12'd0, imm};
                         next_state = ST_FETCH;
                     end
-                    OP_LOADSYM: begin // Load immediate as SYMBOL
+                    OP_LOADSYM: begin
                         reg_we = 1;
                         reg_wr_data.tag = TAG_SYMBOL;
                         reg_wr_data.value = {12'd0, imm};
                         next_state = ST_FETCH;
                     end
                     OP_MOV: begin
-                        // rs2==1: GETTAG rd,rs1   -- rd = FIXNUM(tag of rs1).
-                        // rs2==2: MAKEPRIM rd,rs1 -- rd = PRIMITIVE(value of rs1).
-                        // rs2==3: GETVAL rd,rs1   -- rd = FIXNUM(value of rs1).
-                        // rs2==0 (the assembler's default): plain MOV rd,rs1.
                         reg_we = 1;
                         case (rs2)
                             4'd1: begin
@@ -289,31 +297,21 @@ module control (
                         next_state = ST_WAIT_LDU;
                     end
                     OP_CAR: begin
-                        ldu_cmd_car = 1;
-                        next_state = ST_WAIT_LDU;
+                        // rs2==0: plain CAR rd,rs1
+                        // rs2!=0: FETCH_PAIR rd,rs1,rs2 — rd=CAR, rs2=CDR
+                        if (rs2 != 0) begin
+                            ldu_cmd_fetch_pair = 1;
+                            next_state = ST_WAIT_LDU;
+                        end else begin
+                            ldu_cmd_car = 1;
+                            next_state = ST_WAIT_LDU;
+                        end
                     end
                     OP_CDR: begin
                         ldu_cmd_cdr = 1;
                         next_state = ST_WAIT_LDU;
                     end
                     OP_ATOM: begin
-                        // rs2==0 (the assembler's default for plain ATOM
-                        // rd,rs1): ordinary ATOM check on rs1 into rd.
-                        // rs2!=0: SETCDR rd,rs1,rs2 -- an internal,
-                        // bootstrap-only capability (never reachable from
-                        // eval/apply as an ordinary primitive) that
-                        // overwrites an EXISTING cons cell's CDR in place,
-                        // needed for letrec-style self-referential
-                        // closures (see lisp_data_unit.sv's cmd_setcdr).
-                        // rs1 = the cons cell to mutate, rs2 = the new CDR
-                        // value, rd = receives the new CDR value back as
-                        // confirmation. Same "reuse an unused field as a
-                        // mode selector" pattern as OP_MOV's GETTAG/
-                        // MAKEPRIM/GETVAL, with the one caveat that rs2
-                        // doubles as real data here: rs2 can never be R0
-                        // for this instruction (R0 there means "plain
-                        // ATOM", the same accepted constraint CALL/RET
-                        // already place on rd/rs1 being nonzero).
                         if (rs2 != 0) begin
                             ldu_cmd_setcdr = 1;
                             next_state = ST_WAIT_LDU;
@@ -359,8 +357,6 @@ module control (
                         next_state = ST_FETCH;
                     end
                     OP_JMP: begin
-                        // CALL form (rd!=0, rs1==0): link register gets the
-                        // return address (pc+1) before the jump takes effect.
                         if (rd != 0 && rs1 == 0) begin
                             reg_we = 1;
                             reg_wr_data.tag = TAG_FIXNUM;
@@ -398,15 +394,23 @@ module control (
             end
             ST_WAIT_LDU: begin
                 if (ldu_error) begin
-                    // Unrecoverable type error (e.g. CAR of a non-CONS):
-                    // halt like HALT instead of waiting for a ldu_valid
-                    // that will never come. Inspect via monitor cmd 0x04.
                     next_state = ST_HALT;
                 end else if (ldu_valid) begin
                     reg_we = 1;
                     reg_wr_data = ldu_result;
-                    next_state = ST_FETCH;
+                    if (is_fetch_pair) begin
+                        // CAR written to rd above; CDR goes to rs2 next cycle
+                        next_state = ST_WRITE_PAIR_CDR;
+                    end else begin
+                        next_state = ST_FETCH;
+                    end
                 end
+            end
+            ST_WRITE_PAIR_CDR: begin
+                reg_we = 1;
+                reg_wr_addr = pair_cdr_addr;
+                reg_wr_data = pair_cdr_buf;
+                next_state = ST_FETCH;
             end
             ST_HALT: begin
                 if (in_valid) begin
@@ -417,11 +421,11 @@ module control (
                 if (in_valid) begin
                     in_ack = 1;
                     case (in_data)
-                        8'h01:   next_state = ST_MON_ARG1; // REG <idx>
-                        8'h02:   next_state = ST_MON_ARG1; // HEAP <lo> <hi>
-                        8'h03:   next_state = ST_MON_HP_SEND; // HP
-                        8'h04:   next_state = ST_MON_ERR_SEND; // ERR
-                        default: next_state = ST_MON_CMD; // unknown, ignore
+                        8'h01:   next_state = ST_MON_ARG1;
+                        8'h02:   next_state = ST_MON_ARG1;
+                        8'h03:   next_state = ST_MON_HP_SEND;
+                        8'h04:   next_state = ST_MON_ERR_SEND;
+                        default: next_state = ST_MON_CMD;
                     endcase
                 end
             end
