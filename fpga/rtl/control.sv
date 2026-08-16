@@ -51,6 +51,18 @@ module control (
     output logic         halted
 );
 
+    // Post-HALT diagnostic monitor protocol (binary, one command at a time):
+    //   0x01 <reg>        -> replies with the 4-byte register word (LE)
+    //   0x02 <lo> <hi>    -> replies with CAR (4B LE) then CDR (4B LE) at heap[addr]
+    //   0x03              -> replies with the 4-byte heap pointer (LE)
+    //   0x04              -> replies with {19'd0, err_flag, err_pc} (LE)
+    //   0x05              -> replies with perf_cycles (4B LE)
+    //   0x06              -> replies with perf_cons (4B LE)
+    //   0x07              -> replies with perf_car_cdr (4B LE)
+    //   0x08              -> replies with perf_eval_calls (4B LE)
+    //   0x09              -> replies with perf_jumps (4B LE)
+    //   0x0A              -> replies with perf_heap_peak (4B LE)
+    // Unknown command bytes are ignored (monitor keeps waiting for the next byte).
     typedef enum logic [4:0] {
         ST_FETCH,
         ST_DECODE,
@@ -68,6 +80,7 @@ module control (
         ST_MON_REG_SEND,
         ST_MON_HP_SEND,
         ST_MON_ERR_SEND,
+        ST_MON_PERF_SEND,
         ST_MON_TX_START,
         ST_MON_TX_WAIT
     } state_t;
@@ -106,6 +119,17 @@ module control (
     lisp_word_t  pair_cdr_buf;
     logic [3:0]  pair_cdr_addr;
 
+    // ── Performance counters ──────────────────────────────────
+    // Read via monitor protocol commands 0x05–0x0A (4 bytes each).
+    // All counters are 32-bit, reset to 0 on rst_n.
+    logic [31:0] perf_cycles;       // 0x05: total clock cycles in run
+    logic [31:0] perf_cons;         // 0x06: CONS operations
+    logic [31:0] perf_car_cdr;      // 0x07: CAR + CDR + FETCH_PAIR
+    logic [31:0] perf_eval_calls;   // 0x08: CALL instructions
+    logic [31:0] perf_jumps;        // 0x09: JMP + JF
+    logic [31:0] perf_heap_peak;    // 0x0A: max hp seen during run
+    // ────────────────────────────────────────────────────────────
+
     assign imem_addr = pc;
     assign reg_rd_addr_a = (state == ST_MON_REG_SEND) ? mon_arg1[3:0] : rs1;
     assign reg_rd_addr_b = rs2;
@@ -126,14 +150,37 @@ module control (
             is_fetch_pair <= 0;
             pair_cdr_buf <= '0;
             pair_cdr_addr <= 0;
+            perf_cycles <= 0;
+            perf_cons <= 0;
+            perf_car_cdr <= 0;
+            perf_eval_calls <= 0;
+            perf_jumps <= 0;
+            perf_heap_peak <= 0;
         end else begin
             state <= next_state;
             
             case (state)
                 ST_FETCH: begin
                     instruction <= imem_data;
+                    perf_cycles <= perf_cycles + 1;
                 end
                 ST_EXECUTE: begin
+                    // Performance counters
+                    if (opcode == OP_CONS) begin
+                        perf_cons <= perf_cons + 1;
+                    end
+                    if (opcode == OP_CAR || opcode == OP_CDR) begin
+                        perf_car_cdr <= perf_car_cdr + 1;
+                    end
+                    if (ldu_cmd_fetch_pair) begin
+                        perf_car_cdr <= perf_car_cdr + 1; // FETCH_PAIR counts as one
+                    end
+                    if (opcode == OP_JMP && rd != 0 && rs1 == 0) begin
+                        perf_eval_calls <= perf_eval_calls + 1; // CALL form
+                    end
+                    if (opcode == OP_JMP || opcode == OP_JF) begin
+                        perf_jumps <= perf_jumps + 1;
+                    end
                     if (opcode == OP_JMP) begin
                         if (rs1 != 0) begin
                             pc <= reg_rd_data_a.value[11:0];
@@ -161,6 +208,10 @@ module control (
                         err_flag <= 1;
                         err_pc <= pc;
                     end else if (ldu_valid) begin
+                        // Track heap peak (hp_in is zero-extended to 16 bits)
+                        if (hp_in[11:0] > perf_heap_peak[11:0]) begin
+                            perf_heap_peak <= {20'd0, hp_in[11:0]};
+                        end
                         // If FETCH_PAIR, latch CDR for the second register write
                         if (is_fetch_pair) begin
                             pair_cdr_buf <= ldu_result_cdr;
@@ -170,12 +221,23 @@ module control (
                     end
                 end
                 ST_WRITE_PAIR_CDR: begin
-                    // Second half of FETCH_PAIR: CDR write happens in
-                    // always_comb, just advance PC.
                     pc <= pc + 1;
                 end
                 ST_MON_ERR_SEND: begin
                     mon_tx_buf <= {32'd0, 19'd0, err_flag, err_pc};
+                    mon_tx_remaining <= 4;
+                end
+                ST_MON_PERF_SEND: begin
+                    // Select counter based on which command got us here
+                    case (mon_cmd)
+                        8'h05:   mon_tx_buf <= {32'd0, perf_cycles};
+                        8'h06:   mon_tx_buf <= {32'd0, perf_cons};
+                        8'h07:   mon_tx_buf <= {32'd0, perf_car_cdr};
+                        8'h08:   mon_tx_buf <= {32'd0, perf_eval_calls};
+                        8'h09:   mon_tx_buf <= {32'd0, perf_jumps};
+                        8'h0A:   mon_tx_buf <= {32'd0, perf_heap_peak};
+                        default: mon_tx_buf <= 64'd0;
+                    endcase
                     mon_tx_remaining <= 4;
                 end
                 ST_OUT_WAIT: begin
@@ -243,6 +305,7 @@ module control (
             state == ST_MON_ARG2 || state == ST_MON_HEAP_WAIT ||
             state == ST_MON_REG_SEND || state == ST_MON_HP_SEND ||
             state == ST_MON_ERR_SEND ||
+            state == ST_MON_PERF_SEND ||
             state == ST_MON_TX_START || state == ST_MON_TX_WAIT) begin
             halted = 1;
         end
@@ -297,8 +360,6 @@ module control (
                         next_state = ST_WAIT_LDU;
                     end
                     OP_CAR: begin
-                        // rs2==0: plain CAR rd,rs1
-                        // rs2!=0: FETCH_PAIR rd,rs1,rs2 — rd=CAR, rs2=CDR
                         if (rs2 != 0) begin
                             ldu_cmd_fetch_pair = 1;
                             next_state = ST_WAIT_LDU;
@@ -399,7 +460,6 @@ module control (
                     reg_we = 1;
                     reg_wr_data = ldu_result;
                     if (is_fetch_pair) begin
-                        // CAR written to rd above; CDR goes to rs2 next cycle
                         next_state = ST_WRITE_PAIR_CDR;
                     end else begin
                         next_state = ST_FETCH;
@@ -425,6 +485,12 @@ module control (
                         8'h02:   next_state = ST_MON_ARG1;
                         8'h03:   next_state = ST_MON_HP_SEND;
                         8'h04:   next_state = ST_MON_ERR_SEND;
+                        8'h05:   next_state = ST_MON_PERF_SEND;
+                        8'h06:   next_state = ST_MON_PERF_SEND;
+                        8'h07:   next_state = ST_MON_PERF_SEND;
+                        8'h08:   next_state = ST_MON_PERF_SEND;
+                        8'h09:   next_state = ST_MON_PERF_SEND;
+                        8'h0A:   next_state = ST_MON_PERF_SEND;
                         default: next_state = ST_MON_CMD;
                     endcase
                 end
@@ -458,6 +524,9 @@ module control (
                 next_state = ST_MON_TX_START;
             end
             ST_MON_ERR_SEND: begin
+                next_state = ST_MON_TX_START;
+            end
+            ST_MON_PERF_SEND: begin
                 next_state = ST_MON_TX_START;
             end
             ST_MON_TX_START: begin
