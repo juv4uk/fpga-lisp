@@ -26,6 +26,11 @@
 //       OP_* constants are local because opcodes are not yet
 //       defined in a shared include file. If they ever are,
 //       remove these and use the authoritative ones.
+//
+// iverilog compatibility: this testbench uses [31:28]/[27:0] bit-slicing
+// instead of .tag/.value struct member access, and literal 5'd0 instead
+// of dut.u_ctrl.ST_FETCH enum access. iverilog does not support
+// hierarchical access to enum or struct members.
 
 module tb_fetch_pair;
 
@@ -94,34 +99,36 @@ module tb_fetch_pair;
         $display("");
 
         // R4 should be CAR of (10 . 20) = fixnum 10
+        // Use bit-slicing [31:28]/[27:0] instead of .tag/.value —
+        // iverilog does not support hierarchical struct member access.
         $display("R4: tag=%0d value=%0d (expected tag=%0d value=10)",
-                 dut.u_regs.regs[4].tag, dut.u_regs.regs[4].value, TAG_FIXNUM);
-        if (dut.u_regs.regs[4].tag == TAG_FIXNUM && dut.u_regs.regs[4].value == 28'd10)
+                 dut.u_regs.regs[4][31:28], dut.u_regs.regs[4][27:0], TAG_FIXNUM);
+        if (dut.u_regs.regs[4][31:28] == TAG_FIXNUM && dut.u_regs.regs[4][27:0] == 28'd10)
             $display("  PASS: R4 = CAR = 10");
         else
             $display("  FAIL: R4 != 10");
 
         // R5 should be CDR of (10 . 20) = fixnum 20
         $display("R5: tag=%0d value=%0d (expected tag=%0d value=20)",
-                 dut.u_regs.regs[5].tag, dut.u_regs.regs[5].value, TAG_FIXNUM);
-        if (dut.u_regs.regs[5].tag == TAG_FIXNUM && dut.u_regs.regs[5].value == 28'd20)
+                 dut.u_regs.regs[5][31:28], dut.u_regs.regs[5][27:0], TAG_FIXNUM);
+        if (dut.u_regs.regs[5][31:28] == TAG_FIXNUM && dut.u_regs.regs[5][27:0] == 28'd20)
             $display("  PASS: R5 = CDR = 20");
         else
             $display("  FAIL: R5 != 20");
 
         // R6 should be 123 — this verifies PC wasn't skipped
         $display("R6: tag=%0d value=%0d (expected tag=%0d value=123)",
-                 dut.u_regs.regs[6].tag, dut.u_regs.regs[6].value, TAG_FIXNUM);
-        if (dut.u_regs.regs[6].tag == TAG_FIXNUM && dut.u_regs.regs[6].value == 28'd123)
+                 dut.u_regs.regs[6][31:28], dut.u_regs.regs[6][27:0], TAG_FIXNUM);
+        if (dut.u_regs.regs[6][31:28] == TAG_FIXNUM && dut.u_regs.regs[6][27:0] == 28'd123)
             $display("  PASS: R6 = 123 (next instruction executed)");
         else
             $display("  FAIL: R6 != 123 (FETCH_PAIR skipped next instruction!)");
 
         $display("");
 
-        if (dut.u_regs.regs[4].tag == TAG_FIXNUM && dut.u_regs.regs[4].value == 28'd10 &&
-            dut.u_regs.regs[5].tag == TAG_FIXNUM && dut.u_regs.regs[5].value == 28'd20 &&
-            dut.u_regs.regs[6].tag == TAG_FIXNUM && dut.u_regs.regs[6].value == 28'd123)
+        if (dut.u_regs.regs[4][31:28] == TAG_FIXNUM && dut.u_regs.regs[4][27:0] == 28'd10 &&
+            dut.u_regs.regs[5][31:28] == TAG_FIXNUM && dut.u_regs.regs[5][27:0] == 28'd20 &&
+            dut.u_regs.regs[6][31:28] == TAG_FIXNUM && dut.u_regs.regs[6][27:0] == 28'd123)
             $display("OVERALL: ALL TESTS PASSED");
         else
             $display("OVERALL: TESTS FAILED");
