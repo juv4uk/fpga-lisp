@@ -70,8 +70,8 @@ module lisp_machine (
     );
     
     // --- Lisp Data Unit (Heap + Primitives) ---
-    logic ldu_cmd_cons, ldu_cmd_car, ldu_cmd_cdr, ldu_cmd_setcdr;
-    lisp_word_t ldu_result;
+    logic ldu_cmd_cons, ldu_cmd_car, ldu_cmd_cdr, ldu_cmd_setcdr, ldu_cmd_fetch_pair;
+    lisp_word_t ldu_result, ldu_result_cdr;
     logic ldu_valid, ldu_error;
 
     // Debug/monitor raw heap access (active only after HALT)
@@ -83,17 +83,19 @@ module lisp_machine (
 
     lisp_data_unit u_ldu (
         .clk(clk),
-        .rst_n(cpu_rst_n), // Use CPU reset
+        .rst_n(cpu_rst_n),
 
         .cmd_cons(ldu_cmd_cons),
         .cmd_car(ldu_cmd_car),
         .cmd_cdr(ldu_cmd_cdr),
         .cmd_setcdr(ldu_cmd_setcdr),
+        .cmd_fetch_pair(ldu_cmd_fetch_pair),
 
         .op_a(reg_rd_data_a),
         .op_b(reg_rd_data_b),
 
         .result(ldu_result),
+        .result_cdr(ldu_result_cdr),
         .valid(ldu_valid),
         .error(ldu_error),
 
@@ -133,7 +135,7 @@ module lisp_machine (
     // --- Control Unit ---
     control u_ctrl (
         .clk(clk),
-        .rst_n(cpu_rst_n), // Use CPU reset
+        .rst_n(cpu_rst_n),
         
         .imem_addr(pc),
         .imem_data(instr),
@@ -150,7 +152,9 @@ module lisp_machine (
         .ldu_cmd_car(ldu_cmd_car),
         .ldu_cmd_cdr(ldu_cmd_cdr),
         .ldu_cmd_setcdr(ldu_cmd_setcdr),
+        .ldu_cmd_fetch_pair(ldu_cmd_fetch_pair),
         .ldu_result(ldu_result),
+        .ldu_result_cdr(ldu_result_cdr),
         .ldu_valid(ldu_valid),
         .ldu_error(ldu_error),
         
@@ -176,7 +180,7 @@ module lisp_machine (
     
     uart_tx u_uart_tx (
         .clk(clk),
-        .rst_n(rst_n), // Keep running during boot
+        .rst_n(rst_n),
         .tx_start(uart_tx_start),
         .tx_data(uart_tx_data),
         .tx(uart_tx_out),
@@ -185,7 +189,7 @@ module lisp_machine (
 
     uart_rx u_uart_rx (
         .clk(clk),
-        .rst_n(rst_n), // Keep running during boot
+        .rst_n(rst_n),
         .rx(uart_rx_in),
         .rx_data(uart_rx_data),
         .rx_valid(uart_rx_valid)
