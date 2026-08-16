@@ -32,9 +32,11 @@ module lisp_data_unit #(
     output logic [HEAP_ADDR_WIDTH-1:0] hp_out
 );
 
-    // Heap Pointer
-    logic [HEAP_ADDR_WIDTH-1:0] hp;
-    assign hp_out = hp;
+    // Heap Pointer — one bit wider than address space so that
+    // hp == 2^HEAP_ADDR_WIDTH signals HEAP_FULL without losing
+    // the last usable cell (address 2^HEAP_ADDR_WIDTH - 1).
+    logic [HEAP_ADDR_WIDTH:0] hp; // 13 bits for 12-bit address space
+    assign hp_out = hp[HEAP_ADDR_WIDTH-1:0];
     logic is_peek;
 
     // Heap Memory Interface
@@ -113,18 +115,22 @@ module lisp_data_unit #(
                 reading_state <= 1;
                 is_peek <= 1;
             end else if (cmd_cons) begin
-                // CONS operation — check heap overflow first
-                if (hp == (1 << HEAP_ADDR_WIDTH) - 1) begin
+                // CONS operation — check heap overflow first.
+                // hp is (HEAP_ADDR_WIDTH+1) bits wide, so it can
+                // represent 0..2^HEAP_ADDR_WIDTH. The value
+                // 2^HEAP_ADDR_WIDTH means all 2^HEAP_ADDR_WIDTH
+                // cells (0..2^HEAP_ADDR_WIDTH-1) are used → FULL.
+                if (hp == (1 << HEAP_ADDR_WIDTH)) begin
                     error <= 1; // HEAP_FULL
                 end else begin
                     heap_we_car <= 1;
                     heap_we_cdr <= 1;
-                    heap_addr <= hp;
+                    heap_addr <= hp[HEAP_ADDR_WIDTH-1:0];
                     heap_car_in <= op_a;
                     heap_cdr_in <= op_b;
 
                     result.tag <= TAG_CONS;
-                    result.value <= { {(28-HEAP_ADDR_WIDTH){1'b0}}, hp };
+                    result.value <= { {(28-HEAP_ADDR_WIDTH){1'b0}}, hp[HEAP_ADDR_WIDTH-1:0] };
                     valid <= 1;
 
                     hp <= hp + 1; // Bump allocator
