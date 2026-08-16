@@ -46,6 +46,27 @@ jobs:
         run: |
           set -euo pipefail
           fail=0
+
+          # --- tb_fetch_pair (lives in fpga/tb/, not fpga/sim/) ---
+          echo "::group::tb_fetch_pair"
+          iverilog -g2012 -I fpga/rtl -o tb_fetch_pair.vvp \
+            fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
+            fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv \
+            fpga/rtl/instruction_decoder.sv fpga/rtl/control.sv \
+            fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
+            fpga/tb/tb_fetch_pair.sv
+          out="$(vvp tb_fetch_pair.vvp)"
+          echo "$out"
+          if echo "$out" | grep -q "FAILED"; then
+            echo "::error::tb_fetch_pair FAILED"
+            fail=1
+          elif ! echo "$out" | grep -qE "PASSED|Machine Halted"; then
+            echo "::error::tb_fetch_pair produced no PASSED/FAILED verdict -- treating as failed"
+            fail=1
+          fi
+          echo "::endgroup::"
+
+          # --- fpga/sim/ testbenches ---
           for tb in tb_cons tb_heap tb_car_cdr tb_atom_eq tb_machine tb_monitor tb_control tb_jf_truthiness tb_list tb_call \
                     tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply \
                     tb_eval_primitive tb_error_recovery tb_eval_all_primitives \
