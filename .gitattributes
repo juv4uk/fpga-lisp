@@ -1,3 +1,6 @@
-# GitHub Linguist: .my files are my-lisp source → shown in "Other" bucket
-*.my linguist-language=Text
-*.lisp linguist-language=Common-Lisp
+# GitHub Linguist doesn't know the `.my` extension yet — it misdetected
+# .my files as CLIPS. We map .my to Text so it shows up in the "Other"
+# bucket on GitHub's language stats, until MyLisp is registered upstream
+# via a Linguist PR.
+*.my linguist-language=true
+
