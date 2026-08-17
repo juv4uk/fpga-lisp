@@ -13,3 +13,6 @@ impl/
 fpga/boot/*.mem
 
 my-lisp.exe
+
+# Local scratch scripts
+try_flash.sh
