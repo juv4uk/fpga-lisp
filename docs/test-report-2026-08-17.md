@@ -50,7 +50,7 @@ subsequent run: `R4=10` (CAR), `R5=20` (CDR), `R6=123` (PC not
 skipped) -- matching every number this report's Test 1 (below) already
 predicted from the Python model. **The FETCH_PAIR RTL itself was
 correct all along; every bug found on 2026-08-18 was in the testbench,
-not the hardware being tested.** Full 32-testbench regression suite
+not the hardware being tested.** Full 33-testbench regression suite
 also re-run clean afterward (`tb_cons` through `tb_bootstrap_equal`,
 M02-M32 plus G8), confirming no other regression from either this fix
 or anything committed since `5bcc99c`.
@@ -155,7 +155,7 @@ All counters match expected values for the test program.
    (CAR gets overwritten by CDR). This is an illegal encoding that
    should be rejected by the assembler, but is not yet enforced.
 5. ~~**Existing regression tests**~~ — done 2026-08-18: full
-   32-testbench suite (`tb_cons` through `tb_bootstrap_equal`) re-run
+   33-testbench suite (`tb_cons` through `tb_bootstrap_equal`) re-run
    clean, real `iverilog`, no regressions found.
 
 ## Commit history
