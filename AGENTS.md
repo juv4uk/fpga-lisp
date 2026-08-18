@@ -46,9 +46,17 @@ against the actual `evidence/`/commit before acting on one.
 
 - **my-lisp** — the semantic source of truth. Defines the language: parser,
   evaluator, exactness model (rationals, no floats), `lib/core.my` standard
-  library. Language contract version 1.0 (`language-contract.my`). Nothing
-  else in the ecosystem may drift from what that repo says the language
-  means.
+  library. Language contract version **2.0** as of 2026-08-15
+  (`language-contract.my`'s own `(major . 2) (minor . 0)` -- don't trust a
+  number in this prose file over that one; re-check it directly if it's
+  been a while). The 1.0->2.0 break removed `'` as a reader shorthand for
+  `quote` (now part of symbols) -- a *syntax*-level change. fpga-lisp has
+  no reader (every `.asm` demo builds `(quote x)` cons-forms directly, not
+  via `'`-parsing), so this specific break doesn't touch anything on the
+  hardware side, but the version number in this file still needed fixing
+  per the rule that prose never outranks a machine-readable contract.
+  Nothing else in the ecosystem may drift from what that repo says the
+  language means.
 - **fpga-lisp** (this repo) — hardware implementation of the same language
   on an FPGA. Tracks an ISA contract (`isa-contract.my`, version 1.0)
   against my-lisp's semantics. Milestone-by-milestone bootstrap history and
