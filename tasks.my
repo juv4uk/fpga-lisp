@@ -9,4 +9,14 @@
     (description . "Act as adversarial verifier: test conformance.my against Rust implementation. Flag ambiguous semantics.")
     (done . ())
   ))
+  ("FPGA-FETCH-PAIR-RTL-SIM-VERIFY" . (
+    (priority . 8.0)
+    (description . "done -- tb_fetch_pair.sv (commit 9b529f2) never actually compiled under iverilog before this; only ever MODEL-PASS, not RTL-SIM-PASS (see docs/test-report-2026-08-17.md's own caveat, ARCH-RECOVERY-REVIEW-FPGA). Two real bug classes found and fixed: (1) white-box FSM bypass (force dut.boot_done/dut.u_ctrl.state) doesn't work against the real module hierarchy -- rewrote to load through the real UART bootloader like every other testbench; (2) instruction encoding was backwards (opcode at bits [3:0] instead of instruction_decoder.sv's real [31:28], OP_CONS/OP_CAR/OP_HALT values also wrong). Verified: R4=10 (CAR), R5=20 (CDR), R6=123 (PC not skipped), real iverilog run. Full 32-testbench regression also re-run clean afterward, no other regressions.")
+    (done . t)
+  ))
+  ("ISA-RATIONAL" . (
+    (priority . 7.0)
+    (description . "Plan item 25 (rational/bignum). Representation contract drafted and largely self-verified against my-lisp's actual Rust source after a written confirmation request went unanswered for a full session (docs/rational-bignum-representation.md: sign-magnitude bignum confirmed against bignum.rs, rational normalization/non-collapse confirmed against value.rs). Still open: limb base (needs a real GCD/multiply fixture from my-lisp to size against), and an explicit my-lisp sign-off that the representation matches language-contract.my before any RTL. No RTL work until that lands -- this repo's own 'representation contract before RTL' rule.")
+    (done . ())
+  ))
 )))
