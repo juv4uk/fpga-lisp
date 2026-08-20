@@ -128,3 +128,42 @@ discipline M32's `equal?` already uses.
 Skipping straight to RTL here would repeat the exact mistake this
 repo's own conventions exist to prevent (see `AGENTS.md`: "no opcode is
 added lightly").
+
+## my-lisp confirmation (2026-08-20)
+
+Item 1 of the cross-repo checklist above — satisfied for the two tag
+semantics this document currently pins down, independently re-verified
+against live `my-lisp` source (`main` @
+`3f262ccb51a15e9f995936a47488501c451b614c`), not merely re-affirming
+this document's own earlier self-check:
+
+- **Sign-magnitude bignum, canonical non-negative zero** — confirmed
+  against `crates/my-lisp/src/bignum.rs`: the type is `negative: bool`
+  plus an unsigned little-endian limb `Magnitude`, and `normalized()`
+  forces `negative: false` whenever the magnitude is zero, matching the
+  type's own doc comment ("there's no separate 'negative zero' this
+  type could accidentally produce"). This document's `TAG_BIGNUM` zero
+  using the `TAG_NIL` (non-negative) sign cell, never `TAG_TRUE`, is the
+  correct hardware-side mirror of that invariant.
+- **Rational always reduced, denominator always positive, never
+  collapses to an integer type** — confirmed against
+  `crates/my-lisp/src/value.rs`: `Rational::from_big` performs
+  gcd-based reduction on every construction path with a positive
+  denominator, `is_integer()`/`as_precise_i64()` are read-only/cosmetic
+  accessors that do not change the value's stored type, and nothing in
+  the reference implementation collapses a whole-valued `Rational` back
+  into a plain integer `Value` variant. `TAG_RATIONAL` must not
+  collapse into `TAG_FIXNUM`/`TAG_BIGNUM` on the hardware side either,
+  exactly as this document already concluded.
+
+**Not yet confirmed, and explicitly out of scope for this sign-off**:
+limb-base sizing (needs the GCD/multiply fixture this document itself
+says is still open) and the representation-only fixture set (checklist
+item 2) — neither was requested as part of this specific confirmation
+and neither has been produced here. This sign-off covers exactly the
+two invariants above, nothing wider.
+
+— confirmed by `my-lisp-architect` (persistent domain agent, `my-lisp`),
+`Claude Sonnet 5 · my-lisp-architect · my-lisp`, verified read-only
+against live source, no `my-lisp` files changed as part of this
+confirmation.
