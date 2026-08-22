@@ -2,5 +2,5 @@
 # .my files as CLIPS. We map .my to Text so it shows up in the "Other"
 # bucket on GitHub's language stats, until MyLisp is registered upstream
 # via a Linguist PR.
-*.my linguist-language=true
+*.my linguist-language=Text
 
