@@ -36,7 +36,7 @@
   ))
   ("FPGA-CML-REGISTER-INPUT-BRIDGE-M34" . (
     (priority . 9.1)
-    (description . "DONE 2026-08-24: job_transport.py validates and preserves CML's ISA 1.1 extended register-input frame while retaining legacy byte compatibility. Four targeted parser tests pass. Evidence is host-side protocol only; physical payload execution remains pending.")
+    (description . "DONE 2026-08-24: job_transport.py validates and preserves CML's ISA 1.1 extended register-input frame while retaining legacy byte compatibility. Four targeted parser tests pass. The former host-only boundary was superseded by M35 physical register-input proof and M36 host-staged CPU→CUDA→FPGA evidence.")
     (done . t)
   ))
 )))
