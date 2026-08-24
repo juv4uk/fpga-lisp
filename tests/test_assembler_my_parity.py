@@ -1,0 +1,55 @@
+"""Differential smoke tests for the my-lisp self-hosted assembler."""
+
+import os
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_MY_LISP = Path("/home/agents/GitHub/my-lisp/target/release/my-lisp")
+
+
+class MyLispAssemblerParityTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        configured = os.environ.get("MY_LISP_BIN")
+        cls.my_lisp = Path(configured) if configured else DEFAULT_MY_LISP
+        if not cls.my_lisp.is_file():
+            raise unittest.SkipTest(
+                "release my-lisp binary not found; set MY_LISP_BIN to enable parity tests"
+            )
+
+    def assert_fixture_matches_python(self, fixture):
+        with tempfile.TemporaryDirectory(prefix="fpga-assembler-parity-") as temp:
+            temp = Path(temp)
+            python_bin = temp / "python.bin"
+            my_lisp_bin = temp / "my-lisp.bin"
+            subprocess.run(
+                ["python3", "assembler.py", fixture, "-o", str(python_bin)],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            subprocess.run(
+                [str(self.my_lisp), "assembler.my", fixture, str(my_lisp_bin)],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            self.assertEqual(python_bin.read_bytes(), my_lisp_bin.read_bytes(), fixture)
+
+    def test_small_call_fixture(self):
+        self.assert_fixture_matches_python("call_demo.asm")
+
+    def test_bootstrap_add_fixture(self):
+        self.assert_fixture_matches_python("bootstrap_add_demo.asm")
+
+
+if __name__ == "__main__":
+    unittest.main()

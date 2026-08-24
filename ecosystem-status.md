@@ -242,3 +242,13 @@ the remaining bootstrap demos still require their own physical observations.
   monitor/debug tooling the name map without introducing a global symbol ABI.
 - Six Python assembler/protocol tests pass. This is a host-tooling bridge,
   not a change to ISA 1.1 or language semantics.
+
+## [fpga-lisp] 2026-08-24 — my-lisp assembler parity gate reopened
+
+- The historical `assembler.my` stack-overflow/0-byte observation is no
+  longer reproduced with the current release `my-lisp` binary.
+- `call_demo.asm` (5 instructions) and `bootstrap_add_demo.asm` (280
+  instructions) both produced byte-identical binaries to `assembler.py`.
+- `tests/test_assembler_my_parity.py` records this as a repeatable gate.
+  Python remains the bootstrap/reference encoder until more fixtures pass;
+  `upload.py` and `monitor.py` remain host-side Python infrastructure.

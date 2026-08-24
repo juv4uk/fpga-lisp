@@ -44,4 +44,9 @@
     (description . "DONE 2026-08-24: assembler.py now interns symbolic LOADSYM operands per program from ID 900, preserves numeric operands, and emits a .sym sidecar for monitor/debug tooling. Six Python protocol/assembler tests pass; no global symbol ABI is introduced.")
     (done . t)
   ))
+  ("FPGA-ASSEMBLER-MY-PARITY" . (
+    (priority . 9.0)
+    (description . "ACTIVE 2026-08-24: assembler.my emits byte-identical output to assembler.py for call_demo.asm (5 instructions) and bootstrap_add_demo.asm (280 instructions). Keep Python as bootstrap/reference; expand differential fixtures before changing authority.")
+    (done . ())
+  ))
 )))

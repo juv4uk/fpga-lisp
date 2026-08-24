@@ -59,12 +59,13 @@ capability of the language being demonstrated.
 ## Priority summary
 
 - **`assembler.py` → `assembler.my`**: real, already in progress
-  (`FPGA-ASSEMBLER-DIFF-TEST` in the swarm task registry). Currently
-  blocked externally — `assembler.my` crashes (stack overflow) or
-  silently produces a 0-byte file on every input tested, including
-  trivial ones (see `ecosystem-status.md`, 2026-08-12). This is a
-  my-lisp interpreter-side bug, not something to fix from this repo.
-  `assembler.py` remains authoritative until it's resolved.
+  (`FPGA-ASSEMBLER-DIFF-TEST` in the swarm task registry). The historical
+  stack-overflow/0-byte failure is no longer reproduced: on 2026-08-24 the
+  release my-lisp binary emitted byte-identical output for `call_demo.asm`
+  (5 instructions) and `bootstrap_add_demo.asm` (280 instructions). The
+  Python implementation remains the bootstrap/reference path until the
+  differential fixture set is expanded; `tests/test_assembler_my_parity.py`
+  now makes this migration gate executable.
 - **`upload.py`/`monitor.py` → Lisp**: not planned, not desired. Keep
   them in Python. If a future agent proposes migrating them, point here
   first rather than re-deriving the reasoning.
