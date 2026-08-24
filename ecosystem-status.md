@@ -202,6 +202,16 @@ the remaining bootstrap demos still require their own physical observations.
   2026-08-24). This is one live physical path proving CML payload delivery
   and tagged register initialization; it is not blanket backend conformance.
 
+## [fpga-lisp] 2026-08-24 — M36 host-staged CUDA-to-FPGA input proof
+
+- CML's heterogeneous live graph executed CPU → CUDA → FPGA in 14.17 seconds.
+  CUDA produced the host-visible typed buffer `[3,4,5]`; the explicit CML
+  adapter staged it into ISA 1.1 register inputs, and the FPGA ran
+  `ADD R2,R0,R1; HALT`, returning tagged word `7` with no hardware error.
+- This proves one host-staged buffer-to-register path across the three
+  backends. Direct device-to-device GPU→FPGA transfer, shared memory, and
+  blanket heterogeneous conformance remain unproven by design.
+
 ## [fpga-lisp] 2026-08-24 — permanent ISA 1.1 image and cold-boot proof
 
 - Gowin EDA synthesized repo commit `092aa3b` into
