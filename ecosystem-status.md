@@ -165,3 +165,7 @@ the remaining bootstrap demos still require their own physical observations.
   `core.my` snapshot comments. The canonical 3.0 fixture copy is explicitly a
   reference/gap-accounting corpus, not a claim that the FPGA backend has moved
   beyond its declared contract 2.0 surface.
+- A second operator-gated live test placed the board after CPU and CUDA nodes
+  in one CML dependency graph. It passed in 14.61s with order CPU → CUDA → FPGA,
+  buffer results `[2,3,4]` then `[3,4,5]`, and FPGA tagged word `7`. Scope is
+  coordinated scheduling only; direct GPU→FPGA payload transfer remains absent.

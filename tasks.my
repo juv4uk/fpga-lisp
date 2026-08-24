@@ -24,4 +24,9 @@
     (description . "DONE 2026-08-24: add job_transport.py as a native-Windows pyserial adapter for CML's versioned binary stdin/stdout transport. Unit tests cover framing/rejection. The operator-gated physical CML Execution Graph test passed through COM4 in 13.37s: bootstrap_add_demo returned R9=0x00000007, no hardware error, published as GraphValue::LispWord(7). Scope is one live program path, not blanket FPGA conformance.")
     (done . t)
   ))
+  ("FPGA-CML-HETEROGENEOUS-GRAPH-M3" . (
+    (priority . 8.0)
+    (description . "DONE 2026-08-24: physical GW5A-25A participated after CPU and CUDA in one CML dependency graph. Live pass 14.61s, order CPU->CUDA->FPGA, buffers [2 3 4] then [3 4 5], FPGA tagged word 7. This proves coordinated scheduling only; no direct GPU-to-FPGA payload transfer is claimed.")
+    (done . t)
+  ))
 )))

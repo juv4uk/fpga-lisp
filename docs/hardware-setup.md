@@ -122,6 +122,13 @@ as `0x00000007`, observed no hardware error, and published
 `GraphValue::LispWord(7)`. This verifies the command bridge plus one real graph
 program path; it does not generalize to all FPGA programs.
 
+The next live CML test placed the same physical FPGA after real CPU and CUDA
+nodes in one dependency graph. It passed in 14.61 seconds with execution order
+CPU → CUDA → FPGA: the numeric buffer evolved `[1,2,3] → [2,3,4] → [3,4,5]`,
+then COM4 returned `GraphValue::LispWord(7)`. This proves coordinated physical
+scheduling, not direct GPU-to-FPGA payload transfer; the FPGA node still owns
+its independent preassembled program image.
+
 ### Earlier blocked state and diagnosis
 
 **Symptom:** `programmer_cli.exe --scan` (or any `--operation_index`)
