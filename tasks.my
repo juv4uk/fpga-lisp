@@ -54,4 +54,9 @@
     (description . "DONE 2026-08-24: assembler.my emits byte-identical output to assembler.py for all 28 .asm fixtures in this repository, including bootstrap, evaluator, monitor, memory, and control paths. Python remains the bootstrap/reference encoder; parity does not claim full language-contract conformance or remove host tooling.")
     (done . t)
   ))
+  ("FPGA-SYMBOL-TABLE-MY-MIGRATION" . (
+    (priority . 8.8)
+    (description . "BLOCKED GATE: pure gen_symbol_table_v01.my transformation is oracle-verified, but full migration requires text extraction, generated .inc, 28-program ASM/fixture renumbering, and byte-level parity. Do not add language primitives or remove PROGRAM_SYMBOLS without owner-ratified text API and complete evidence.")
+    (done . ())
+  ))
 )))

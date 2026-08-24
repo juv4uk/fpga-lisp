@@ -77,6 +77,15 @@ capability of the language being demonstrated.
   The Python version remains in place until drift-fixture coverage is added;
   this migration does not move serial, filesystem orchestration, or driver I/O
   into the language.
+- **`gen_symbol_table.py` → my-lisp (blocked gate)**: the pure transformation
+  pilot `gen_symbol_table_v01.my` is oracle-verified, but full migration is not
+  a text-free rewrite. The legacy generator extracts 164 entries from 28 ASM
+  programs; 137 IDs conflict with the canonical core symbol inventory and 27
+  names are program-local. Completing this migration requires a generated
+  `.inc`, mass ASM/fixture renumbering, and byte-level assembler parity before
+  removing `PROGRAM_SYMBOLS`. The extraction step still needs a ratified text
+  API (`read-file-string`/`string-slice`/`*argv*`) or remains a Python
+  bootstrap step; no language-contract change is implied by this gate.
 - **`upload.py`/`monitor.py` → Lisp**: not planned, not desired. Keep
   them in Python. If a future agent proposes migrating them, point here
   first rather than re-deriving the reasoning.
