@@ -46,7 +46,7 @@
   ))
   ("FPGA-ASSEMBLER-MY-PARITY" . (
     (priority . 9.0)
-    (description . "ACTIVE 2026-08-24: assembler.my emits byte-identical output to assembler.py for call_demo.asm (5 instructions) and bootstrap_add_demo.asm (280 instructions). Keep Python as bootstrap/reference; expand differential fixtures before changing authority.")
-    (done . ())
+    (description . "DONE 2026-08-24: assembler.my emits byte-identical output to assembler.py for all 28 .asm fixtures in this repository, including bootstrap, evaluator, monitor, memory, and control paths. Python remains the bootstrap/reference encoder; parity does not claim full language-contract conformance or remove host tooling.")
+    (done . t)
   ))
 )))

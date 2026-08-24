@@ -44,7 +44,7 @@ class MyLispAssemblerParityTest(unittest.TestCase):
             )
             self.assertEqual(python_bin.read_bytes(), my_lisp_bin.read_bytes(), fixture)
 
-    def test_representative_fixtures(self):
+    def test_all_repo_fixtures(self):
         for fixture in (
             "call_demo.asm",
             "bootstrap_add_demo.asm",
@@ -58,6 +58,22 @@ class MyLispAssemblerParityTest(unittest.TestCase):
             "bootstrap_not_demo.asm",
             "bootstrap_nullp_demo.asm",
             "bootstrap_reverse_demo.asm",
+            "bootstrap_length_demo.asm",
+            "bootstrap_second_demo.asm",
+            "bootstrap_third_demo.asm",
+            "bootstrap_triple_demo.asm",
+            "control_demo.asm",
+            "echo_list.asm",
+            "env_demo.asm",
+            "eval_all_primitives_demo.asm",
+            "eval_apply_demo.asm",
+            "eval_atom_demo.asm",
+            "eval_cond_demo.asm",
+            "eval_primitive_demo.asm",
+            "list_demo.asm",
+            "monitor_demo.asm",
+            "setcdr_demo.asm",
+            "test_memory.asm",
         ):
             with self.subTest(fixture=fixture):
                 self.assert_fixture_matches_python(fixture)
