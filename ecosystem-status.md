@@ -247,8 +247,9 @@ the remaining bootstrap demos still require their own physical observations.
 
 - The historical `assembler.my` stack-overflow/0-byte observation is no
   longer reproduced with the current release `my-lisp` binary.
-- `call_demo.asm` (5 instructions) and `bootstrap_add_demo.asm` (280
-  instructions) both produced byte-identical binaries to `assembler.py`.
+- Seven representative fixtures now produce byte-identical binaries to
+  `assembler.py`: call (5 instructions), bootstrap add (280), pair,
+  tail-recursive length, equality, lambda, and quote paths.
 - `tests/test_assembler_my_parity.py` records this as a repeatable gate.
   Python remains the bootstrap/reference encoder until more fixtures pass;
   `upload.py` and `monitor.py` remain host-side Python infrastructure.
