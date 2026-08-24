@@ -432,7 +432,7 @@
 ; crash, silent unless you're specifically watching for it. Found the
 ; same way as the earlier stack-overflow bug: tested an edge case the
 ; first version never considered. `/` (the Rust primitive) already
-; fails named on division by zero (`ErrorKind::InvalidForm`) — routing
+; fails named on division by zero (`ErrorKind::DivisionByZero`) — routing
 ; through it here reuses that real, already-tested error instead of
 ; inventing a second, different one for the same condition.
 ; `b = 0` раніше зависав назавжди: `largest-chunk` починає подвоювати
@@ -440,7 +440,7 @@
 ; chunk усе ще вміщується" ніколи не переверталась — нескінченний
 ; хвостово-рекурсивний цикл, не крах, непомітний, якщо спеціально не
 ; шукати. `/` (Rust-примітив) уже провалюється названо на діленні на
-; нуль (`ErrorKind::InvalidForm`) — маршрутизація через нього тут
+; нуль (`ErrorKind::DivisionByZero`) — маршрутизація через нього тут
 ; перевикористовує цю реальну, вже перевірену помилку замість
 ; вигадування другої, іншої для того самого стану.
 (def quotient

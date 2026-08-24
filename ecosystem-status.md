@@ -160,3 +160,8 @@ the remaining bootstrap demos still require their own physical observations.
   tagged word `0x00000007`, hardware error clear, and CML published
   `GraphValue::LispWord(7)`. Scope remains one live graph program path, not
   blanket FPGA conformance.
+- Witness follow-up corrected the contract-3.0 wire vocabulary table with
+  `division-by-zero`/`DivisionByZero` and `parse-error`/`Parse`, plus stale
+  `core.my` snapshot comments. The canonical 3.0 fixture copy is explicitly a
+  reference/gap-accounting corpus, not a claim that the FPGA backend has moved
+  beyond its declared contract 2.0 surface.

@@ -11,7 +11,13 @@ Third-party implementations must map through this table.
 | `type-error`           | `Type`                | operand type mismatch |
 | `invalid-form`         | `InvalidForm`         | malformed expression structure |
 | `numeric-overflow`     | `NumericOverflow`     | bignum/rational range |
+| `division-by-zero`     | `DivisionByZero`      | exact arithmetic received a zero divisor |
+| `parse-error`          | `Parse`               | reader or decoder rejected malformed input |
 | `unknown-symbol`       | `UnknownSymbol`       | unbound symbol |
 
 Upstream unification tracked in my-lisp; if oracle vocabulary changes,
 refresh this table and re-run adversarial fixtures.
+
+The canonical fixture copy is an upstream reference and gap-accounting input.
+Its contract 3.0 pin does not claim that fpga-lisp hardware implements every
+3.0 error category; backend support must be stated and evidenced separately.
