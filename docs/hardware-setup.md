@@ -1,10 +1,9 @@
 # Real hardware setup: Tang Primer 25K, Gowin toolchain, Windows/WSL2
 
-Notes from actually flashing and debugging the board (2026-08-13), so a
-future session doesn't rediscover this from scratch. Written mid-debug
--- the JTAG driver conflict below is **not yet resolved**; this
-document records what's been tried and ruled out, not a working
-recipe end to end.
+Notes from actually flashing and debugging the board (2026-08-13 through
+2026-08-24), so a future session doesn't rediscover this from scratch. The
+JTAG driver conflict described below was resolved on 2026-08-24; the failed
+attempts remain as provenance for the working recipe.
 
 ## Toolchain locations
 
@@ -69,7 +68,42 @@ successfully -- confirmed by a real upload completing without error
 and the board's own `PRESS RESET` prompt timing lining up. Channel A is
 the JTAG interface (see below) -- don't point the UART tools at it.
 
-## JTAG programming -- BLOCKED as of this writing, root cause identified but not fixed
+## JTAG programming -- RESOLVED 2026-08-24
+
+After reconnecting the board with the child VCP for Channel A disabled, while
+the parent `USB Serial Converter A` remained enabled, Gowin enumerated two
+`USB Debugger A` locations. Location `449` was the JTAG endpoint:
+
+```text
+programmer_cli.exe --cable-index 4 --location 449 --scan
+→ GW5A-25A family, ID 0x0001281B, one device
+```
+
+Volatile SRAM programming then completed successfully:
+
+```text
+programmer_cli.exe --cable-index 4 --location 449 \
+  --device GW5A-25A --operation_index 2 \
+  --fsFile C:/GitHub/fpga-lisp/impl/pnr/project.fs
+→ 100%, User Code 0x00008DFD, Status 0x70026020, Finished
+```
+
+Bitstream SHA-256:
+`557bbe28190611e3785475a2755a717d5be6a50c25ff88acb0002da6182dfe3a`.
+Operation 2 changes SRAM only; power cycling removes the image.
+
+The second enumerated location (`450`) did not return from `--scan` and left a
+`programmer_cli` process holding Channel B/COM4. Terminating only that scan
+process released the UART port. Do not probe both locations sequentially
+without an explicit timeout; use the confirmed JTAG location `449` while the
+USB topology remains unchanged.
+
+The first physical smoke after programming uploaded `bootstrap_add_demo.bin`
+(280 instructions) through native Windows Python/pyserial on COM4. The board
+halted normally with `R9 = FIXNUM(7) [0x00000007]` and `ERR: no error`, proving
+the `(plus 3 4)` eval path on the physical FPGA for this bitstream.
+
+### Earlier blocked state and diagnosis
 
 **Symptom:** `programmer_cli.exe --scan` (or any `--operation_index`)
 against Channel A's cable fails: `Error: Cable failed to open via the
@@ -113,13 +147,9 @@ each time a channel disappears/reappears from Windows's USB tree
 before using a `--cable-index`, don't assume a previously-observed
 index is still valid.
 
-## Open item
+## Earlier open item — now partially closed
 
-Actual board flash-and-verify of M17-M32 (the other half of
-`FPGA-HARDWARE-VERIFY-M17-M32`) is still blocked on the JTAG issue
-above. UART-only verification (bypassing JTAG, if the board already
-has *some* bitstream loaded from a previous session) was attempted but
-got no response from the board (`No reply from board: Expected 4
-bytes, got 0`) -- inconclusive on its own whether that's because no
-compatible bitstream was ever actually programmed, or a reset-timing
-issue unrelated to JTAG.
+The JTAG and UART transport blocker is closed by the live evidence above.
+`bootstrap_add_demo` is hardware-confirmed. This does not by itself verify
+every M17-M32 program; each additional claimed behavior still needs its own
+uploaded binary and observed register/heap/error result.

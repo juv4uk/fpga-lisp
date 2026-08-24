@@ -127,3 +127,22 @@ an error; add a new entry instead of restating one.
   whether the board is connected. Once the board is plugged in, running
   M28-M32's bootstrap demos through `monitor.py` for real is the
   remaining half of this task.
+
+## [fpga-lisp] 2026-08-24 — JTAG blocker closed; first M17-M32-era hardware smoke
+
+- Windows enumerated both FT2232 parent channels; Channel A parent and Channel
+  B/COM4 were healthy, while the Channel A VCP child COM3 remained disabled.
+- Gowin `--scan-cables` found two `USB Debugger A` locations. Read-only scan at
+  location 449 opened JTAG and identified one physical GW5A-25A-family device,
+  ID `0x0001281B`.
+- `operation_index 2` programmed volatile SRAM to 100% from
+  `impl/pnr/project.fs` (SHA-256
+  `557bbe28190611e3785475a2755a717d5be6a50c25ff88acb0002da6182dfe3a`),
+  reporting User Code `0x00008DFD`, Status `0x70026020`, `Finished`.
+- Native Windows `monitor.py` uploaded `bootstrap_add_demo.bin` over COM4 (280
+  instructions). Physical result: `R9 = FIXNUM(7) [0x00000007]`; error channel:
+  `ERR: no error (halted normally via HALT)`.
+
+This closes the JTAG/UART transport blocker and confirms the `(plus 3 4)` eval
+path on real hardware. It does **not** yet claim blanket M17-M32 verification;
+the remaining bootstrap demos still require their own physical observations.
