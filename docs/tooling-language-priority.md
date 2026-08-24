@@ -74,9 +74,12 @@ Twenty fresh process invocations measured:
 This is a real loss for my-lisp on this small cold-start CLI workload (~15.7×
 slower), while the self-hosted path uses less peak memory (~3.6× lower). It is
 not a reason to add host-specific primitives or to hide the result. If this
-tool becomes a frequent path, startup/reader/process-launch overhead is the
-next my-lisp optimization target; Python remains the justified bootstrap
-default until then.
+tool becomes a frequent path, its recursive text-processing path is the next
+my-lisp optimization target; Python remains the justified bootstrap default
+until then. A follow-up decomposition isolates the cost: 20 empty
+my-lisp processes take 0.06 s total, while 20 `check-stale-refs.my` processes
+take 13.65 s. Startup is therefore not the bottleneck; recursive text
+traversal/string construction in the checker/library is the measured target.
 
 - **`assembler.py` → `assembler.my`**: real, already in progress
   (`FPGA-ASSEMBLER-DIFF-TEST` in the swarm task registry). The historical
