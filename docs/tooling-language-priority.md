@@ -58,6 +58,26 @@ capability of the language being demonstrated.
 
 ## Priority summary
 
+## Comparative evidence
+
+The first apples-to-apples guard benchmark ran 2026-08-25 after a resource
+preflight (load 1.24, 2.5 GiB available RAM; GPU visibility unavailable in
+this sandbox). Both implementations checked the same live contracts and
+returned success; `tests/test_stale_refs_my_parity.py` verifies that parity.
+Twenty fresh process invocations measured:
+
+| implementation | wall time | peak RSS |
+|---|---:|---:|
+| Python `check_stale_refs.py` | 0.89 s | 12,020 KB |
+| release my-lisp `check-stale-refs.my` | 14.00 s | 3,328 KB |
+
+This is a real loss for my-lisp on this small cold-start CLI workload (~15.7×
+slower), while the self-hosted path uses less peak memory (~3.6× lower). It is
+not a reason to add host-specific primitives or to hide the result. If this
+tool becomes a frequent path, startup/reader/process-launch overhead is the
+next my-lisp optimization target; Python remains the justified bootstrap
+default until then.
+
 - **`assembler.py` → `assembler.my`**: real, already in progress
   (`FPGA-ASSEMBLER-DIFF-TEST` in the swarm task registry). The historical
   stack-overflow/0-byte failure is no longer reproduced: on 2026-08-24 the
