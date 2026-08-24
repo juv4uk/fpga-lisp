@@ -38,6 +38,34 @@ negative slack. BSRAM 24/56 (43%), matching the number
 `docs/lisp-machine-plan.md` already derived from real synthesis at
 M18's imem expansion.
 
+### Current FPGA resource snapshot (ISA 1.1, commit `092aa3b`)
+
+The permanently flashed 2026-08-24 build uses:
+
+| Resource | Used | Utilization | Remaining |
+|---|---:|---:|---:|
+| Logic | 1,935 / 23,040 | 9% | 21,105 |
+| LUT | 1,692 | about 7% of logic capacity | substantial |
+| ALU | 243 | included in Logic | - |
+| Registers | 1,207 / 23,280 | 6% | 22,073 |
+| CLS | 1,605 / 11,520 | 14% | 9,915 |
+| BSRAM | 24 / 56 | 43% | 32 blocks |
+| I/O ports | 5 / 86 | 6% | 81 |
+| Primary clocks | 1 / 8 | 13% | 7 |
+| Local-wire clocks | 5 / 8 | 63% | 3 |
+
+The 50 MHz clock constraint closes cleanly at an actual Fmax of
+66.727 MHz: setup and hold TNS are both `0.000`, with no violated
+endpoints. This is about 33% frequency headroom over the operating clock.
+
+The practical near-term constraint is BSRAM, not logic: roughly 91% of the
+logic and 94% of the registers remain free, while only 57% of block RAM
+remains. New execution logic, control paths and hardware operations therefore
+have ample fabric headroom. Heap, instruction-memory and bulk-buffer growth
+should be budgeted deliberately; larger data capacity may eventually need
+external-memory or host-staged designs rather than consuming BSRAM without a
+plan.
+
 ## UART (upload.py / monitor.py) -- works, with two gotchas
 
 **Run from native Windows Python, not WSL.** WSL2's `/dev/ttyS*` legacy
