@@ -306,6 +306,50 @@
       (cond (found (cdr found))
             (t (read tok))))))
 
+; LOADSYM accepts a symbolic operand as well as an already-numeric ID.
+; IDs are deliberately per-program and start at the same 900 boundary as
+; assembler.py.  A numeric-looking token is distinguished from a symbol by
+; comparing `read` with the canonical symbol constructor; this keeps the
+; language surface small and avoids adding an assembler-only predicate.
+(def symbolic-token?
+  (lambda (tok) (eq (read tok) (string->symbol tok))))
+
+(def intern-loadsym-onto
+  (lambda (insns labels ids next acc)
+    (cond
+      ((atom insns) (list (reverse acc) ids next))
+      (t (let ((toks (car insns)))
+           (cond
+             ((eq (car toks) "LOADSYM")
+              (cond
+                ((symbolic-token? (third toks))
+                 (let ((name (third toks)) (found (assoc-str (third toks) ids)))
+                   (cond
+                     ((assoc-str name labels)
+                      (intern-loadsym-onto (cdr insns) labels ids next (cons toks acc)))
+                     (found (intern-loadsym-onto (cdr insns) labels ids next
+                               (cons (list "LOADSYM" (second toks) (number->string (cdr found))) acc)))
+                     (t (intern-loadsym-onto (cdr insns) labels
+                          (cons (cons name next) ids) (+ next 1)
+                          (cons (list "LOADSYM" (second toks) (number->string next)) acc))))))
+                (t (intern-loadsym-onto (cdr insns) labels ids next (cons toks acc)))))
+             (t (intern-loadsym-onto (cdr insns) labels ids next (cons toks acc)))))))))
+
+(def intern-loadsym
+  (lambda (insns labels) (intern-loadsym-onto insns labels (quote ()) 900 (quote ()))))
+
+(def symbol-table-lines-onto
+  (lambda (ids acc)
+    (cond
+      ((atom ids) acc)
+      (t (let ((entry (car ids)))
+           (symbol-table-lines-onto (cdr ids)
+             (string-append (string-append (number->string (cdr entry)) " ")
+               (string-append (string-append (car entry) "\n") acc))))))))
+
+(def symbol-table-lines
+  (lambda (ids) (symbol-table-lines-onto ids "")))
+
 (def fourth
   (lambda (toks) (car (cdr (cdr (cdr toks))))))
 
@@ -360,13 +404,18 @@
     (let ((expanded (expand-includes (split-lines (read-file input-path)) (quote ()))))
       (let ((labels+insns (pass1 expanded)))
         (let ((labels (car labels+insns)) (insns (second labels+insns)))
-          (let ((words (map (lambda (toks) (encode-instr toks labels)) insns)))
+          (let ((interned (intern-loadsym insns labels)))
+            (let ((interned-insns (car interned)) (symbol-ids (second interned)))
+              (let ((words (map (lambda (toks) (encode-instr toks labels)) interned-insns)))
             ; `let`'s body is exactly one expression (no implicit begin),
             ; so the three side-effecting steps are chained through
             ; throwaway bindings instead of listed as separate forms.
             (let ((_ (print (string-append "Assembled " (string-append (number->string (length words)) " instructions.")))))
               (let ((_ (write-file-bytes output-path (words->bytes words))))
-                (print (string-append "Wrote binary to " output-path))))))))))
+                (let ((_ (cond ((atom symbol-ids) ())
+                               (t (write-file (string-append output-path ".sym")
+                                      (symbol-table-lines symbol-ids))))))
+                  (print (string-append "Wrote binary to " output-path)))))))))))))
 
 (cond
   ((atom *argv*) (print "Usage: my-lisp.exe assembler.my input.asm output.bin"))

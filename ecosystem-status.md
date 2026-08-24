@@ -247,9 +247,21 @@ the remaining bootstrap demos still require their own physical observations.
 
 - The historical `assembler.my` stack-overflow/0-byte observation is no
   longer reproduced with the current release `my-lisp` binary.
-- All 28 `.asm` fixtures currently in the repository now produce
+- All 29 `.asm` fixtures currently in the repository now produce
   byte-identical binaries to `assembler.py`, including bootstrap, evaluator,
-  monitor, memory, and control paths.
+  monitor, memory, control, and symbolic `LOADSYM` paths. The symbolic
+  fixture also produces a byte-identical per-program `.sym` sidecar.
 - `tests/test_assembler_my_parity.py` records this as a repeatable gate.
   This proves assembler parity, not full language-contract conformance;
   `upload.py` and `monitor.py` remain host-side Python infrastructure.
+
+## [fpga-lisp] 2026-08-24 — self-hosted symbolic LOADSYM parity
+
+- `assembler.my` now interns symbolic `LOADSYM Rn NAME` operands per program
+  from ID 900, preserves numeric/`.define` operands, and writes the matching
+  `.sym` sidecar.
+- `symbolic_loadsym_demo.asm` passes binary and sidecar parity against
+  `assembler.py`; the complete 29-fixture gate remains green (116.7s under
+  nice/ionice/timeout).
+- This closes implementation parity only. Python remains the bootstrap and
+  reference encoder until the owner ratifies an authority switch.

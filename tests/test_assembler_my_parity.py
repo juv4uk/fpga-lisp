@@ -43,6 +43,11 @@ class MyLispAssemblerParityTest(unittest.TestCase):
                 timeout=60,
             )
             self.assertEqual(python_bin.read_bytes(), my_lisp_bin.read_bytes(), fixture)
+            python_sym = python_bin.with_name(python_bin.name + ".sym")
+            my_lisp_sym = my_lisp_bin.with_name(my_lisp_bin.name + ".sym")
+            self.assertEqual(python_sym.exists(), my_lisp_sym.exists(), fixture + " sidecar")
+            if python_sym.exists():
+                self.assertEqual(python_sym.read_text(), my_lisp_sym.read_text(), fixture + " sidecar")
 
     def test_all_repo_fixtures(self):
         for fixture in (
@@ -74,6 +79,7 @@ class MyLispAssemblerParityTest(unittest.TestCase):
             "monitor_demo.asm",
             "setcdr_demo.asm",
             "test_memory.asm",
+            "symbolic_loadsym_demo.asm",
         ):
             with self.subTest(fixture=fixture):
                 self.assert_fixture_matches_python(fixture)
