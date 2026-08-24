@@ -1,13 +1,13 @@
 ((tasks . (
   ("FPGA-SWARM-CONTRACT-01" . (
     (priority . 9.0)
-    (description . "Adopt Swarm Contract v0.1: setup repo.my and ecosystem/ folders.")
-    (done . ())
+    (description . "Adopt Swarm Contract v0.1: repo.my scope declaration + ecosystem/README scaffold verified present and substantive 2026-08-24; marked done retroactively.")
+    (done . t)
   ))
   ("FPGA-CONFORMANCE-TESTING" . (
     (priority . 9.5)
-    (description . "Act as adversarial verifier: test conformance.my against Rust implementation. Flag ambiguous semantics.")
-    (done . ())
+    (description . "DONE 2026-08-24 (ganaka-1): adversarial run complete -- docs/conformance-adversarial-report-2026-08-23.md. Findings executed same day: F1 stale docs/reference/conformance.my replaced byte-identical with canonical my-lisp fixture + hash pin (conformance.canonical.pin); F2 wire/contract error-kind mapping table added (docs/reference/error-kind-mapping.md).")
+    (done . t)
   ))
   ("FPGA-FETCH-PAIR-RTL-SIM-VERIFY" . (
     (priority . 8.0)

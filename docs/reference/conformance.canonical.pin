@@ -1,0 +1,11 @@
+# Canonical conformance pointer
+
+This directory previously held a STALE local copy (see
+docs/conformance-adversarial-report-2026-08-23.md, finding F1).
+The file conformance.my is now byte-identical to the canonical:
+
+source repo : my-lisp @ bedece7
+path        : tests/fixtures/conformance.my
+sha256      : 4bd36e99585bf710261773c4e92d053090fee74954b049121e9c6116ff474429
+
+Do not edit here. Update by copying from my-lisp and refreshing this pin.
