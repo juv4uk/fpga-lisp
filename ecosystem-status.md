@@ -191,3 +191,22 @@ the remaining bootstrap demos still require their own physical observations.
 - Four targeted Python protocol tests pass, including extended-frame
   preservation and duplicate-register rejection. This proves host bridge
   parsing only; no new physical-board payload observation is claimed.
+
+## [fpga-lisp] 2026-08-24 — permanent ISA 1.1 image and cold-boot proof
+
+- Gowin EDA synthesized repo commit `092aa3b` into
+  `impl/pnr/project.fs` (6,604,065 bytes, SHA-256
+  `4a5ba486c4592c75db9d261641b219d9f2608706abbc8dacc53931099dffdb9b`).
+  Place-and-route reports `Fmax = 66.727 MHz` at the 50 MHz constraint,
+  setup/hold TNS `0.000`, BSRAM 24/56, 1,692 LUTs and 1,207 registers.
+- Gowin Programmer operation 54 (`exFlash Erase,Program,Verify Arora V`) at
+  confirmed JTAG location 449 detected SPI flash `0x0B4017`, programmed and
+  verified it successfully, and finished in 35.12 seconds.
+- The board was then disconnected from USB power for at least five seconds
+  and reconnected. A new JTAG scan identified GW5A-25A-family device
+  `0x0001281B`; native Windows `monitor.py` uploaded the 280-instruction
+  `bootstrap_add_demo.bin` over COM4 and observed
+  `R9 = FIXNUM(7) [0x00000007]` with `ERR: no error`.
+- Scope: this is live evidence that this exact image boots from persistent
+  external flash and executes one `(plus 3 4)` path. It is not blanket ISA,
+  language-contract or M17-M34 hardware conformance.

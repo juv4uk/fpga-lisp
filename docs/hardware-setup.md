@@ -92,6 +92,35 @@ Bitstream SHA-256:
 `557bbe28190611e3785475a2755a717d5be6a50c25ff88acb0002da6182dfe3a`.
 Operation 2 changes SRAM only; power cycling removes the image.
 
+### Permanent external-flash programming -- verified 2026-08-24
+
+The current ISA 1.1 RTL at commit `092aa3b` was synthesized with Gowin EDA
+and written to the board's external SPI NOR with the Arora V operation:
+
+```text
+programmer_cli.exe --cable-index 4 --location 449 \
+  --device GW5A-25A --operation_index 54 --frequency 2.5MHz \
+  --fsFile C:/GitHub/fpga-lisp/impl/pnr/project.fs
+→ SPI flash ID 0x0B4017
+→ Program and Verify Flash successfully.
+→ Finished. Cost 35.12 seconds.
+```
+
+The programmed `project.fs` is 6,604,065 bytes with SHA-256
+`4a5ba486c4592c75db9d261641b219d9f2608706abbc8dacc53931099dffdb9b`.
+Its place-and-route report gives `Fmax = 66.727 MHz` for the 50 MHz
+constraint, setup/hold TNS `0.000`, BSRAM 24/56, 1,692 LUTs and 1,207
+registers.
+
+Permanence was tested rather than inferred from the programmer's success:
+the board was fully disconnected from USB power for at least five seconds
+and reconnected. A fresh JTAG scan found the same device ID `0x0001281B`.
+Native Windows `monitor.py` then uploaded the 280-instruction
+`bootstrap_add_demo.bin` over COM4; the cold-booted design returned
+`R9 = FIXNUM(7) [0x00000007]` and `ERR: no error`. This proves external-flash
+boot for this exact bitstream and one `(plus 3 4)` execution path, not blanket
+hardware conformance.
+
 The second enumerated location (`450`) did not return from `--scan` and left a
 `programmer_cli` process holding Channel B/COM4. Terminating only that scan
 process released the UART port. Do not probe both locations sequentially
