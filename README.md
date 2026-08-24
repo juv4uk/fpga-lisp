@@ -16,7 +16,7 @@ The full design philosophy, instruction set, memory model, and milestone-by-mile
 - **Heap**: a bump-allocated cons-cell store (parallel `CAR`/`CDR` BRAMs), no garbage collector yet — but the design for one is already fixed: trace-based (mark-and-sweep), never reference counting, since `SETCDR`-built `letrec` closures can form real reference cycles.
 - **ISA**: version 1.0 (`isa-contract.my`), 16 opcodes, all allocated. `CALL`/`RET`, `GETTAG`/`MAKEPRIM`/`GETVAL`, and `SETCDR` reuse the `JMP`/`MOV`/`ATOM` opcodes (RISC-V JAL/JALR-style dual-purposing) rather than consuming new instruction slots. `JF` matches my-lisp's truth semantics exactly: only `NIL` is falsy, fixnum `0` is truthy.
 - **Program memory**: 4096 words (12-bit PC), sized against the board's real BRAM budget (56 blocks on the GW5A-25A; the heap alone uses 16) rather than picked arbitrarily. The UART bootloader protocol length prefix is 2 bytes, little-endian.
-- **Toolchain**: [`assembler.py`](assembler.py) (asm → `.bin`, the authoritative encoder; symbolic `LOADSYM` operands are interned per program from ID 900 and emit a `.sym` sidecar), [`upload.py`](upload.py) (serial bootloader + terminal), [`monitor.py`](monitor.py) (post-`HALT` binary debug REPL: `reg <n>`, `heap <addr>`, `hp`).
+- **Toolchain**: [`assembler.my`](assembler.my) (preferred self-hosted my-lisp asm → `.bin`, including per-program symbolic `LOADSYM` IDs from 900 and `.sym` sidecar), [`assembler.py`](assembler.py) (bootstrap/reference encoder), [`upload.py`](upload.py) (serial bootloader + terminal), [`monitor.py`](monitor.py) (post-`HALT` binary debug REPL: `reg <n>`, `heap <addr>`, `hp`).
 - **Status**: a complete `eval(expr, env)` — atoms, `quote`, `cond`, closure application (1/2/N-ary), and primitive-procedure dispatch — plus real self-referential and mutually-recursive functions bootstrapped straight from `my-lisp`'s `lib/core.my` and run on real hardware: `length`/`length-onto` (tail-recursive mutual pair), `reverse`/`reverse-onto`, `append`, and `equal?` (structural equality, not pointer comparison) all PASS on real `iverilog`, cross-checked against my-lisp's TCP semantic oracle. 34 milestones green at their documented evidence levels. See [`docs/testing.md`](docs/testing.md) for the full list and [`docs/lisp-machine-plan.md`](docs/lisp-machine-plan.md) for the detailed history. Tagged releases: `lisp-machine-v0.01`–`v0.04`.
 
 ### Build, simulate, flash
@@ -42,7 +42,8 @@ programmer_cli --device GW5A-25A --operation_index 2 --fsFile impl/pnr/project.f
 Assemble and upload a program over UART:
 
 ```bash
-python assembler.py your_program.asm
+my-lisp assembler.my your_program.asm your_program.bin
+# fallback/reference: python assembler.py your_program.asm -o your_program.bin
 python upload.py COM3 your_program.bin
 python monitor.py COM3 your_program.bin   # upload + post-HALT debug REPL
 ```
@@ -82,7 +83,7 @@ Program memory (`imem`) and heap size were both chosen against this real BRAM bu
 - **Heap**: сховище cons-комірок з bump-allocator (паралельні `CAR`/`CDR` BRAM), garbage collector'а поки немає — але його дизайн уже зафіксований: trace-based (mark-and-sweep), ніколи не reference counting, бо `letrec`-closures, побудовані через `SETCDR`, можуть утворювати справжні цикли посилань.
 - **ISA**: версія 1.0 (`isa-contract.my`), 16 опкодів, усі зайняті. `CALL`/`RET`, `GETTAG`/`MAKEPRIM`/`GETVAL` і `SETCDR` перевикористовують опкоди `JMP`/`MOV`/`ATOM` (за принципом RISC-V JAL/JALR) замість нових слотів інструкцій. `JF` точно відповідає truth-семантиці my-lisp: лише `NIL` — falsy, fixnum `0` — truthy.
 - **Пам'ять програми**: 4096 слів (12-бітний PC), розмір обраний під реальний BRAM-бюджет плати (56 блоків на GW5A-25A; сам heap займає 16), а не довільно. Префікс довжини протоколу UART-завантажувача — 2 байти little-endian.
-- **Інструментарій**: [`assembler.py`](assembler.py) (asm → `.bin`, авторитетний енкодер; символічні `LOADSYM` інтернуються per-program від ID 900 і дають `.sym` sidecar), [`upload.py`](upload.py) (серійний завантажувач + термінал), [`monitor.py`](monitor.py) (бінарний debug REPL після `HALT`: `reg <n>`, `heap <addr>`, `hp`).
+- **Інструментарій**: [`assembler.my`](assembler.my) (переважний self-hosted my-lisp asm → `.bin`, символічні `LOADSYM` інтернуються per-program від ID 900 і дають `.sym` sidecar), [`assembler.py`](assembler.py) (bootstrap/reference), [`upload.py`](upload.py) (серійний завантажувач + термінал), [`monitor.py`](monitor.py) (бінарний debug REPL після `HALT`: `reg <n>`, `heap <addr>`, `hp`).
 - **Стан**: повний `eval(expr, env)` — атоми, `quote`, `cond`, аплікація closure (1/2/N-арна) і диспетчеризація примітивних процедур — плюс справжні самореференційні й взаємно-рекурсивні функції, забутстраплені прямо з `my-lisp`'s `lib/core.my` і виконані на реальному залізі: `length`/`length-onto` (хвостово-рекурсивна взаємна пара), `reverse`/`reverse-onto`, `append`, `equal?` (структурна рівність, не порівняння вказівників) — усі PASSED на реальному `iverilog`, звірені проти TCP semantic oracle my-lisp. 34 milestone'и зелені на задокументованих рівнях доказів. Повний перелік — [`docs/testing.md`](docs/testing.md), детальна історія — [`docs/lisp-machine-plan.md`](docs/lisp-machine-plan.md). Теговані релізи: `lisp-machine-v0.01`–`v0.04`.
 
 ### Збірка, симуляція, прошивка
@@ -108,7 +109,8 @@ programmer_cli --device GW5A-25A --operation_index 2 --fsFile impl/pnr/project.f
 Асемблювання й заливка програми через UART:
 
 ```bash
-python assembler.py your_program.asm
+my-lisp assembler.my your_program.asm your_program.bin
+# fallback/reference: python assembler.py your_program.asm -o your_program.bin
 python upload.py COM3 your_program.bin
 python monitor.py COM3 your_program.bin   # заливка + debug REPL після HALT
 ```
@@ -148,7 +150,7 @@ Die vollständige Design-Philosophie, der Befehlssatz, das Speichermodell und di
 - **Heap**: ein Bump-Allocator-Cons-Zellen-Speicher (parallele `CAR`/`CDR`-BRAMs), noch kein Garbage Collector — dessen Design steht aber bereits fest: trace-basiert (Mark-and-Sweep), niemals Reference Counting, da über `SETCDR` gebaute `letrec`-Closures echte Referenzzyklen bilden können.
 - **ISA**: Version 1.0 (`isa-contract.my`), 16 Opcodes, alle belegt. `CALL`/`RET`, `GETTAG`/`MAKEPRIM`/`GETVAL` und `SETCDR` nutzen die Opcodes von `JMP`/`MOV`/`ATOM` wieder (RISC-V-JAL/JALR-Stil) statt neue Instruktions-Slots zu verbrauchen. `JF` entspricht exakt der Wahrheitssemantik von my-lisp: nur `NIL` ist falsy, Fixnum `0` ist truthy.
 - **Programmspeicher**: 4096 Woerter (12-Bit-PC), dimensioniert nach dem realen BRAM-Budget des Boards (56 Bloecke auf dem GW5A-25A; der Heap allein nutzt 16). Das Laengenpraefix des UART-Bootloader-Protokolls ist 2 Byte, Little-Endian.
-- **Toolchain**: [`assembler.py`](assembler.py) (maßgeblicher Encoder; symbolische `LOADSYM`-Operanden werden pro Programm ab ID 900 interniert und erzeugen eine `.sym`-Sidecar-Datei), [`upload.py`](upload.py), [`monitor.py`](monitor.py) (binäres Debug-REPL nach `HALT`).
+- **Toolchain**: [`assembler.my`](assembler.my) (bevorzugter self-hosted my-lisp-Assembler; symbolische `LOADSYM`-Operanden werden pro Programm ab ID 900 interniert und erzeugen eine `.sym`-Sidecar-Datei), [`assembler.py`](assembler.py) (Bootstrap/Referenz), [`upload.py`](upload.py), [`monitor.py`](monitor.py) (binäres Debug-REPL nach `HALT`).
 - **Status**: ein vollständiges `eval(expr, env)` — Atome, `quote`, `cond`, Closure-Anwendung (1/2/N-är) und Dispatch primitiver Prozeduren — plus echte selbstreferenzielle und wechselseitig rekursive Funktionen, direkt aus `my-lisp`'s `lib/core.my` gebootstrapt und auf echter Hardware verifiziert: `length`/`length-onto` (schwanzrekursives Paar), `reverse`/`reverse-onto`, `append`, `equal?` (strukturelle statt Zeiger-Gleichheit) — alle PASSED auf echtem `iverilog`, gegen my-lisps TCP-Orakel abgeglichen. 34 Meilensteine auf ihren dokumentierten Evidenzstufen grün. Vollständige Liste in [`docs/testing.md`](docs/testing.md), Details in [`docs/lisp-machine-plan.md`](docs/lisp-machine-plan.md). Getaggte Releases: `lisp-machine-v0.01`–`v0.04`.
 
 ### Bauen, Simulieren, Flashen
@@ -174,7 +176,8 @@ programmer_cli --device GW5A-25A --operation_index 2 --fsFile impl/pnr/project.f
 Programm assemblieren und per UART hochladen:
 
 ```bash
-python assembler.py your_program.asm
+my-lisp assembler.my your_program.asm your_program.bin
+# Fallback/Referenz: python assembler.py your_program.asm -o your_program.bin
 python upload.py COM3 your_program.bin
 python monitor.py COM3 your_program.bin   # Upload + Debug-REPL nach HALT
 ```
