@@ -53,6 +53,11 @@ class MyLispAssemblerParityTest(unittest.TestCase):
             "bootstrap_equal_demo.asm",
             "lambda_demo.asm",
             "eval_quote_demo.asm",
+            "bootstrap_append_demo.asm",
+            "bootstrap_caar_demo.asm",
+            "bootstrap_not_demo.asm",
+            "bootstrap_nullp_demo.asm",
+            "bootstrap_reverse_demo.asm",
         ):
             with self.subTest(fixture=fixture):
                 self.assert_fixture_matches_python(fixture)

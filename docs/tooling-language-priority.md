@@ -65,7 +65,7 @@ capability of the language being demonstrated.
   (5 instructions) and `bootstrap_add_demo.asm` (280 instructions). The
   Python implementation remains the bootstrap/reference path until the
   differential fixture set is expanded; `tests/test_assembler_my_parity.py`
-  now makes this migration gate executable. The gate currently covers seven
+  now makes this migration gate executable. The gate currently covers twelve
   representative programs (call, arithmetic, pair/list, tail-recursive
   length, equality, lambda, and quote paths).
 - **`upload.py`/`monitor.py` → Lisp**: not planned, not desired. Keep
