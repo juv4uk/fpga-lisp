@@ -103,6 +103,19 @@ The first physical smoke after programming uploaded `bootstrap_add_demo.bin`
 halted normally with `R9 = FIXNUM(7) [0x00000007]` and `ERR: no error`, proving
 the `(plus 3 4)` eval path on the physical FPGA for this bitstream.
 
+### CML command bridge
+
+`job_transport.py` is the non-interactive native-Windows transport used by
+CML's `CommandFpgaTransport`. It reads a versioned binary job on stdin, owns
+COM4/reset/HALT timing and exact monitor reads, and returns only a fixed binary
+result on stdout. Diagnostics and the reset prompt go to stderr. This is a
+host-I/O adapter, not a new Lisp primitive or a second ISA protocol.
+
+The CML live integration test supplies a ten-second reset window and runs the
+same `bootstrap_add_demo.bin` expectation through the heterogeneous Execution
+Graph. Device presence alone is not a pass: the test must return raw tagged
+word `0x00000007` and a clear hardware-error status.
+
 ### Earlier blocked state and diagnosis
 
 **Symptom:** `programmer_cli.exe --scan` (or any `--operation_index`)

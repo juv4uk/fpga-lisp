@@ -146,3 +146,14 @@ an error; add a new entry instead of restating one.
 This closes the JTAG/UART transport blocker and confirms the `(plus 3 4)` eval
 path on real hardware. It does **not** yet claim blanket M17-M32 verification;
 the remaining bootstrap demos still require their own physical observations.
+
+## [fpga-lisp] 2026-08-24 — CML binary job bridge M2c
+
+- Added `job_transport.py`, a native-Windows pyserial adapter for CML's
+  versioned binary stdin/stdout command transport. It reuses the established
+  bootloader/monitor bytes and delayed input-buffer reset workaround; no new
+  ISA or language semantics were introduced.
+- Protocol unit tests cover valid CML v1 framing plus truncated/version-drift
+  rejection. Windows PnP currently reports Converter B and COM4 healthy.
+- The physical CML Execution Graph pass remains pending a manual RESET press;
+  PnP presence is not promoted to execution evidence.
