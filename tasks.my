@@ -34,4 +34,9 @@
     (description . "DONE 2026-08-24: ISA 1.1 adds a backward-compatible extended boot header for up to 16 register/tagged-word initializers. RTL simulation proves R0=3,R1=4 -> ADD -> R2=7; legacy header remains unchanged and targeted legacy simulations pass. Full regression remains a CI gate under the owner resource policy. Physical-board and CML payload integration remain separate next steps.")
     (done . t)
   ))
+  ("FPGA-CML-REGISTER-INPUT-BRIDGE-M34" . (
+    (priority . 9.1)
+    (description . "DONE 2026-08-24: job_transport.py validates and preserves CML's ISA 1.1 extended register-input frame while retaining legacy byte compatibility. Four targeted parser tests pass. Evidence is host-side protocol only; physical payload execution remains pending.")
+    (done . t)
+  ))
 )))

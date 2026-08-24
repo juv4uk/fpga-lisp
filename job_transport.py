@@ -37,16 +37,33 @@ def parse_request(data):
         raise ValueError("request is shorter than the bridge header and word count")
     if data[:4] != REQUEST_MAGIC:
         raise ValueError("request magic mismatch")
-    version, result_register, reserved, word_count = struct.unpack("<HBBH", data[4:10])
+    version, result_register, reserved, raw_header = struct.unpack("<HBBH", data[4:10])
     if version != PROTOCOL_VERSION:
         raise ValueError(f"unsupported protocol version {version}")
     if reserved != 0:
         raise ValueError("reserved request byte must be zero")
     if result_register > 15:
         raise ValueError(f"invalid result register {result_register}")
+    if raw_header & 0x7000:
+        raise ValueError("boot header reserved bits 12..14 must be zero")
+    extended = bool(raw_header & 0x8000)
+    word_count = raw_header & 0x0FFF
     if not 1 <= word_count <= MAX_PROGRAM_WORDS:
         raise ValueError(f"invalid program length {word_count}")
-    expected = 10 + word_count * 4
+    if extended:
+        if len(data) < 11:
+            raise ValueError("extended request is missing register input count")
+        input_count = data[10]
+        if not 1 <= input_count <= 16:
+            raise ValueError(f"invalid register input count {input_count}")
+        registers = [data[11 + index * 5] for index in range(input_count)]
+        if any(register > 15 for register in registers):
+            raise ValueError("register input address exceeds R15")
+        if len(set(registers)) != len(registers):
+            raise ValueError("duplicate register input")
+        expected = 11 + input_count * 5 + word_count * 4
+    else:
+        expected = 10 + word_count * 4
     if len(data) != expected:
         raise ValueError(f"request has {len(data)} bytes, expected {expected}")
     return result_register, data[8:]

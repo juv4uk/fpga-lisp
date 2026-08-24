@@ -182,3 +182,12 @@ the remaining bootstrap demos still require their own physical observations.
 - Targeted legacy simulations (`tb_machine`, `tb_jf_truthiness`, `tb_monitor`)
   pass. The full regression was intentionally deferred to CI under the owner
   resource policy rather than consuming the interactive machine locally.
+
+## [fpga-lisp] 2026-08-24 — M34 CML register-input bridge parsing
+
+- `job_transport.py` now validates ISA 1.1 extended frames from CML: reserved
+  header bits, 1..16 unique R0..R15 inputs, exact frame length, and unchanged
+  legacy framing. Tagged words remain opaque at the bridge boundary.
+- Four targeted Python protocol tests pass, including extended-frame
+  preservation and duplicate-register rejection. This proves host bridge
+  parsing only; no new physical-board payload observation is claimed.
