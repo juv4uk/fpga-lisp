@@ -169,3 +169,16 @@ the remaining bootstrap demos still require their own physical observations.
   in one CML dependency graph. It passed in 14.61s with order CPU → CUDA → FPGA,
   buffer results `[2,3,4]` then `[3,4,5]`, and FPGA tagged word `7`. Scope is
   coordinated scheduling only; direct GPU→FPGA payload transfer remains absent.
+
+## [fpga-lisp] 2026-08-24 — M33 extended boot register inputs
+
+- ISA contract advanced backward-compatibly from 1.0 to 1.1. Legacy program
+  images retain their exact two-byte word-count header and program bytes.
+- Header bit 15 now selects an extended frame with up to 16 `(register,
+  u32-le tagged-word)` initializers before the unchanged program image.
+- RTL simulation initializes R0=FIXNUM(3), R1=FIXNUM(4), then executes
+  `ADD R2,R0,R1; HALT` and observes R2=FIXNUM(7). This is simulation evidence
+  for a host-staged input path, not yet physical-board or CML payload evidence.
+- Targeted legacy simulations (`tb_machine`, `tb_jf_truthiness`, `tb_monitor`)
+  pass. The full regression was intentionally deferred to CI under the owner
+  resource policy rather than consuming the interactive machine locally.

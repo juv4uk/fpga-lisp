@@ -29,6 +29,9 @@ module lisp_machine (
     logic boot_we;
     logic [11:0] boot_addr;
     logic [31:0] boot_data;
+    logic boot_reg_we;
+    logic [3:0] boot_reg_addr;
+    logic [31:0] boot_reg_data;
 
     logic [7:0] uart_rx_data;
     logic uart_rx_valid;
@@ -43,6 +46,9 @@ module lisp_machine (
         .boot_we(boot_we),
         .boot_addr(boot_addr),
         .boot_data(boot_data),
+        .boot_reg_we(boot_reg_we),
+        .boot_reg_addr(boot_reg_addr),
+        .boot_reg_data(boot_reg_data),
         .boot_done(boot_done)
     );
 
@@ -59,14 +65,14 @@ module lisp_machine (
     
     registers u_regs (
         .clk(clk),
-        .rst_n(cpu_rst_n),
+        .rst_n(rst_n),
         .rd_addr_a(reg_rd_addr_a),
         .rd_addr_b(reg_rd_addr_b),
         .rd_data_a(reg_rd_data_a),
         .rd_data_b(reg_rd_data_b),
-        .we(reg_we),
-        .wr_addr(reg_wr_addr),
-        .wr_data(reg_wr_data)
+        .we(boot_done ? reg_we : boot_reg_we),
+        .wr_addr(boot_done ? reg_wr_addr : boot_reg_addr),
+        .wr_data(boot_done ? reg_wr_data : boot_reg_data)
     );
     
     // --- Lisp Data Unit (Heap + Primitives) ---

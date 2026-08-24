@@ -11,15 +11,22 @@ module bootloader #(
     output logic [ADDR_WIDTH-1:0]  boot_addr,
     output logic [31:0]            boot_data,
 
+    output logic        boot_reg_we,
+    output logic [3:0]  boot_reg_addr,
+    output logic [31:0] boot_reg_data,
+
     output logic        boot_done
 );
 
     // Program length is sent as 2 bytes, little-endian (up to 4095
     // instructions for a 12-bit imem address), followed by that many
     // 32-bit instruction words, also little-endian.
-    typedef enum logic [1:0] {
+    typedef enum logic [2:0] {
         STATE_WAIT_LENGTH_LO,
         STATE_WAIT_LENGTH_HI,
+        STATE_WAIT_REG_COUNT,
+        STATE_WAIT_REG_ADDR,
+        STATE_READ_REG_BYTES,
         STATE_READ_BYTES,
         STATE_DONE
     } state_t;
@@ -38,6 +45,13 @@ module bootloader #(
     logic [31:0] assembled_word;
     logic [31:0] next_assembled_word;
 
+    logic [4:0] input_count;
+    logic [4:0] next_input_count;
+    logic [4:0] input_index;
+    logic [4:0] next_input_index;
+    logic [3:0] input_reg_addr;
+    logic [3:0] next_input_reg_addr;
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= STATE_WAIT_LENGTH_LO;
@@ -45,12 +59,18 @@ module bootloader #(
             word_count <= 0;
             byte_count <= 0;
             assembled_word <= 0;
+            input_count <= 0;
+            input_index <= 0;
+            input_reg_addr <= 0;
         end else begin
             state <= next_state;
             prog_length <= next_prog_length;
             word_count <= next_word_count;
             byte_count <= next_byte_count;
             assembled_word <= next_assembled_word;
+            input_count <= next_input_count;
+            input_index <= next_input_index;
+            input_reg_addr <= next_input_reg_addr;
         end
     end
 
@@ -60,10 +80,16 @@ module bootloader #(
         next_word_count = word_count;
         next_byte_count = byte_count;
         next_assembled_word = assembled_word;
+        next_input_count = input_count;
+        next_input_index = input_index;
+        next_input_reg_addr = input_reg_addr;
 
         boot_we = 0;
         boot_addr = word_count;
         boot_data = assembled_word;
+        boot_reg_we = 0;
+        boot_reg_addr = input_reg_addr;
+        boot_reg_data = assembled_word;
         boot_done = 0;
 
         case (state)
@@ -76,14 +102,69 @@ module bootloader #(
 
             STATE_WAIT_LENGTH_HI: begin
                 if (rx_valid) begin
-                    next_prog_length[15:8] = rx_data;
+                    next_prog_length[15:12] = 0;
+                    next_prog_length[11:8] = rx_data[3:0];
                     if (rx_data == 0 && prog_length[7:0] == 0) begin
                         next_state = STATE_DONE;
+                    end else if (rx_data[7]) begin
+                        next_state = STATE_WAIT_REG_COUNT;
+                        next_input_index = 0;
                     end else begin
                         next_state = STATE_READ_BYTES;
                         next_word_count = 0;
                         next_byte_count = 0;
                         next_assembled_word = 0;
+                    end
+                end
+            end
+
+            STATE_WAIT_REG_COUNT: begin
+                if (rx_valid) begin
+                    next_input_count = rx_data[4:0];
+                    next_input_index = 0;
+                    next_byte_count = 0;
+                    next_assembled_word = 0;
+                    if (rx_data[4:0] == 0) begin
+                        next_state = STATE_READ_BYTES;
+                        next_word_count = 0;
+                    end else begin
+                        next_state = STATE_WAIT_REG_ADDR;
+                    end
+                end
+            end
+
+            STATE_WAIT_REG_ADDR: begin
+                if (rx_valid) begin
+                    next_input_reg_addr = rx_data[3:0];
+                    next_byte_count = 0;
+                    next_assembled_word = 0;
+                    next_state = STATE_READ_REG_BYTES;
+                end
+            end
+
+            STATE_READ_REG_BYTES: begin
+                if (rx_valid) begin
+                    case (byte_count)
+                        2'd0: next_assembled_word[7:0]   = rx_data;
+                        2'd1: next_assembled_word[15:8]  = rx_data;
+                        2'd2: next_assembled_word[23:16] = rx_data;
+                        2'd3: next_assembled_word[31:24] = rx_data;
+                    endcase
+
+                    if (byte_count == 2'd3) begin
+                        boot_reg_we = 1;
+                        boot_reg_data = next_assembled_word;
+                        next_input_index = input_index + 1;
+                        next_byte_count = 0;
+                        next_assembled_word = 0;
+                        if (input_index + 1 == input_count) begin
+                            next_state = STATE_READ_BYTES;
+                            next_word_count = 0;
+                        end else begin
+                            next_state = STATE_WAIT_REG_ADDR;
+                        end
+                    end else begin
+                        next_byte_count = byte_count + 1;
                     end
                 end
             end
