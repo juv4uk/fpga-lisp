@@ -81,3 +81,16 @@ CLI і wire). При цьому mccarthy conformance_tests_from_my проход�
 ### F5 (NEW): wire словник розширився — error_kind_symbol() у
 my-lisp-cli/src/swarm.rs є АВТОРИТЕТОМ wire-vocabulary; KIND_MAP
 моєго ранера синхронізовано з ним.
+
+## Resolution 2026-08-24 — F4 ratified, downstream gap remains
+
+Owner ratified the distinct error taxonomy. `my-lisp` commit `2eb4ad1`
+publishes language contract 3.0: zero divisors are `DivisionByZero`, exact
+arithmetic magnitude failures are `NumericOverflow`, and malformed
+`json-parse` input is `Parse`. The canonical and this reference fixture copy
+now agree (207 entries).
+
+This resolves F4 as a contract decision, not as an FPGA implementation claim.
+`fpga-lisp` ISA 1.0 still lacks a machine-visible eight-kind error ABI and is
+therefore **UNSUPPORTED** for contract-3.0 named-error parity until such an ABI,
+RTL behavior, and differential evidence are added.

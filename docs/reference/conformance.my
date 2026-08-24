@@ -1,7 +1,6 @@
 ; PROVENANCE: synced from canonical my-lisp/tests/fixtures/conformance.my
-; source commit: 9b93cfd on 2026-08-24 by ganaka-1 (MYLISP-SEMANTIC-CONTRACT).
-; Previous copy was stale pre-item-10 semantics - see
-; docs/conformance-adversarial-report-2026-08-23.md for the delta record.
+; source commit: 2eb4ad1 on 2026-08-24; contract 3.0.
+; This is a reference copy; my-lisp remains semantic authority.
 
 ; tests/fixtures/conformance.my — the implementation-independent contract
 ; (see CLAUDE.md): any future my-lisp implementation — C, HDL, whatever —
@@ -71,7 +70,7 @@
 ((expr . "1.25e2") (expected . "125") (tier . 2) (axioms . (S1)))
 ((expr . "-0.0") (expected . "0") (tier . 2) (axioms . (S1)))
 ((expr . "0.0") (expected . "0") (tier . 2) (axioms . (S1)))
-((expr . "(/ 1 0.0)") (error . "InvalidForm") (tier . 2) (axioms . (S2)))
+((expr . "(/ 1 0.0)") (error . "DivisionByZero") (tier . 2) (since-contract . (3 0)) (axioms . (S2)))
 ((expr . "(eq 3 3)") (expected . "t") (tier . 1) (axioms . (G1)) (role . "constitutive"))
 ((expr . "(eq 3 4)") (expected . "()") (tier . 1) (axioms . (G1)) (role . "constitutive"))
 ((expr . "(eq \"radio\" \"radio\")") (expected . "t") (tier . 1) (axioms . (G1)) (role . "constitutive"))
@@ -105,7 +104,7 @@
 ((expr . "(lambda (x))") (error . "Arity") (tier . 2) (axioms . (S2)))
 ((expr . "(quote a b)") (error . "Arity") (tier . 1) (axioms . (S2)) (role . "constitutive"))
 ((expr . "(cons 1)") (error . "Arity") (tier . 1) (axioms . (S2)) (role . "constitutive"))
-((expr . "(/ 1 0)") (error . "InvalidForm") (tier . 2) (axioms . (S2)))
+((expr . "(/ 1 0)") (error . "DivisionByZero") (tier . 2) (since-contract . (3 0)) (axioms . (S2)))
 ((expr . "(let ((x 1) (y 2)) (+ x y))") (expected . "3") (tier . 3) (axioms . (G5)))
 ((expr . "(let* ((x 1) (y (+ x 1))) y)") (expected . "2") (tier . 3) (axioms . (G5)))
 ((expr . "(equal? (quote (1 (2 3) 4)) (quote (1 (2 3) 4)))") (expected . "t") (tier . 3) (axioms . (G5)))
@@ -186,8 +185,9 @@
 ((expr . "(quotient 9999999999999 10)") (expected . "999999999999") (tier . 3) (axioms . (G5)) (note . "regression fixture: the original repeated-subtraction quotient had recursion depth equal to the quotient's VALUE, not its digit count, and overflowed the Rust host's stack on exactly this input while implementing number->string. Fixed 2026-08-10 via a doubling algorithm, O(log(a/b)) depth"))
 ((expr . "(number->string 9999999999999)") (expected . "\"9999999999999\"") (tier . 3) (axioms . (G5)) (note . "surfaced from the fpga-lisp session's assembler.my, which had its own version limited to ~10 digits by a fixed DECIMAL-POWERS table; this one has no digit-count ceiling of its own"))
 ((expr . "(number->string 0)") (expected . "\"0\"") (tier . 3) (axioms . (G5)))
-((expr . "(quotient 5 0)") (error . "InvalidForm") (tier . 3) (axioms . (G5)) (note . "regression fixture: (quotient a 0) used to hang forever (largest-chunk's doubling never grows from chunk=0) instead of failing named -- fixed 2026-08-10 by routing b=0 through the primitive / for its already-tested division-by-zero error"))
-((expr . "(mod 5 0)") (error . "InvalidForm") (tier . 3) (axioms . (G5)))
+((expr . "(quotient 5 0)") (error . "DivisionByZero") (tier . 3) (since-contract . (3 0)) (axioms . (G5 S2)) (note . "regression fixture: (quotient a 0) used to hang forever; contract 3.0 names the routed primitive / failure DivisionByZero"))
+((expr . "(mod 5 0)") (error . "DivisionByZero") (tier . 3) (since-contract . (3 0)) (axioms . (G5 S2)))
+((expr . "(json-parse \"{\")") (error . "Parse") (tier . 2) (since-contract . (3 0)) (axioms . (S2)) (note . "contract 3.0 classifies malformed decoder input as Parse, not InvalidForm"))
 ((expr . "(fourth (quote (w x y z)))") (expected . "z") (tier . 3) (axioms . (G5)) (note . "surfaced from the fpga-lisp session's assembler.my — same single-parameter primitive-chain pattern as second/third, one step deeper"))
 ((expr . "(nth 2 (quote (a b c)))") (expected . "c") (tier . 3) (axioms . (G5)))
 ((expr . "(member? (quote b) (quote (a b c)))") (expected . "t") (tier . 3) (axioms . (G5)))
