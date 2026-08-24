@@ -192,6 +192,16 @@ the remaining bootstrap demos still require their own physical observations.
   preservation and duplicate-register rejection. This proves host bridge
   parsing only; no new physical-board payload observation is claimed.
 
+## [fpga-lisp] 2026-08-24 — M35 physical CML ISA 1.1 register-input proof
+
+- On the permanently flashed board at COM4, the Windows `job_transport.py`
+  bridge accepted the corrected 21-byte ISA 1.1 frame: R0=FIXNUM(3),
+  R1=FIXNUM(4), `ADD R2,R0,R1`, `HALT`.
+- After an operator S1/RESET, the bridge returned `CMLR` protocol version 1
+  with result word `0x00000007` and error status `0x00000000` (14 seconds,
+  2026-08-24). This is one live physical path proving CML payload delivery
+  and tagged register initialization; it is not blanket backend conformance.
+
 ## [fpga-lisp] 2026-08-24 — permanent ISA 1.1 image and cold-boot proof
 
 - Gowin EDA synthesized repo commit `092aa3b` into
