@@ -70,6 +70,13 @@ capability of the language being demonstrated.
   monitor, memory, control-path, and symbolic `LOADSYM` programs. This
   establishes assembler parity, including the `.sym` sidecar, not full
   language-contract conformance.
+- **`check_stale_refs.py` → `check-stale-refs.my`**: the self-hosted guard now
+  reads the machine-readable ISA and language contracts, scans only explicit
+  prose version claims, and fails closed on drift. `tests/test_stale_refs_my_parity.py`
+  compares its current exit status with the Python bootstrap/reference guard.
+  The Python version remains in place until drift-fixture coverage is added;
+  this migration does not move serial, filesystem orchestration, or driver I/O
+  into the language.
 - **`upload.py`/`monitor.py` → Lisp**: not planned, not desired. Keep
   them in Python. If a future agent proposes migrating them, point here
   first rather than re-deriving the reasoning.

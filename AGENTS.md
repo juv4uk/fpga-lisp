@@ -46,8 +46,8 @@ against the actual `evidence/`/commit before acting on one.
 
 - **my-lisp** — the semantic source of truth. Defines the language: parser,
   evaluator, exactness model (rationals, no floats), `lib/core.my` standard
-  library. Language contract version **2.0** as of 2026-08-15
-  (`language-contract.my`'s own `(major . 2) (minor . 0)` -- don't trust a
+  library. Language contract version **3.0** as of 2026-08-15
+  (`language-contract.my`'s own `(major . 3) (minor . 0)` -- don't trust a
   number in this prose file over that one; re-check it directly if it's
   been a while). The 1.0->2.0 break removed `'` as a reader shorthand for
   `quote` (now part of symbols) -- a *syntax*-level change. fpga-lisp has
@@ -58,7 +58,7 @@ against the actual `evidence/`/commit before acting on one.
   Nothing else in the ecosystem may drift from what that repo says the
   language means.
 - **fpga-lisp** (this repo) — hardware implementation of the same language
-  on an FPGA. Tracks an ISA contract (`isa-contract.my`, version 1.0)
+  on an FPGA. Tracks an ISA contract (`isa-contract.my`, version 1.1)
   against my-lisp's semantics. Milestone-by-milestone bootstrap history and
   the current plan queue position live in `docs/lisp-machine-plan.md` —
   that file is the current, authoritative status; don't infer progress
