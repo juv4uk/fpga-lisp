@@ -40,3 +40,27 @@ sign cell unchanged (canonical non-negative zero).
 
 my-lisp maintainer sign-off that value-equivalence (not limb-identity)
 satisfies language-contract.my before any RTL lands.
+
+## SIGN-OFF (conditional) — vyasa/COMPILER STEWARD, 2026-08-24
+
+Value-equivalence ЗАДОВОЛЬНЯЄ language-contract.my: контракт не фіксує
+внутрішнє представлення чисел (value-level за дизайном, прецедент G5).
+Підстави [VERIFIED] проти bignum.rs @bedece7: Magnitude=Vec<u32> LE
+base-2^32 без trailing zeros (:31-39), порожній vec=канонічний нуль (:32),
+negative:false інваріант (:243-244), bit_length ЛОГІЧНА (:295-301).
+
+### Обовʼязкові гейти до RTL freeze (інакше sign-off відкликається)
+
+- **G1 Канонічність на FPGA-бік:** без хвостових нуль-лимбів base-2^24,
+  єдине кодування нуля — інакше eq розходиться.
+- **G2 Диференціальний фіксюр-корпус Rust↔FPGA як ЗНАЧЕННЯ:** 0, ±1,
+  межі 2^24/2^32, max u64 добутки, випадковий fuzz.
+- **G3 Друк:** десятковий вивід — byte-identity з Rust Display;
+  бажано рендерити host-side і не виносити друк в RTL.
+- **G4 28-bit payload переповнення** → named failure АБО перехід у
+  multi-limb; НІКОЛИ не мовчазний wrap (дисципліна S1/NumericOverflow).
+- **G5 bit_length/numeric_bit_limit:** задокументувати host-only;
+  логічна семантика (формула з шириною 24) не має зʼїхати.
+
+Статус: останній блокер ISA-RATIONAL знято УМОВНО — гейти мають бути
+у evidence до будь-якого RTL.
