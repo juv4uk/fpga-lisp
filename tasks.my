@@ -39,4 +39,9 @@
     (description . "DONE 2026-08-24: job_transport.py validates and preserves CML's ISA 1.1 extended register-input frame while retaining legacy byte compatibility. Four targeted parser tests pass. The former host-only boundary was superseded by M35 physical register-input proof and M36 host-staged CPU→CUDA→FPGA evidence.")
     (done . t)
   ))
+  ("FPGA-SYMBOLIC-LOADSYM-INTERNING" . (
+    (priority . 8.5)
+    (description . "DONE 2026-08-24: assembler.py now interns symbolic LOADSYM operands per program from ID 900, preserves numeric operands, and emits a .sym sidecar for monitor/debug tooling. Six Python protocol/assembler tests pass; no global symbol ABI is introduced.")
+    (done . t)
+  ))
 )))

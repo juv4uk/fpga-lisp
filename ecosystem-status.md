@@ -232,3 +232,13 @@ the remaining bootstrap demos still require their own physical observations.
 - Scope: this is live evidence that this exact image boots from persistent
   external flash and executes one `(plus 3 4)` path. It is not blanket ISA,
   language-contract or M17-M34 hardware conformance.
+
+## [fpga-lisp] 2026-08-24 — symbolic LOADSYM assembler bridge
+
+- `assembler.py` now accepts symbolic `LOADSYM Rn NAME` operands and assigns
+  deterministic per-program tagged-symbol IDs starting at 900; existing
+  numeric operands remain unchanged.
+- The CLI writes a `<output>.sym` sidecar when symbols were interned, giving
+  monitor/debug tooling the name map without introducing a global symbol ABI.
+- Six Python assembler/protocol tests pass. This is a host-tooling bridge,
+  not a change to ISA 1.1 or language semantics.

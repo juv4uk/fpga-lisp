@@ -29,6 +29,8 @@ OPCODES = {
     'IN':     15
 }
 
+SYMBOL_BASE_ID = 900
+
 def expand_includes(lines, base_dir, seen=None):
     """Recursively inline `.include "path"` directives (relative to the
     including file's own directory), so shared fragments -- symbol
@@ -70,7 +72,29 @@ def parse_imm(imm_str, labels):
     else:
         return int(imm_str)
 
-def assemble(lines):
+def _intern_loadsym_operands(instructions, labels):
+    """Resolve per-program symbolic LOADSYM operands to tagged-symbol IDs."""
+    ids = {}
+    next_id = SYMBOL_BASE_ID
+    normalized = []
+    for line_num, line in instructions:
+        parts = line.replace(',', ' ').split()
+        if len(parts) >= 3 and parts[0].upper() == 'LOADSYM':
+            operand = parts[2]
+            try:
+                parse_imm(operand, labels)
+            except ValueError:
+                if operand not in ids:
+                    if next_id > 0xFFFF:
+                        raise ValueError("per-program symbol table exceeds 16-bit LOADSYM IDs")
+                    ids[operand] = next_id
+                    next_id += 1
+                line = f"LOADSYM {parts[1]} {ids[operand]}"
+        normalized.append((line_num, line))
+    return normalized, ids
+
+
+def assemble_with_symbols(lines):
     labels = {}
     instructions_pass1 = []
     
@@ -120,6 +144,10 @@ def assemble(lines):
                 
         instructions_pass1.append((line_num + 1, line))
         pc += 1
+
+    instructions_pass1, symbol_ids = _intern_loadsym_operands(
+        instructions_pass1, labels
+    )
 
     # Second pass: assemble instructions
     machine_code = []
@@ -202,6 +230,12 @@ def assemble(lines):
             
         machine_code.append(instr_word)
         
+    return machine_code, symbol_ids
+
+
+def assemble(lines):
+    """Backward-compatible machine-code-only assembler API."""
+    machine_code, _ = assemble_with_symbols(lines)
     return machine_code
 
 def main():
@@ -215,7 +249,7 @@ def main():
 
     lines = expand_includes(lines, os.path.dirname(os.path.abspath(args.input)))
 
-    machine_code = assemble(lines)
+    machine_code, symbol_ids = assemble_with_symbols(lines)
     
     out_file = args.output
     if not out_file:
@@ -228,6 +262,13 @@ def main():
     with open(out_file, 'wb') as f:
         for instr in machine_code:
             f.write(struct.pack('<I', instr))
+
+    if symbol_ids:
+        symbol_file = out_file + '.sym'
+        with open(symbol_file, 'w') as f:
+            for name, symbol_id in sorted(symbol_ids.items(), key=lambda item: item[1]):
+                f.write(f"{symbol_id} {name}\n")
+        print(f"Wrote symbol table to {symbol_file}")
             
     print(f"Wrote binary to {out_file}")
 
