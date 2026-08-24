@@ -167,8 +167,10 @@ the remaining bootstrap demos still require their own physical observations.
   beyond its declared contract 2.0 surface.
 - A second operator-gated live test placed the board after CPU and CUDA nodes
   in one CML dependency graph. It passed in 14.61s with order CPU → CUDA → FPGA,
-  buffer results `[2,3,4]` then `[3,4,5]`, and FPGA tagged word `7`. Scope is
-  coordinated scheduling only; direct GPU→FPGA payload transfer remains absent.
+  buffer results `[2,3,4]` then `[3,4,5]`, and FPGA tagged word `7`. At that
+  checkpoint the scope was coordinated scheduling only; M36 subsequently
+  proved the explicit host-staged buffer-to-register path. Direct device-to-
+  device GPU→FPGA transfer remains absent.
 
 ## [fpga-lisp] 2026-08-24 — M33 extended boot register inputs
 
