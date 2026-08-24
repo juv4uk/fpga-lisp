@@ -66,3 +66,18 @@ confirmation (Vyasa).
 *Runner: independent Python client over the :9999 sexpr protocol;
 prelude core/unify/reason/understand/narrate/persistent-map loaded per
 session exactly like the canonical harness.*
+
+## Додаток 2026-08-24 (post-sync verification)
+
+Копію оновлено до канону (241 рядок, provenance-заголовок, source
+my-lisp c42c7cb). Повторний ран обох файлів через оновлений oracle:
+**206/206 парність, 202 PASS на кожній** (ідентичні результати).
+
+### F4 (NEW, для my-lisp/Vyasa): контракто-код дрейф на div-zero
+4 фікстури очікують `InvalidForm` ((/ 1 0), (/ 1 0.0), (quotient 5 0),
+(mod 5 0)) — код після d15c910 повертає `DivisionByZero` (підтверджено
+CLI і wire). При цьому mccarthy conformance_tests_from_my проходить
+68/68 — механізм розбіжності неочевидний, потребує погляду автора.
+### F5 (NEW): wire словник розширився — error_kind_symbol() у
+my-lisp-cli/src/swarm.rs є АВТОРИТЕТОМ wire-vocabulary; KIND_MAP
+моєго ранера синхронізовано з ним.

@@ -1,3 +1,8 @@
+; PROVENANCE: synced from canonical my-lisp/tests/fixtures/conformance.my
+; source commit: 9b93cfd on 2026-08-24 by ganaka-1 (MYLISP-SEMANTIC-CONTRACT).
+; Previous copy was stale pre-item-10 semantics - see
+; docs/conformance-adversarial-report-2026-08-23.md for the delta record.
+
 ; tests/fixtures/conformance.my — the implementation-independent contract
 ; (see CLAUDE.md): any future my-lisp implementation — C, HDL, whatever —
 ; should reproduce these results once it has the seven primitives and
@@ -55,8 +60,8 @@
 ((expr . "(def 1e100001 5)") (error . "NumericOverflow") (tier . 2) (axioms . (S3)))
 ((expr . "1ee3") (error . "UnknownSymbol") (tier . 2) (axioms . (S2)))
 ((expr . "--0.5") (error . "UnknownSymbol") (tier . 2) (axioms . (S2)))
-((expr . "+") (expected . "#<builtin +>") (tier . 2) (axioms . (S2)))
-((expr . "-") (expected . "#<builtin ->") (tier . 2) (axioms . (S2)))
+((expr . "+") (expected . "#<builtin +>") (tier . 2) (since-contract . (2 1)) (requires . (first-class-builtins builtin-add)) (axioms . (S2)))
+((expr . "-") (expected . "#<builtin ->") (tier . 2) (since-contract . (2 1)) (requires . (first-class-builtins builtin-subtract)) (axioms . (S2)))
 ((expr . ".5") (expected . "1/2") (tier . 2) (axioms . (S1)))
 ((expr . "-.5") (expected . "-1/2") (tier . 2) (axioms . (S1)))
 ((expr . "5.") (expected . "5") (tier . 2) (axioms . (S1)))
@@ -129,7 +134,7 @@
 ((expr . "((lambda (a b . rest) a) 1)") (error . "Arity") (tier . 1) (axioms . (S2)) (role . "constitutive") (note . "variadic lambda still enforces its fixed parameters"))
 ((expr . "(list 1 2 3)") (expected . "(1 2 3)") (tier . 3) (axioms . (G5)) (note . "list moved from a Rust special form to lib/core.my (lambda args args) once variadic parameters existed to express it"))
 ((expr . "(let ((second (lambda (x) (quote shadowed)))) (second (quote (1 2 3))))") (expected . "shadowed") (tier . 2) (axioms . (G4)) (note . "neither Lisp-1 nor Lisp-2 as an identity — ordinary def/defmacro bindings share one namespace and are locally shadowable"))
-((expr . "(let ((car (lambda (x) (quote shadowed)))) (car (quote (1 2))))") (expected . "1") (tier . 1) (axioms . (G4)) (role . "constitutive") (note . "the seven primitives are syntax, dispatched before any environment lookup, so never shadowable — the same distinction Scheme draws between special forms and procedures"))
+((expr . "(let ((car (lambda (x) (quote shadowed)))) (car (quote (1 2))))") (expected . "shadowed") (tier . 1) (since-contract . (2 1)) (requires . (first-class-builtins builtin-car)) (axioms . (G4)) (role . "constitutive") (note . "contract 2.1: builtins are ordinary first-class values bootstrapped into the global environment, so lexical bindings may shadow them; only quote/cond/lambda/def/defmacro remain syntax-only special forms"))
 ((expr . "(reverse (quote ()))") (expected . "()") (tier . 3) (axioms . (G5)) (note . "empty-list edge case, previously untested"))
 ((expr . "(append (quote ()) (quote (a b)))") (expected . "(a b)") (tier . 3) (axioms . (G5)) (note . "empty-list edge case, previously untested — empty first argument"))
 ((expr . "(append (quote (a b)) (quote ()))") (expected . "(a b)") (tier . 3) (axioms . (G5)) (note . "empty-list edge case, previously untested — empty second argument"))
@@ -214,3 +219,23 @@
 ((expr . "(->> 5 (- 2))") (expected . "-3") (tier . 3) (axioms . (G5)))
 ((expr . "(-> 5)") (expected . "5") (tier . 3) (axioms . (G5)))
 ((expr . "(->> 5)") (expected . "5") (tier . 3) (axioms . (G5)))
+; FIX-NUMBER-TO-STRING-RATIONAL: number->string delegates to canonical
+; serialization — non-integer rationals render reduced and exact, never
+; decimal approximations; negatives included. Regression for the cdr-crash
+; on fractional digit indices (docs/BUG-number-to-string-rational.md).
+((expr . "(number->string 1/3)") (expected . "\"1/3\"") (tier . 3) (axioms . (G5 S1)) (note . "was: crash via (nth 1/3 <digit-table>) misreported as memory corruption"))
+((expr . "(number->string 10/20)") (expected . "\"1/2\"") (tier . 3) (axioms . (G5 S1)) (note . "reduced canonical form, same law as write-to-string's G6 fixture"))
+((expr . "(number->string -10/4)") (expected . "\"-5/2\"") (tier . 3) (axioms . (G5 S1)) (note . "negative + reduction in one case"))
+; Contract 2.2: immutable fixed-width buffers make an explicit, portable
+; representation boundary for bulk compute without weakening exact arithmetic.
+((expr . "#i32(1 -2 3)") (expected . "#i32(1 -2 3)") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)))
+((expr . "(i32-buffer 1 -2 3)") (expected . "#i32(1 -2 3)") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)))
+((expr . "(f32-buffer 1 1/10 -2.5)") (expected . "#f32(1.0 0.1 -2.5)") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)) (note . "f32 conversion is explicit and returns inexact elements"))
+((expr . "(list (numeric-buffer-type #i32()) (numeric-buffer-length #f32(1.0 2.0)) (numeric-buffer-ref #i32(-7) 0))") (expected . "(i32 2 -7)") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)))
+((expr . "(eq (read (write-to-string #f32(1.0 0.1 -2.5))) #f32(1.0 0.1 -2.5))") (expected . "t") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)))
+((expr . "(i32-buffer 2147483648)") (error . "NumericOverflow") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (S2 S3)))
+((expr . "(i32-buffer 1/2)") (error . "Type") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (S1 S2)))
+; Contract 2.3: the canonical semantic operation CML ComputeBackends must match.
+((expr . "(numeric-buffer-map (lambda (x) (+ x 1)) #i32(1 2 3))") (expected . "#i32(2 3 4)") (tier . 2) (since-contract . (2 3)) (requires . (typed-numeric-buffers numeric-buffer-map)) (axioms . (G6 G7 S1)))
+((expr . "(numeric-buffer-map (lambda (x) (+ x 0.5)) #f32(1.0 2.0))") (expected . "#f32(1.5 2.5)") (tier . 2) (since-contract . (2 3)) (requires . (typed-numeric-buffers numeric-buffer-map)) (axioms . (G6 G7 S1)))
+((expr . "(numeric-buffer-map (lambda (x) (+ x 1)) #i32(2147483647))") (error . "NumericOverflow") (tier . 2) (since-contract . (2 3)) (requires . (typed-numeric-buffers numeric-buffer-map)) (axioms . (S2 S3)))
