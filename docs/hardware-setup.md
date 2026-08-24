@@ -116,6 +116,12 @@ same `bootstrap_add_demo.bin` expectation through the heterogeneous Execution
 Graph. Device presence alone is not a pass: the test must return raw tagged
 word `0x00000007` and a clear hardware-error status.
 
+That stronger test passed on 2026-08-24 in 13.37 seconds: CML registered the
+physical board as `fpga-lisp:com4`, uploaded the 280-word program, received R9
+as `0x00000007`, observed no hardware error, and published
+`GraphValue::LispWord(7)`. This verifies the command bridge plus one real graph
+program path; it does not generalize to all FPGA programs.
+
 ### Earlier blocked state and diagnosis
 
 **Symptom:** `programmer_cli.exe --scan` (or any `--operation_index`)

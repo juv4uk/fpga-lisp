@@ -21,7 +21,7 @@
   ))
   ("FPGA-CML-JOB-BRIDGE-M2C" . (
     (priority . 8.0)
-    (description . "DONE 2026-08-24: add job_transport.py as a native-Windows pyserial adapter for CML's versioned binary stdin/stdout transport. Unit tests cover framing/rejection; COM4 is PnP-present. Physical graph result remains pending the operator-gated RESET run and is not inferred from device presence.")
+    (description . "DONE 2026-08-24: add job_transport.py as a native-Windows pyserial adapter for CML's versioned binary stdin/stdout transport. Unit tests cover framing/rejection. The operator-gated physical CML Execution Graph test passed through COM4 in 13.37s: bootstrap_add_demo returned R9=0x00000007, no hardware error, published as GraphValue::LispWord(7). Scope is one live program path, not blanket FPGA conformance.")
     (done . t)
   ))
 )))

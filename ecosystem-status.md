@@ -155,5 +155,8 @@ the remaining bootstrap demos still require their own physical observations.
   ISA or language semantics were introduced.
 - Protocol unit tests cover valid CML v1 framing plus truncated/version-drift
   rejection. Windows PnP currently reports Converter B and COM4 healthy.
-- The physical CML Execution Graph pass remains pending a manual RESET press;
-  PnP presence is not promoted to execution evidence.
+- The operator-gated physical CML Execution Graph test subsequently passed in
+  13.37 seconds after a manual RESET: `bootstrap_add_demo.bin` returned R9 raw
+  tagged word `0x00000007`, hardware error clear, and CML published
+  `GraphValue::LispWord(7)`. Scope remains one live graph program path, not
+  blanket FPGA conformance.
