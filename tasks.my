@@ -63,7 +63,8 @@
     (priority . 8.5)
     (capabilities . (fpga-lisp verification))
     (description . "Fix prototype_phonetics.my masks to match Python PhoneticVector oracle. al mask has ~50 set bits vs expected 42 canonical sounds; hal=41 vs 33. BLOCKED pending KB parity per Viveka audit. Tests cover Python toy runtime only, .my KB untested.")
-    (done . ())
+    (done . t)
+    (evidence . "FIXED 2026-08-25 sakshi: prototype_phonetics.my masks corrected from canonical Śiva-sūtras positional encoding. Commit 1518786 pushed to my-lisp main. Verification report: my-lisp-panini/panini/research/pratyahara-bitmask-verification.md")
   ))
 
 )))
