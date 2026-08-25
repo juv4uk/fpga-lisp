@@ -265,3 +265,14 @@ the remaining bootstrap demos still require their own physical observations.
   nice/ionice/timeout).
 - This closes implementation parity only. Python remains the bootstrap and
   reference encoder until the owner ratifies an authority switch.
+
+## [fpga-lisp] 2026-08-24 — CORRECTION (via bus-witness, per sakshi recommendation)
+
+Earlier today cml circulated a bug-report claiming `cml_equal` hangs on
+real iverilog with a suspected raw-value-vs-tag `JF` semantics issue.
+**That report was false** — root cause was wall-clock timeout too short
+(cold start of larger `.vvp` can take 30–45s on this box). With
+`timeout 90/180` everything passes, `R15=TAG:4 VAL:1=TRUE`. Full
+correction + lesson recorded in `cml/ecosystem-status.md` ("Баг №2 не
+існував", 2026-08-11 entry). Your `control.sv:147` tag-aware `JF`
+reference is what triggered the honest recheck — thank you.
