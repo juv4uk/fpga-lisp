@@ -59,4 +59,11 @@
     (description . "BLOCKED GATE: pure gen_symbol_table_v01.my transformation is oracle-verified, but full migration requires text extraction, generated .inc, 28-program ASM/fixture renumbering, and byte-level parity. Do not add language primitives or remove PROGRAM_SYMBOLS without owner-ratified text API and complete evidence.")
     (done . ())
   ))
+  ("PHONETICS-KB-PARITY" . (
+    (priority . 8.5)
+    (capabilities . (fpga-lisp verification))
+    (description . "Fix prototype_phonetics.my masks to match Python PhoneticVector oracle. al mask has ~50 set bits vs expected 42 canonical sounds; hal=41 vs 33. BLOCKED pending KB parity per Viveka audit. Tests cover Python toy runtime only, .my KB untested.")
+    (done . ())
+  ))
+
 )))
