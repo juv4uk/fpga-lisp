@@ -65,7 +65,21 @@
     (description . "Fix prototype_phonetics.my masks to match Python PhoneticVector oracle. al mask has ~50 set bits vs expected 42 canonical sounds; hal=41 vs 33. BLOCKED pending KB parity per Viveka audit. Tests cover Python toy runtime only, .my KB untested.")
     (done . t)
     (evidence . "FIXED 2026-08-25 sakshi: prototype_phonetics.my masks corrected from canonical Śiva-sūtras positional encoding. Commit 1518786 pushed to my-lisp main. Verification report: my-lisp-panini/panini/research/pratyahara-bitmask-verification.md")
-  ))
+  )
+
+  ("PVC16-UNBOXED-SIGNOFF-REQUEST" . (
+    (priority . 7.0)
+    (capabilities . (fpga-lisp compiler rust coordination)
+
+  ("FPGA-VERILOG-MODULE-AUDIT" . (
+    (priority . 7.5)
+    (capabilities . (fpga-lisp verilog audit))
+    (description . "Audit existing Verilog modules against recommendations-fpga-prototypes.md spec (fpga_alu.v, savarna unit, voicing/devoicing unit). Verify which are implemented vs proposed-only.")
+    (done . ())
+  )))
+    (description . "Request COMPILER STEWARD sign-off for PVC-16 unboxed representation (TAG_PHONETIC_VECTOR=12) in NaN-boxed word model per recommendations-my-lisp-prototypes.md. Blocked on text-primitive decision.")
+    (done . ())
+  )))
 
   ("FPGA-TIMING-EVIDENCE" . (
     (priority . 8.0)
