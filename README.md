@@ -50,7 +50,7 @@ python monitor.py COM3 your_program.bin   # upload + post-HALT debug REPL
 
 ### Resource usage (Gowin GW5A-25A)
 
-Measured from `impl/pnr/project.rpt.txt` after the current build — not estimated:
+Vendor P&R report numbers (`impl/pnr/project.rpt.txt`, recorded from a local implementation run) — NOTE: the report file itself is NOT committed to this repository; treat as recorded-until-committed:
 
 | Resource | Total on device | Used | % |
 |---|---|---|---|
@@ -117,7 +117,7 @@ python monitor.py COM3 your_program.bin   # заливка + debug REPL післ
 
 ### Використання ресурсів (Gowin GW5A-25A)
 
-Виміряно з `impl/pnr/project.rpt.txt` після поточної збірки — не оцінка:
+Числа з vendor P&R звіту (`impl/pnr/project.rpt.txt`, записаного під час локальної реалізації) — УВАГА: сам файл звіту НЕ закомічено до цього репозиторію; рахувати як recorded-until-committed: оцінка:
 
 | Ресурс | Всього на кристалі | Використано | % |
 |---|---|---|---|
