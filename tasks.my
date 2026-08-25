@@ -94,4 +94,12 @@
     (description . "Execute Gold Spike 01: end-to-end derivation bhū+laṭ->bhavati through full vertical chain (canon->UPC-8->IR->CML->FPGA RTL). Spec: /home/agents/ecosystem/docs/GOLD_SPIKE_01.md. This is THE experiment proving functional compatibility of the entire stack.")
     (done . ())
   ))
+
+
+  ("FPGA-PHONETIC-ALU" . (
+    (priority . 7.0)
+    (capabilities . (fpga-lisp verilog rtl))
+    (description . "Implement fpga_alu.v phonetic vector ALU per recommendations-fpga-prototypes.md section 2. Includes savarna unit, voicing/devoicing unit, palatalization unit. BLOCKED on G1-G5 gates.")
+    (done . ())
+  ))
 )))
