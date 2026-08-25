@@ -67,6 +67,13 @@
     (evidence . "FIXED 2026-08-25 sakshi: prototype_phonetics.my masks corrected from canonical Śiva-sūtras positional encoding. Commit 1518786 pushed to my-lisp main. Verification report: my-lisp-panini/panini/research/pratyahara-bitmask-verification.md")
   ))
 
+  ("FPGA-TIMING-EVIDENCE" . (
+    (priority . 8.0)
+    (capabilities . (fpga-lisp verification documentation))
+    (description . "Remove unverified timing claims (0.3ns, <8 LUTs) from docs. Replace with actual post-P&R reports per CONSOLIDATED_CRITIQUE point 7.")
+    (done . ())
+  ))
+
   ("EXECUTE-GOLD-SPIKE-01" . (
     (priority . 10.0)
     (capabilities . (compiler rust iverilog fpga verification testing))
