@@ -1,102 +1,96 @@
 ((tasks . (
-  ("FPGA-SWARM-CONTRACT-01" . (
+("FPGA-SWARM-CONTRACT-01" . (
     (priority . 9.0)
     (description . "Adopt Swarm Contract v0.1: repo.my scope declaration + ecosystem/README scaffold verified present and substantive 2026-08-24; marked done retroactively.")
     (done . t)
   ))
-  ("FPGA-CONFORMANCE-TESTING" . (
+("FPGA-CONFORMANCE-TESTING" . (
     (priority . 9.5)
     (description . "DONE 2026-08-24 (ganaka-1): adversarial run complete -- docs/conformance-adversarial-report-2026-08-23.md. Findings executed same day: F1 stale docs/reference/conformance.my replaced byte-identical with canonical my-lisp fixture + hash pin (conformance.canonical.pin); F2 wire/contract error-kind mapping table added (docs/reference/error-kind-mapping.md).")
     (done . t)
   ))
-  ("FPGA-FETCH-PAIR-RTL-SIM-VERIFY" . (
+("FPGA-FETCH-PAIR-RTL-SIM-VERIFY" . (
     (priority . 8.0)
     (description . "done -- tb_fetch_pair.sv (commit 9b529f2) never actually compiled under iverilog before this; only ever MODEL-PASS, not RTL-SIM-PASS (see docs/test-report-2026-08-17.md's own caveat, ARCH-RECOVERY-REVIEW-FPGA). Two real bug classes found and fixed: (1) white-box FSM bypass (force dut.boot_done/dut.u_ctrl.state) doesn't work against the real module hierarchy -- rewrote to load through the real UART bootloader like every other testbench; (2) instruction encoding was backwards (opcode at bits [3:0] instead of instruction_decoder.sv's real [31:28], OP_CONS/OP_CAR/OP_HALT values also wrong). Verified: R4=10 (CAR), R5=20 (CDR), R6=123 (PC not skipped), real iverilog run. Full 32-testbench regression also re-run clean afterward, no other regressions.")
     (done . t)
   ))
-  ("ISA-RATIONAL" . (
+("ISA-RATIONAL" . (
     (priority . 7.0)
     (description . "Plan item 25 (rational/bignum). Representation contract drafted and largely self-verified against my-lisp's actual Rust source after a written confirmation request went unanswered for a full session (docs/rational-bignum-representation.md: sign-magnitude bignum confirmed against bignum.rs, rational normalization/non-collapse confirmed against value.rs). Limb-base fixture landed 2026-08-24 (evidence/ISA-RATIONAL/limb-base-fixture.md): Rust facts extracted from bignum.rs @bedece7 (base-2^32 LE, canonical zero, schoolbook u64 mul, gcd present); FPGA decision proposed: base 2^24 inside TAG_FIXNUM 28-bit payload, value-equivalence conversion rule documented. G2 DIFFERENTIAL CORPUS LANDED 2026-08-24: evidence/ISA-RATIONAL/g2_differential_corpus.json -- 128 cases (add/sub/mul/div/gcd), edge/boundary/fuzz coverage, smoke-tested against release oracle. CONDITIONAL SIGN-OFF received 2026-08-24 from vyasa (COMPILER STEWARD): value-equivalence qualifies; mandatory gates G1-G5 recorded in evidence/ISA-RATIONAL/limb-base-fixture.md -- all must be evidenced before any RTL freeze. No RTL until then. No RTL work until that lands.")
     (done . ())
   ))
-  ("FPGA-CML-JOB-BRIDGE-M2C" . (
+("FPGA-CML-JOB-BRIDGE-M2C" . (
     (priority . 8.0)
     (description . "DONE 2026-08-24: add job_transport.py as a native-Windows pyserial adapter for CML's versioned binary stdin/stdout transport. Unit tests cover framing/rejection. The operator-gated physical CML Execution Graph test passed through COM4 in 13.37s: bootstrap_add_demo returned R9=0x00000007, no hardware error, published as GraphValue::LispWord(7). Scope is one live program path, not blanket FPGA conformance.")
     (done . t)
   ))
-  ("FPGA-CML-HETEROGENEOUS-GRAPH-M3" . (
+("FPGA-CML-HETEROGENEOUS-GRAPH-M3" . (
     (priority . 8.0)
     (description . "DONE 2026-08-24: physical GW5A-25A participated after CPU and CUDA in one CML dependency graph. Live pass 14.61s, order CPU->CUDA->FPGA, buffers [2 3 4] then [3 4 5], FPGA tagged word 7. This proves coordinated scheduling only; no direct GPU-to-FPGA payload transfer is claimed.")
     (done . t)
   ))
-  ("FPGA-EXTENDED-BOOT-INPUTS-M33" . (
+("FPGA-EXTENDED-BOOT-INPUTS-M33" . (
     (priority . 9.0)
     (description . "DONE 2026-08-24: ISA 1.1 adds a backward-compatible extended boot header for up to 16 register/tagged-word initializers. RTL simulation proves R0=3,R1=4 -> ADD -> R2=7; legacy header remains unchanged and targeted legacy simulations pass. Full regression remains a CI gate under the owner resource policy. Physical-board and CML payload integration remain separate next steps.")
     (done . t)
   ))
-  ("FPGA-CML-REGISTER-INPUT-BRIDGE-M34" . (
+("FPGA-CML-REGISTER-INPUT-BRIDGE-M34" . (
     (priority . 9.1)
     (description . "DONE 2026-08-24: job_transport.py validates and preserves CML's ISA 1.1 extended register-input frame while retaining legacy byte compatibility. Four targeted parser tests pass. The former host-only boundary was superseded by M35 physical register-input proof and M36 host-staged CPU→CUDA→FPGA evidence.")
     (done . t)
   ))
-  ("FPGA-SYMBOLIC-LOADSYM-INTERNING" . (
+("FPGA-SYMBOLIC-LOADSYM-INTERNING" . (
     (priority . 8.5)
     (description . "DONE 2026-08-24: assembler.py now interns symbolic LOADSYM operands per program from ID 900, preserves numeric operands, and emits a .sym sidecar for monitor/debug tooling. Six Python protocol/assembler tests pass; no global symbol ABI is introduced.")
     (done . t)
   ))
-  ("FPGA-ASSEMBLER-MY-SYMBOLS" . (
+("FPGA-ASSEMBLER-MY-SYMBOLS" . (
     (priority . 9.1)
     (description . "DONE 2026-08-24: assembler.my interns symbolic LOADSYM operands per program from ID 900 and writes a matching .sym sidecar. symbolic_loadsym_demo.asm plus all 28 legacy fixtures pass byte/sidecar differential parity. Python remains bootstrap/reference pending independent review and authority migration.")
     (done . t)
   ))
-  ("FPGA-ASSEMBLER-MY-PARITY" . (
+("FPGA-ASSEMBLER-MY-PARITY" . (
     (priority . 9.0)
     (description . "DONE 2026-08-24: assembler.my emits byte-identical output to assembler.py for all 28 .asm fixtures in this repository, including bootstrap, evaluator, monitor, memory, and control paths. Python remains the bootstrap/reference encoder; parity does not claim full language-contract conformance or remove host tooling.")
     (done . t)
   ))
-  ("FPGA-SYMBOL-TABLE-MY-MIGRATION" . (
+("FPGA-SYMBOL-TABLE-MY-MIGRATION" . (
     (priority . 8.8)
     (description . "BLOCKED GATE: pure gen_symbol_table_v01.my transformation is oracle-verified, but full migration requires text extraction, generated .inc, 28-program ASM/fixture renumbering, and byte-level parity. Do not add language primitives or remove PROGRAM_SYMBOLS without owner-ratified text API and complete evidence.")
     (done . ())
   ))
-  ("PHONETICS-KB-PARITY" . (
+("PHONETICS-KB-PARITY" . (
     (priority . 8.5)
     (capabilities . (fpga-lisp verification))
     (description . "Fix prototype_phonetics.my masks to match Python PhoneticVector oracle. al mask has ~50 set bits vs expected 42 canonical sounds; hal=41 vs 33. BLOCKED pending KB parity per Viveka audit. Tests cover Python toy runtime only, .my KB untested.")
     (done . t)
     (evidence . "FIXED 2026-08-25 sakshi: prototype_phonetics.my masks corrected from canonical Śiva-sūtras positional encoding. Commit 1518786 pushed to my-lisp main. Verification report: my-lisp-panini/panini/research/pratyahara-bitmask-verification.md")
-  )
-
-  ("PVC16-UNBOXED-SIGNOFF-REQUEST" . (
+  ))
+("PVC16-UNBOXED-SIGNOFF-REQUEST" . (
     (priority . 7.0)
-    (capabilities . (fpga-lisp compiler rust coordination)
-
-  ("FPGA-VERILOG-MODULE-AUDIT" . (
+    (capabilities . (fpga-lisp compiler rust coordination))
+    (description . "Request COMPILER STEWARD sign-off for PVC-16 unboxed representation")
+    (done . ())
+  ))
+("FPGA-VERILOG-MODULE-AUDIT" . (
     (priority . 7.5)
     (capabilities . (fpga-lisp verilog audit))
     (description . "Audit existing Verilog modules against recommendations-fpga-prototypes.md spec (fpga_alu.v, savarna unit, voicing/devoicing unit). Verify which are implemented vs proposed-only.")
     (done . ())
-  )))
-    (description . "Request COMPILER STEWARD sign-off for PVC-16 unboxed representation (TAG_PHONETIC_VECTOR=12) in NaN-boxed word model per recommendations-my-lisp-prototypes.md. Blocked on text-primitive decision.")
-    (done . ())
-  )))
-
-  ("FPGA-TIMING-EVIDENCE" . (
+  ))
+("FPGA-TIMING-EVIDENCE" . (
     (priority . 8.0)
     (capabilities . (fpga-lisp verification documentation))
     (description . "Remove unverified timing claims (0.3ns, <8 LUTs) from docs. Replace with actual post-P&R reports per CONSOLIDATED_CRITIQUE point 7.")
     (done . ())
   ))
-
-  ("EXECUTE-GOLD-SPIKE-01" . (
+("EXECUTE-GOLD-SPIKE-01" . (
     (priority . 10.0)
     (capabilities . (compiler rust iverilog fpga verification testing))
     (description . "Execute Gold Spike 01: end-to-end derivation bhū+laṭ->bhavati through full vertical chain (canon->UPC-8->IR->CML->FPGA RTL). Spec: /home/agents/ecosystem/docs/GOLD_SPIKE_01.md. This is THE experiment proving functional compatibility of the entire stack.")
     (done . ())
   ))
-
-
-  ("FPGA-PHONETIC-ALU" . (
+("FPGA-PHONETIC-ALU" . (
     (priority . 7.0)
     (capabilities . (fpga-lisp verilog rtl))
     (description . "Implement fpga_alu.v phonetic vector ALU per recommendations-fpga-prototypes.md section 2. Includes savarna unit, voicing/devoicing unit, palatalization unit. BLOCKED on G1-G5 gates.")
