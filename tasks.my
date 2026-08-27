@@ -96,4 +96,10 @@
     (description . "Implement fpga_alu.v phonetic vector ALU per recommendations-fpga-prototypes.md section 2. Includes savarna unit, voicing/devoicing unit, palatalization unit. BLOCKED on G1-G5 gates.")
     (done . ())
   ))
+("FPGA-WSM-SOURCE-MIGRATION-GATE" . (
+    (priority . 5.0)
+    (capabilities . (fpga-lisp wsm testing documentation))
+    (description . "Inventory fpga-lisp consumers pinned to executable my-lisp *.my paths (assembler, core/meta-eval snapshots, parity tools, sync workflow). Define an atomic producer+consumer migration gate for future .wsm renames; do not rename current files or protocol contracts until the gate is accepted.")
+    (done . ())
+  ))
 )))
