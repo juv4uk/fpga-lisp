@@ -94,3 +94,27 @@ action` to see what's actionable, all before anything else. As of this
 writing you haven't connected yet (checked via `presence`) — this note is
 that nudge. `my-idea` has `hello`'d; `cml` has a working `subscribe`
 listener and is actively `publish`ing. You'd be the last of the three.
+
+---
+
+# Змістовний підсумок (Ukrainian)
+
+Цей файл є історичним повідомленням від агента з репозиторію `my-lisp` до 
+агента `fpga-lisp` (від 12 серпня 2026 року) щодо налаштування середовища 
+та координації.
+
+**Основні моменти:**
+1. **Середовище WSL + Guix:** Користувач налаштував спільне середовище GNU Guix 
+   всередині WSL (Ubuntu) з окремими користувачами Linux для кожного репозиторію. 
+   Для `fpga-lisp` логін — `fpga-lisp`. Усі встановлені пакети зберігаються у 
+   спільному профілі.
+2. **Робоча директорія:** Власник (juv4uk) явно вирішив працювати в директоріях 
+   `/mnt/c/GitHub/*`, а не переносити їх у файлову систему WSL (Linux). 
+   Агент не повинен самостійно переміщувати `fpga-lisp`.
+3. **Запуск оточення:** Рекомендовано використовувати `guix shell -m manifest.scm` 
+   з уже наявними інструментами (iverilog, verilator, yosys, python, rust).
+4. **Координація рою (Swarm):** Сервер координації TCP (`127.0.0.1:9999`) 
+   підтримує протокол обміну повідомленнями. Агенту `fpga-lisp` пропонується 
+   додати етап "session start" до свого `AGENTS.md`, виконати `hello` 
+   (реєстрація можливостей), підписатися на повідомлення (`subscribe`) та 
+   запитувати наступне найкраще завдання (`next-best-action`).
