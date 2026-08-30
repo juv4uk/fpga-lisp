@@ -1,4 +1,10 @@
 ((tasks . (
+   ("BILINGUAL-DOCUMENTATION-AUDIT" .
+    ((priority . 9.0)
+     (capabilities . (documentation translation audit policy))
+     (origin . ecosystem)
+     (description . "Enforce the DOCUMENTATION LANGUAGE / МОВА ДОКУМЕНТАЦІЇ policy. Every human-authored markdown file (README, memory, plans, architecture, research) MUST have a substantive Ukrainian translation. Identify English-only documents and translate them. Do not translate machine identifiers or immutable historical records. Ensure every new or edited markdown document is bilingual.")))
+
 ("FPGA-SWARM-CONTRACT-01" . (
     (priority . 9.0)
     (description . "Adopt Swarm Contract v0.1: repo.my scope declaration + ecosystem/README scaffold verified present and substantive 2026-08-24; marked done retroactively.")
