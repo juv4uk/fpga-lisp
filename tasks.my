@@ -108,4 +108,11 @@
     (description . "Inventory fpga-lisp consumers pinned to executable my-lisp *.my paths (assembler, core/meta-eval snapshots, parity tools, sync workflow). Define an atomic producer+consumer migration gate for future .wsm renames; do not rename current files or protocol contracts until the gate is accepted.")
     (done . ())
   ))
+  ("FPGA-WSM-FS-REPRESENTATION-WITNESS" . (
+    (priority . 6.4)
+    (capabilities . (fpga-lisp wsm filesystem isa evidence))
+    (origin . fpga-lisp)
+    (description . "Define an independent FPGA witness for the shared data-only FS boundary without storing host pointers. Reuse tagged cons/fixnum mechanics only for temporary materialization; keep persistent object addresses, names and logical revisions explicit and separate. Compare one canonical observation with my-lisp/CML evidence, and classify unsupported strings or storage operations explicitly." )
+    (done . ())
+  ))
 )))
