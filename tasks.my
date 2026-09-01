@@ -93,7 +93,7 @@
 ("EXECUTE-GOLD-SPIKE-01" . (
     (priority . 10.0)
     (capabilities . (compiler rust iverilog fpga verification testing))
-    (description . "Execute Gold Spike 01: end-to-end derivation bhū+laṭ->bhavati through full vertical chain (canon->UPC-8->IR->CML->FPGA RTL). Spec: /home/agents/ecosystem/docs/GOLD_SPIKE_01.md. This is THE experiment proving functional compatibility of the entire stack.")
+    (description . "Execute Gold Spike 01: end-to-end derivation bhū+laṭ->bhavati through full vertical chain (canon->UPC-8->IR->CML->FPGA RTL). Spec: /home/agents/ecosystem/docs/sessions/GOLD_SPIKE_01.md. This is THE experiment proving functional compatibility of the entire stack.")
     (done . ())
   ))
 ("FPGA-PHONETIC-ALU" . (
