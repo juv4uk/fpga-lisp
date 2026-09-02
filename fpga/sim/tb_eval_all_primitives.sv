@@ -69,7 +69,7 @@ module tb_eval_all_primitives;
         $display("Machine Halted.");
         $display("R9 = TAG:%0d VAL:%0d", u_mac.u_regs.regs[9][31:28], u_mac.u_regs.regs[9][27:0]);
 
-        if (u_mac.u_regs.regs[9][31:28] == TAG_TRUE) begin
+        if (u_mac.u_regs.regs[9][31:28] == TAG_SYMBOL && u_mac.u_regs.regs[9][27:0] == 28'd79) begin
             $display("M18 PASSED: eval-all-primitives (cdr/atom/eq as procedures) works");
         end else begin
             $display("M18 FAILED");

@@ -383,8 +383,12 @@ module control (
                                 reg_wr_data.tag = TAG_NIL;
                                 reg_wr_data.value = 28'd0;
                             end else begin
-                                reg_wr_data.tag = TAG_TRUE;
-                                reg_wr_data.value = 28'd1;
+                                // atom -> canonical Symbol("t") (SYM_T = 79,
+                                // fpga/asm/symbol-table.inc), not a manufactured
+                                // true-tag: t is an ordinary interned symbol in
+                                // canonical WSM, not a distinct primitive.
+                                reg_wr_data.tag = TAG_SYMBOL;
+                                reg_wr_data.value = 28'd79;
                             end
                             next_state = ST_FETCH;
                         end
@@ -410,8 +414,10 @@ module control (
                     OP_EQ: begin
                         reg_we = 1;
                         if (reg_rd_data_a == reg_rd_data_b) begin
-                            reg_wr_data.tag = TAG_TRUE;
-                            reg_wr_data.value = 28'd1;
+                            // eq -> canonical Symbol("t") (SYM_T = 79), same
+                            // rationale as OP_ATOM above.
+                            reg_wr_data.tag = TAG_SYMBOL;
+                            reg_wr_data.value = 28'd79;
                         end else begin
                             reg_wr_data.tag = TAG_NIL;
                             reg_wr_data.value = 28'd0;

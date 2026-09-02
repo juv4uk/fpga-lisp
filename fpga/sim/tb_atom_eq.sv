@@ -60,9 +60,9 @@ module tb_atom_eq;
         $display("R5 (atom (cons a a))  = TAG:%0d VAL:%0d", u_mac.u_regs.regs[5][31:28], u_mac.u_regs.regs[5][27:0]);
         $display("R6 (eq 'a 'a)         = TAG:%0d VAL:%0d", u_mac.u_regs.regs[6][31:28], u_mac.u_regs.regs[6][27:0]);
 
-        if (u_mac.u_regs.regs[4][31:28] == TAG_TRUE &&
+        if (u_mac.u_regs.regs[4][31:28] == TAG_SYMBOL && u_mac.u_regs.regs[4][27:0] == 28'd79 &&
             u_mac.u_regs.regs[5][31:28] == TAG_NIL &&
-            u_mac.u_regs.regs[6][31:28] == TAG_TRUE) begin
+            u_mac.u_regs.regs[6][31:28] == TAG_SYMBOL && u_mac.u_regs.regs[6][27:0] == 28'd79) begin
             $display("M05 PASSED: ATOM/EQ behave correctly");
         end else begin
             $display("M05 FAILED");

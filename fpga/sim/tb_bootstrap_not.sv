@@ -65,7 +65,7 @@ module tb_bootstrap_not;
         $display("R8 (not NIL)        = TAG:%0d VAL:%0d", u_mac.u_regs.regs[8][31:28], u_mac.u_regs.regs[8][27:0]);
         $display("R9 (not (quote a))  = TAG:%0d VAL:%0d", u_mac.u_regs.regs[9][31:28], u_mac.u_regs.regs[9][27:0]);
 
-        if (u_mac.u_regs.regs[8][31:28] == TAG_TRUE &&
+        if (u_mac.u_regs.regs[8][31:28] == TAG_SYMBOL && u_mac.u_regs.regs[8][27:0] == 28'd79 &&
             u_mac.u_regs.regs[9][31:28] == TAG_NIL) begin
             $display("M21 PASSED: bootstrapped not (cond inside closure body) works");
         end else begin
