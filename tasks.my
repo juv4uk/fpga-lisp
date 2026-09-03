@@ -162,4 +162,12 @@
     (description . "Select the lowest constitutional fixture classified REACHABLE but not PROVEN, implement only its generic missing ISA/RTL mechanism, and prove unchanged-source oracle→CML→RTL plus board evidence when available. Do not add clause-specific opcodes or approximate semantics." )
     (done . ())
   ))
+  ("FPGA-LISP-FS-INDEPENDENT-WITNESS-GAP" . (
+    (priority . 5.0)
+    (capabilities . (fpga-lisp filesystem documentation))
+    (origin . ecosystem)
+    (context . "Found 2026-09-04 during WSM-FS-CROSS-REPO-HARMONIZATION (ecosystem session): the FS harmonization plan names fpga-lisp as the independent machine witness for the FS work (my-lisp/lib/lisp-fs.my, CML lowering, wsm-os-block). A directory search this session found zero FS-related files, docs, or fixtures anywhere in fpga-lisp.")
+    (description . "Confirm the gap and decide the next step: is an independent hardware FS witness planned but not yet started, out of current scope for fpga-lisp, or was the harmonization plan's framing of fpga-lisp's role here itself premature/wrong? Do not build a witness speculatively -- record the actual current status honestly first.")
+    (done . ())
+  ))
 )))
