@@ -204,3 +204,7 @@ Programmspeicher (`imem`) und Heap-Groesse wurden nach diesem realen BRAM-Budget
 - [`isa-contract.my`](isa-contract.my) / [`docs/isa-contract.md`](docs/isa-contract.md) — die versionierte maschinenlesbare ISA-Grenze und ihre Begründung.
 - [`docs/testing.md`](docs/testing.md) — Meilenstein-/Testbench-Inventar.
 - [`docs/reference/conformance.my`](docs/reference/conformance.my) — Konformitätsvertrag mit `my-lisp`.
+
+## Ліцензія
+
+Цей твір поширюється під [ВОЛЬНІСТЮ](LICENSE) — простим словом про свободу творити, пам'ятаючи про волю іншого.
