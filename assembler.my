@@ -281,10 +281,11 @@
 
 (def OPCODES (list
   (cons "NOP" 0) (cons "LOADI" 1) (cons "MOV" 2) (cons "GETTAG" 2)
-  (cons "MAKEPRIM" 2) (cons "GETVAL" 2) (cons "CONS" 3) (cons "CAR" 4)
-  (cons "CDR" 5) (cons "ATOM" 6) (cons "SETCDR" 6) (cons "EQ" 7) (cons "JMP" 8)
-  (cons "CALL" 8) (cons "RET" 8) (cons "LOADSYM" 9) (cons "JF" 10)
-  (cons "HALT" 11) (cons "OUT" 12) (cons "ADD" 13) (cons "SUB" 14) (cons "IN" 15)))
+  (cons "MAKEPRIM" 2) (cons "GETVAL" 2) (cons "SANDHI" 2) (cons "CONS" 3)
+  (cons "CAR" 4) (cons "CDR" 5) (cons "ATOM" 6) (cons "SETCDR" 6)
+  (cons "EQ" 7) (cons "JMP" 8) (cons "CALL" 8) (cons "RET" 8)
+  (cons "LOADSYM" 9) (cons "JF" 10) (cons "HALT" 11) (cons "OUT" 12)
+  (cons "ADD" 13) (cons "SUB" 14) (cons "IN" 15)))
 
 (def POW16 65536)
 (def POW20 1048576)
@@ -373,6 +374,10 @@
              (let ((mode (cond ((eq op "GETTAG") 1) ((eq op "MAKEPRIM") 2) (t 3))))
                (+ base (+ (* (parse-reg (second toks)) POW24)
                           (+ (* (parse-reg (third toks)) POW20) (* mode POW16))))))
+
+            ((eq op "SANDHI")  ; MOV rs2=7: rd = sandhi(rs1) -- ISA 1.3
+             (+ base (+ (* (parse-reg (second toks)) POW24)
+                        (+ (* (parse-reg (third toks)) POW20) (* 7 POW16)))))
 
             ((any-eq? op (list "CONS" "ADD" "SUB" "EQ" "ATOM" "SETCDR"))
              (let ((rs2 (cond ((atom (cdr (cdr (cdr toks)))) 0) (t (parse-reg (fourth toks))))))

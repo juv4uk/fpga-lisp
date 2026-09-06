@@ -68,6 +68,7 @@ module control (
         ST_DECODE,
         ST_EXECUTE,
         ST_WAIT_LDU,
+        ST_WAIT_SANDHI,
         ST_WRITE_PAIR_CDR,
         ST_OUT_START,
         ST_OUT_WAIT,
@@ -116,6 +117,28 @@ module control (
         .result(upc8_result),
         .valid(upc8_valid),
         .error(upc8_error)
+    );
+
+    // Sandhi engine (encoded-mode MOV rs2=7, ISA 1.3)
+    // Operates on a PAIR of codes packed in rs1: [15:8]=prev, [7:0]=curr.
+    // Blocking: CPU stays in ST_SANDHI_WAIT until engine done (3-4 cyc/rule).
+    logic       sandhi_start;
+    logic       sandhi_done;
+    logic [1:0] sandhi_mode;
+    logic [7:0] sandhi_out0;
+    logic [7:0] sandhi_out1;
+
+    sandhi_engine u_sandhi (
+        .clk(clk),
+        .rst_n(rst_n),
+        .start(sandhi_start),
+        .code_prev(reg_rd_data_a.value[15:8]),
+        .code_curr(reg_rd_data_a.value[7:0]),
+        .done(sandhi_done),
+        .result_mode(sandhi_mode),
+        .result_0(sandhi_out0),
+        .result_1(sandhi_out1),
+        .error()
     );
 
     // Monitor scratch registers
@@ -208,7 +231,7 @@ module control (
                         end else begin
                             pc <= pc + 1;
                         end
-                    end else if (!ldu_cmd_cons && !ldu_cmd_car && !ldu_cmd_cdr && !ldu_cmd_setcdr && !ldu_cmd_fetch_pair && opcode != OP_HALT && opcode != OP_OUT && opcode != OP_IN) begin
+                    end else if (!ldu_cmd_cons && !ldu_cmd_car && !ldu_cmd_cdr && !ldu_cmd_setcdr && !ldu_cmd_fetch_pair && opcode != OP_HALT && opcode != OP_OUT && opcode != OP_IN && !(opcode == OP_MOV && rs2 == 4'd7)) begin
                         pc <= pc + 1;
                     end
                     // Latch is_fetch_pair when entering ST_WAIT_LDU via FETCH_PAIR
@@ -238,6 +261,11 @@ module control (
                 ST_WRITE_PAIR_CDR: begin
                     // PC already incremented in ST_WAIT_LDU.
                     // This state only writes the second register (CDR).
+                end
+                ST_WAIT_SANDHI: begin
+                    if (sandhi_done) begin
+                        pc <= pc + 1;
+                    end
                 end
                 ST_MON_ERR_SEND: begin
                     mon_tx_buf <= {32'd0, 19'd0, err_flag, err_pc};
@@ -316,6 +344,7 @@ module control (
         out_data = 8'd0;
         in_ack = 0;
         mon_peek_cmd = 0;
+        sandhi_start = 0;
 
         if (state == ST_HALT || state == ST_MON_CMD || state == ST_MON_ARG1 ||
             state == ST_MON_ARG2 || state == ST_MON_HEAP_WAIT ||
@@ -377,11 +406,18 @@ module control (
                                 reg_wr_data = upc8_result;
                                 next_state = ST_FETCH;
                             end
+                            4'd7: begin  // UPC8_SANDHI
+                                // Blocking: start engine, wait ST_WAIT_SANDHI.
+                                // Register write happens there when done.
+                                reg_we = 0;
+                                sandhi_start = 1;
+                                next_state = ST_WAIT_SANDHI;
+                            end
                             default: begin
                                 reg_wr_data = reg_rd_data_a;
+                                next_state = ST_FETCH;
                             end
                         endcase
-                        next_state = ST_FETCH;
                     end
                     OP_CONS: begin
                         ldu_cmd_cons = 1;
@@ -505,6 +541,17 @@ module control (
                 reg_wr_addr = pair_cdr_addr;
                 reg_wr_data = pair_cdr_buf;
                 next_state = ST_FETCH;
+            end
+            ST_WAIT_SANDHI: begin
+                if (sandhi_done) begin
+                    reg_we = 1;
+                    // Packing (owner-confirmed): rd[17:16]=result_mode,
+                    // rd[15:8]=result_1, rd[7:0]=result_0
+                    reg_wr_data.tag   = TAG_FIXNUM;
+                    reg_wr_data.value = {10'd0, sandhi_mode[1:0],
+                                         sandhi_out1[7:0], sandhi_out0[7:0]};
+                    next_state = ST_FETCH;
+                end
             end
             ST_HALT: begin
                 if (in_valid) begin
