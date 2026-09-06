@@ -1,0 +1,106 @@
+// ============================================================================
+// tang_primer_25k.cst — Physical Constraints for UPC-8 Demo
+// ============================================================================
+// Board: Sipeed Tang Primer 25K Dock
+// FPGA:  Gowin GW5A-LV25MG121NC1/I0
+// Source: Sipeed official examples + community fix (issue #11)
+//
+// NOTE: Button pins H10/H11 require PULLDOWN (not UP).
+//       Default Gowin pull mode is UP, which makes buttons always read HIGH.
+//       See: electronics.stackexchange.com/questions/727476
+// ============================================================================
+
+// ------------------------------------------------------------------------
+// Clock (50 MHz crystal)
+// ------------------------------------------------------------------------
+IO_LOC "clk" E2;
+IO_PORT "clk" PULL_MODE=NONE DRIVE=OFF BANK_VCCIO=3.3;
+
+// ------------------------------------------------------------------------
+// Reset (optional — tie to btn[1] or pullup if unused)
+// ------------------------------------------------------------------------
+// IO_LOC "rst_n" H10;  // Can share with btn[1] if needed
+// IO_PORT "rst_n" PULL_MODE=UP DRIVE=OFF BANK_VCCIO=3.3;
+
+// ------------------------------------------------------------------------
+// Buttons (active-high, need PULLDOWN)
+//   btn[0] = H11 (S1 on dock)
+//   btn[1] = H10 (S2 on dock)
+// ------------------------------------------------------------------------
+IO_LOC "btn[0]" H11;
+IO_PORT "btn[0]" PULL_MODE=DOWN DRIVE=OFF BANK_VCCIO=3.3;
+
+IO_LOC "btn[1]" H10;
+IO_PORT "btn[1]" PULL_MODE=DOWN DRIVE=OFF BANK_VCCIO=3.3;
+
+// ------------------------------------------------------------------------
+// Switches (5x DIP or jumpers on 40-pin header / PMOD)
+// Using pmod_io[8..12] positions from official pmod_led example
+//   sw[0] = pmod_io[8]  = J5
+//   sw[1] = pmod_io[9]  = H5
+//   sw[2] = pmod_io[10] = L9
+//   sw[3] = pmod_io[11] = K9
+//   sw[4] = pmod_io[12] = J8
+// ------------------------------------------------------------------------
+IO_LOC "sw[0]" J5;
+IO_PORT "sw[0]" PULL_MODE=DOWN DRIVE=OFF BANK_VCCIO=3.3;
+
+IO_LOC "sw[1]" H5;
+IO_PORT "sw[1]" PULL_MODE=DOWN DRIVE=OFF BANK_VCCIO=3.3;
+
+IO_LOC "sw[2]" L9;
+IO_PORT "sw[2]" PULL_MODE=DOWN DRIVE=OFF BANK_VCCIO=3.3;
+
+IO_LOC "sw[3]" K9;
+IO_PORT "sw[3]" PULL_MODE=DOWN DRIVE=OFF BANK_VCCIO=3.3;
+
+IO_LOC "sw[4]" J8;
+IO_PORT "sw[4]" PULL_MODE=DOWN DRIVE=OFF BANK_VCCIO=3.3;
+
+// ------------------------------------------------------------------------
+// External LEDs (8x on PMOD or 40-pin header)
+// Using pmod_io[0..7] positions from official pmod_led example
+//   led_ext[0] = pmod_io[0] = G5
+//   led_ext[1] = pmod_io[1] = F5
+//   led_ext[2] = pmod_io[2] = G7
+//   led_ext[3] = pmod_io[3] = G8
+//   led_ext[4] = pmod_io[4] = H7
+//   led_ext[5] = pmod_io[5] = H8
+//   led_ext[6] = pmod_io[6] = L5
+//   led_ext[7] = pmod_io[7] = K5
+// ------------------------------------------------------------------------
+IO_LOC "led_ext[0]" G5;
+IO_PORT "led_ext[0]" PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
+
+IO_LOC "led_ext[1]" F5;
+IO_PORT "led_ext[1]" PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
+
+IO_LOC "led_ext[2]" G7;
+IO_PORT "led_ext[2]" PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
+
+IO_LOC "led_ext[3]" G8;
+IO_PORT "led_ext[3]" PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
+
+IO_LOC "led_ext[4]" H7;
+IO_PORT "led_ext[4]" PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
+
+IO_LOC "led_ext[5]" H8;
+IO_PORT "led_ext[5]" PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
+
+IO_LOC "led_ext[6]" L5;
+IO_PORT "led_ext[6]" PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
+
+IO_LOC "led_ext[7]" K5;
+IO_PORT "led_ext[7]" PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
+
+// ------------------------------------------------------------------------
+// Onboard LED (L6)
+// ------------------------------------------------------------------------
+IO_LOC "led_onb" L6;
+IO_PORT "led_onb" PULL_MODE=NONE DRIVE=8 BANK_VCCIO=3.3;
+
+// ------------------------------------------------------------------------
+// Timing constraints
+// ------------------------------------------------------------------------
+// 50 MHz = 20 ns period
+CREATE_CLOCK -name clk_50m -period 20.000 -waveform {0 10.000} [get_ports {clk}]
