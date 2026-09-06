@@ -7,7 +7,7 @@
 ; releases and implementation-only RTL changes are independent.
 
 ((kind . fpga-lisp-isa)
- (version . (1 1))
+ (version . (1 2))
  (word . ((bits . 32) (tag-bits . 4) (payload-bits . 28)))
  (tags . ((fixnum . 0) (cons . 1) (symbol . 2) (nil . 3)
           (true . 4) (primitive . 5)))
@@ -27,7 +27,10 @@
     (getval . ((opcode . mov) (rs2 . 3)))
     (setcdr . ((opcode . atom) (rs2 . nonzero) (scope . bootstrap-internal)))
     (call . ((opcode . jmp) (rd . nonzero) (rs1 . 0)))
-    (ret . ((opcode . jmp) (rd . 0) (rs1 . nonzero)))))
+    (ret . ((opcode . jmp) (rd . 0) (rs1 . nonzero)))
+    (upc8-decode    . ((opcode . mov) (rs2 . 4) (scope . phonetic)))
+    (upc8-transform . ((opcode . mov) (rs2 . 5) (scope . phonetic)))
+    (upc8-predicate . ((opcode . mov) (rs2 . 6) (scope . phonetic)))))
  (registers . ((count . 16) (arguments . 0) (environment . 4) (stack . 11)
                (link . 14) (value . 15)))
  (primitive-ids . ((car . 0) (cdr . 1) (cons . 2)
@@ -50,4 +53,4 @@
            (jf-branches-only-on . (nil))
            (my-lisp-g8-conformant . t)))
  (errors . ((ldu-error . halt-and-record-pc)))
- (notes . "ISA 1.1 preserves every 1.0 program image byte-for-byte and adds an optional extended boot header for initializing up to 16 registers with already-tagged words before CPU start. JF remains conformant to my-lisp G8: only NIL is false and fixnum 0 is true. R0 carries the complete evaluated argument list for dotted and bare-symbol lambda parameters. LOADI and LOADSYM zero-extend a 16-bit immediate; SETCDR is not an eval-visible Lisp primitive. 2026-09-02: ATOM and EQ's positive result is now canonical Symbol(\"t\") (SYM_T = 79, fpga/asm/symbol-table.inc), routed through the same TAG_SYMBOL mechanism LOADSYM already uses for any interned symbol -- not the standalone `true` tag (value 4) declared above, which no RTL producer emits anymore. That tag stays declared in this contract for backward image compatibility (ISA 1.1 preserves 1.0 program images byte-for-byte) but is no longer produced by ATOM/EQ; t is an ordinary bootstrap symbol, not a manufactured hardware primitive."))
+ (notes . "ISA 1.2 adds the UPC-8 phonetic engine as an encoded-mode extension of MOV: rs2=4 (upc8-decode) returns a 28-bit class/canonical/position bit-mask for a syllable byte in bits [7:0]; rs2=5 (upc8-transform) applies a phonological transform encoded by rs1's input byte bits [10:8] with input syllable in bits [7:0]; rs2=6 (upc8-predicate) returns a 4-bit boolean class mask (is_class10+ac_14+an+ik). Scope: phonetic; requires the upc8_unit RTL. ISA 1.1 preserves every 1.0 program image byte-for-byte and adds an optional extended boot header for initializing up to 16 registers with already-tagged words before CPU start. JF remains conformant to my-lisp G8: only NIL is false and fixnum 0 is true. R0 carries the complete evaluated argument list for dotted and bare-symbol lambda parameters. LOADI and LOADSYM zero-extend a 16-bit immediate; SETCDR is not an eval-visible Lisp primitive. 2026-09-02: ATOM and EQ's positive result is now canonical Symbol(\"t\") (SYM_T = 79, fpga/asm/symbol-table.inc), routed through the same TAG_SYMBOL mechanism LOADSYM already uses for any interned symbol -- not the standalone `true` tag (value 4) declared above, which no RTL producer emits anymore. That tag stays declared in this contract for backward image compatibility (ISA 1.1 preserves 1.0 program images byte-for-byte) but is no longer produced by ATOM/EQ; t is an ordinary bootstrap symbol, not a manufactured hardware primitive."))

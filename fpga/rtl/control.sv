@@ -103,6 +103,21 @@ module control (
         .imm(imm)
     );
 
+    // UPC-8 phonetic engine (encoded-mode MOV rs2=4/5/6, ISA 1.2)
+    // Instantiated here: it operates on the *staged* instruction's rs2
+    // and the rs1 register read (reg_rd_data_a) — both live in this module.
+    lisp_word_t upc8_result;
+    logic       upc8_valid;
+    logic       upc8_error;
+
+    upc8_unit u_upc8 (
+        .code_word(reg_rd_data_a),
+        .rs2(rs2),
+        .result(upc8_result),
+        .valid(upc8_valid),
+        .error(upc8_error)
+    );
+
     // Monitor scratch registers
     logic [7:0]  mon_cmd;
     logic [7:0]  mon_arg1;
@@ -349,6 +364,18 @@ module control (
                             4'd3: begin
                                 reg_wr_data.tag = TAG_FIXNUM;
                                 reg_wr_data.value = reg_rd_data_a.value;
+                            end
+                            4'd4: begin  // UPC8_DECODE
+                                reg_wr_data = upc8_result;
+                                next_state = ST_FETCH;
+                            end
+                            4'd5: begin  // UPC8_TRANSFORM
+                                reg_wr_data = upc8_result;
+                                next_state = ST_FETCH;
+                            end
+                            4'd6: begin  // UPC8_PREDICATE
+                                reg_wr_data = upc8_result;
+                                next_state = ST_FETCH;
                             end
                             default: begin
                                 reg_wr_data = reg_rd_data_a;
