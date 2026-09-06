@@ -1,0 +1,74 @@
+// ============================================================================
+// PATCH: UPC-8 encoded-mode integration into control.sv
+// ============================================================================
+// Insert the following into control.sv at the indicated locations.
+// All changes are additive (backward-compatible with ISA 1.1).
+//
+// Location 1: Module port list (after mon_peek_valid input)
+// Location 2: Submodule instantiation (after ldu_result_cdr)
+// Location 3: ST_EXECUTE / OP_MOV case (after 4'd3: GETVAL)
+// ============================================================================
+
+// ------------------------------------------------------------------------
+// LOCATION 1: Add to module port list
+// ------------------------------------------------------------------------
+// After:
+//     input  logic         mon_peek_valid,
+// Add:
+    // UPC-8 phonetic engine interface
+    input  lisp_word_t   upc8_result,
+    input  logic         upc8_valid,
+    input  logic         upc8_error,
+
+// ------------------------------------------------------------------------
+// LOCATION 2: Add submodule instantiation (in lisp_machine.sv)
+// ------------------------------------------------------------------------
+// In lisp_machine.sv, after ldu_result_cdr declaration, add:
+
+    // --- UPC-8 Phonetic Unit ---
+    lisp_word_t upc8_result;
+    logic       upc8_valid;
+    logic       upc8_error;
+
+    upc8_unit u_upc8 (
+        .code_word(reg_rd_data_a),
+        .rs2(rs2),
+        .result(upc8_result),
+        .valid(upc8_valid),
+        .error(upc8_error)
+    );
+
+// ------------------------------------------------------------------------
+// LOCATION 3: Add to ST_EXECUTE / OP_MOV case in control.sv
+// ------------------------------------------------------------------------
+// In the OP_MOV case block, after:
+//     4'd3: begin  // GETVAL
+//         reg_wr_data.tag = TAG_FIXNUM;
+//         reg_wr_data.value = reg_rd_data_a.value;
+//         next_state = ST_FETCH;
+//     end
+// Add:
+
+                    4'd4: begin  // UPC8_DECODE
+                        reg_we = 1;
+                        reg_wr_data = upc8_result;
+                        next_state = ST_FETCH;
+                    end
+                    4'd5: begin  // UPC8_TRANSFORM
+                        reg_we = 1;
+                        reg_wr_data = upc8_result;
+                        next_state = ST_FETCH;
+                    end
+                    4'd6: begin  // UPC8_PREDICATE
+                        reg_we = 1;
+                        reg_wr_data = upc8_result;
+                        next_state = ST_FETCH;
+                    end
+
+// ------------------------------------------------------------------------
+// LOCATION 4: Add upc8_unit.sv to build.tcl
+// ------------------------------------------------------------------------
+// In fpga/synth/build.tcl, after:
+//     add_file "fpga/rtl/lisp_machine.sv"
+// Add:
+    add_file "fpga/rtl/upc8_unit.sv"
