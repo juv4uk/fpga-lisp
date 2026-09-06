@@ -7,6 +7,41 @@
 
 ---
 
+## Flash-прошивка (перманентна ISA 1.2) — перевірено 2026-09-06
+
+### Операція 54 (exFlash Erase, Program, Verify, Arora V)
+
+```text
+programmer_cli.exe --cable-index 1 --location 449 --device GW5A-25A \
+  --operation_index 54 --frequency 2.5MHz \
+  --fsFile \\wsl.localhost\Ubuntu\...\impl\pnr\project.fs
+→ SPI flash ID 0x0B4017
+→ Program and Verify Flash successfully.
+→ Cost 41.5 second(s)
+```
+
+- Останній попередній Flash-образ був `092aa3b` (ISA 1.1, 2026-08-24). Тепер
+  Flash містить ISA 1.2 (SHA `0535bc34...`, User Code `0x00005A25`).
+- **Permanence перевірено фактом** (не лише за звітом інструмента): повне
+  відключення USB-живлення на ~10 с, повторне підключення, `--scan` →
+  ID `0x0001281B`; cold-boot UART-тест `bootstrap_add_demo.bin` →
+  **R9 = FIXNUM 7, ERR=0**; потім SRAM-reload + upc8_smoke → усі
+  регістри PASS. ISA 1.2 переживає знеструмлення і завантажується з Flash.
+
+### Урок з помилки (чесність > красивый звіт)
+
+Перша спроба operation 54 провалилась через пайплайн: вивід
+`programmer_cli.exe` був пропущений через `head -30`, який закрив stdout,
+процес отримав SIGPIPE і вмер **посередині** запису Flash (лог — 14× "0%").
+Flash лишився у проміжному стані, FPGA-ланцюг перестав відповідати на JTAG
+(`Error: No Gowin devices found!`, SRAM-операція теж fail, EXIT=3).
+Відновлення — повне знеструмлення плати на ~5–10 с (штатний рецепт з
+`docs/hardware-setup.md`), після чого пристрій повернувся (ID `0x0001281B`),
+а повторна операція 54 пройшла успішно. **Правило: ніколи не пропускати
+вивід programmer_cli через head/tail без збереження повного логу у файл.**
+
+---
+
 ## Прошитий бітстрім
 
 - Джерело: `impl/pnr/project.fs` (свіжий синтез, **Sep 6 20:16**, 6 765 345 байт,
@@ -71,3 +106,5 @@ through eval works".
 - `evidence/upc8-hardware-2026-09-06/upc8_smoke_driver.py` (Windows Python 3.12,
   тільки pyserial; одна точка вʼїзду: `python upc8_smoke_driver.py <bin>`).
 - Цей звіт: `runs/2026-09-06-upc8-hardware/README.md`
+- `runs/2026-09-06-upc8-hardware/lut4-delta.md` — порівняльний синтез
+  (baseline `015c68a` vs `04a4f6a`, +206 LUT, +2 logic level).
