@@ -83,12 +83,13 @@
     (priority . 7.5)
     (capabilities . (fpga-lisp verilog audit))
     (description . "Audit existing Verilog modules against recommendations-fpga-prototypes.md spec (fpga_alu.v, savarna unit, voicing/devoicing unit). Verify which are implemented vs proposed-only.")
-    (done . ())
+    (done . (t . "Claude Sonnet 5, 2026-09-08: audited directly, not from memory. prototype/fpga_alu/fpga_alu.v (218 lines) + prototype/fpga_alu/fpga_alu_tb.v (136 lines, commit a35604a, 2026-08-21) is IMPLEMENTED as one combined module covering Savarna (1.1.9), voicing/devoicing, palatalization, and 64-bit Pratyahara bitmask/ROM membership -- the spec's separate 'savarna unit'/'voicing unit' naming does not correspond to separate files, it's all one fpga_alu.v. Ran the testbench under iverilog directly: 10/10 PASS. NOT integrated: not referenced anywhere in fpga/rtl/, fpga/synth/build.tcl, or .github/workflows/ci.yml -- it is a standalone prototype, never part of the real lisp_machine build or any place-and-route run. See FPGA-TIMING-EVIDENCE for the resulting doc fix."))
   ))
 ("FPGA-TIMING-EVIDENCE" . (
     (priority . 8.0)
     (capabilities . (fpga-lisp verification documentation))
     (description . "Remove unverified timing claims (0.3ns, <8 LUTs) from docs. Replace with actual post-P&R reports per CONSOLIDATED_CRITIQUE point 7.")
+    (evidence . "Claude Sonnet 5, 2026-09-08: the literal '0.3ns'/'<8 LUTs' strings are already gone from the repo (grepped, not found) -- but docs/recommendations-fpga-prototypes.md 3.1 ('Synthesis on Target FPGAs', 184.2MHz/42 LUT4/1.82ns etc.) has the same defect under a different presentation: precise-looking numbers with no real post-P&R run behind them (fpga_alu.v was never added to build.tcl, see FPGA-VERILOG-MODULE-AUDIT). Relabeled that section explicitly PREDICTED/not-measured rather than deleting the design work, and pointed at exactly how to get real numbers (add fpga_alu.v to build.tcl, run gw_sh.exe -- same recipe used today for lisp_machine's own Fmax=60.316MHz).")
     (done . ())
   ))
 ("EXECUTE-GOLD-SPIKE-01" . (

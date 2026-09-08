@@ -79,7 +79,23 @@ graph TD
 
 ## 3. Resource Estimation & Timing Analysis
 
-### 3.1 Synthesis on Target FPGAs
+**СТАТУС ЦИФР НИЖЧЕ (звірено 2026-09-08): PREDICTED, не EMPIRICALLY CONFIRMED.**
+`prototype/fpga_alu/fpga_alu.v` існує і функціонально коректний —
+`prototype/fpga_alu/fpga_alu_tb.v` під iverilog проходить усі 10/10
+тестів (Savarṇa, voicing/devoicing, palatalization, bitmask/ROM
+membership), перевірено напряму 2026-09-08. Але цей модуль ніколи не
+проходив реальний place-and-route жодним інструментом (не входить у
+`fpga/rtl/`, не в `build.tcl`, не в `.github/workflows/ci.yml`) — таблиця
+нижче була написана як оцінка/прогноз, а не як звіт синтезу, попри
+заголовок "Synthesis on Target FPGAs". Це саме той overclaiming, який
+`docs/CONSOLIDATED_CRITIQUE_AND_REACTIONS.md` (пункт 7) і
+`docs/external-architectural-review-2026-08-21.md` вже критикували щодо
+"0.3 ns" / "<8 LUTs" — ці конкретні числа звідси вже прибрані, але
+таблиця нижче має той самий дефект (точні MHz/ns без жодного реального
+P&R прогону). Залишаю числа як історичний архітектурний прогноз, не
+видаляю — але позначаю explicitly, щоб ніхто не читав це як доказ.
+
+### 3.1 Оцінка синтезу на цільових FPGA (PREDICTED, не виміряно)
 
 | Target Device | Logic Elements / LUTs | Flip-Flops (FF) | Block RAM (BRAM) | Max Clock Freq ($F_{\max}$) | Worst Negative Slack (WNS) |
 |---|---|---|---|---|---|
@@ -87,9 +103,16 @@ graph TD
 | **Lattice iCE40UP5K-SG48** | **58 LUT4** | **36 FF** | **0 EBR** | **86.5 MHz** | $+1.58\text{ ns}$ @ 25MHz |
 | **Xilinx Artix-7 (XC7A35T)** | **34 LUT6** | **36 FF** | **0 BRAM** | **295.0 MHz** | $+6.61\text{ ns}$ @ 100MHz |
 
-### 3.2 Key Timing Insights
+### 3.2 Ключові твердження про таймінг (PREDICTED, не виміряно)
 1. **Critical Path:** Sūtra 1.1.9 comparator path from `sound_a[5:1]` through 5-bit equality comparator $\to$ 2-input AND gate $\to$ output mux. Total propagation delay is $\approx 1.82\text{ ns}$ on Gowin 22nm LP process.
 2. **Pratyāhāra ROM Implementation:** The 42-entry 64-bit table synthesizes entirely into distributed ROM / LUT logic without consuming dedicated Block SRAMs (BSRAMs), preserving all 56 BSRAMs for Lisp instruction memory and cons heap.
+
+**Щоб отримати реальні цифри**: додати `prototype/fpga_alu/fpga_alu.v` у
+`fpga/synth/build.tcl` (окремим top-level модулем або інтегрувавши в
+`lisp_data_unit.sv`) і прогнати `gw_sh.exe` — саме так сьогодні
+(2026-09-08) отримано реальний `Fmax=60.316MHz` для основної
+lisp_machine (`impl/pnr/project_tr_content.html`), той самий шлях
+підходить і сюди.
 
 ---
 
