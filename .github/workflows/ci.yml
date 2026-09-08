@@ -53,6 +53,7 @@ jobs:
             fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
             fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv \
             fpga/rtl/instruction_decoder.sv fpga/rtl/control.sv \
+            fpga/rtl/upc8_unit.sv fpga/rtl/sandhi_engine.sv \
             fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
             fpga/tb/tb_fetch_pair.sv
           out="$(vvp tb_fetch_pair.vvp)"
@@ -78,7 +79,8 @@ jobs:
             echo "::group::${tb}"
             iverilog -g2012 -I fpga/rtl -o "${tb}.vvp" fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
               fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
-              fpga/rtl/control.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
+              fpga/rtl/control.sv fpga/rtl/upc8_unit.sv fpga/rtl/sandhi_engine.sv \
+              fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
               "fpga/sim/${tb}.sv"
             out="$(vvp "${tb}.vvp")"
             echo "$out"
