@@ -385,14 +385,17 @@ module control (
                             4'd1: begin
                                 reg_wr_data.tag = TAG_FIXNUM;
                                 reg_wr_data.value = {24'd0, reg_rd_data_a.tag};
+                                next_state = ST_FETCH;
                             end
                             4'd2: begin
                                 reg_wr_data.tag = TAG_PRIMITIVE;
                                 reg_wr_data.value = reg_rd_data_a.value;
+                                next_state = ST_FETCH;
                             end
                             4'd3: begin
                                 reg_wr_data.tag = TAG_FIXNUM;
                                 reg_wr_data.value = reg_rd_data_a.value;
+                                next_state = ST_FETCH;
                             end
                             4'd4: begin  // UPC8_DECODE
                                 reg_wr_data = upc8_result;
