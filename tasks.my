@@ -108,7 +108,7 @@
     (priority . 5.0)
     (capabilities . (fpga-lisp wsm testing documentation))
     (description . "Inventory fpga-lisp consumers pinned to executable my-lisp *.my paths (assembler, core/meta-eval snapshots, parity tools, sync workflow). Define an atomic producer+consumer migration gate for future .wsm renames; do not rename current files or protocol contracts until the gate is accepted.")
-    (done . ())
+    (done . (t . "Claude Sonnet 5, 2026-09-08: docs/wsm-source-migration-gate.md -- full inventory of every .my touchpoint (grep-verified, not from memory), split into 4 categories by real risk: locally-authored executable pairs with parity tests (assembler.my/check-stale-refs.my), copies synced from my-lisp (sync-my-lisp.yml, sync-my-lisp-contract-authority.yml -- federated, fpga-lisp cannot unilaterally act on these per root policy ss9), frozen evidence artifacts (no live consumer, out of scope), and files with no automated consumer found (gen_symbol_table_v01.my, docs/equal-oracle-checklist.my -- flagged unknown, not asserted safe). Proposed gate: atomic single-commit rename+consumer-update for category 1; sync-workflow-updated-in-the-same-window for category 2 (owner-gated, this repo doesn't control my-lisp's rename timing). No files renamed, no protocol contracts touched -- exactly as the task required."))
   ))
   ("FPGA-WSM-FS-REPRESENTATION-WITNESS" . (
     (priority . 6.4)
