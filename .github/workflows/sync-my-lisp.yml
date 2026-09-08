@@ -1,11 +1,11 @@
 name: Sync my-lisp reference files
 
 # Pulls the small set of my-lisp files fpga-lisp keeps as reference
-# material under docs/reference/ (the conformance contract, the
-# language contract, and the canonical bootstrap library/meta-eval)
-# and opens a PR when upstream has changed. Never pushes to master
-# directly, since these are reference copies that deserve a look
-# before landing.
+# material under docs/reference/ (conformance fixtures, language-core prose,
+# and the canonical bootstrap library/meta-eval) and opens a PR when upstream
+# has changed. The authoritative machine-readable language-contract.my is
+# synchronized separately into contracts/my-lisp/ by
+# sync-my-lisp-contract-authority.yml.
 
 on:
   schedule:
@@ -39,13 +39,16 @@ jobs:
           commit-message: "Sync reference files from my-lisp"
           title: "Sync reference files from my-lisp"
           body: |
-            Automated sync of the reference files fpga-lisp mirrors from
+            Automated sync of supporting reference files fpga-lisp mirrors from
             [my-lisp](https://github.com/juv4uk/my-lisp) under `docs/reference/`:
 
-            - `tests/fixtures/conformance.my` — the implementation-independent contract
-            - `docs/language-core.md` — the language contract
+            - `tests/fixtures/conformance.my` — implementation-independent conformance fixtures
+            - `docs/language-core.md` — explanatory language-core prose
             - `lib/core.my` — the canonical bootstrapped standard library
             - `lib/meta-eval.my` — the metacircular eval/apply reference
+
+            The authoritative machine-readable `language-contract.my` is synced
+            separately under `contracts/my-lisp/` with an exact revision lock.
 
             Review the diff before merging — a conformance-contract change may
             mean fpga-lisp's own eval needs a matching update.
