@@ -6,6 +6,13 @@
      (context . "2026-09-08 ecosystem-wide language-debt audit (ecosystem/memory/LANGUAGE-DEBT-REGISTRY-2026-09-08.md): README.md opens with '## English' (line 7) before '## Українська' (line 74) -- English-first structural order violates language-policy.wsm's human-facing-order (ukrainian english german). Ukrainian content itself is present and complete, this is an ordering fix, not a translation gap.")
      (description . "Enforce the DOCUMENTATION LANGUAGE / МОВА ДОКУМЕНТАЦІЇ policy. Every human-authored markdown file (README, memory, plans, architecture, research) MUST have a substantive Ukrainian translation. Identify English-only documents and translate them. Do not translate machine identifiers or immutable historical records. Ensure every new or edited markdown document is bilingual.")))
 
+("FPGA-SHARED-ORACLE-PARITY-1" .
+ ((priority . 9.9)
+  (capabilities . (fpga-lisp cml rtl simulation conformance evidence))
+  (origin . ecosystem)
+  (description . "Independent FPGA witness for the pinned my-lisp compiler corpus. Source and expected are read from my-lisp@4a5dba0d1d61103385406ef2821d76661442621c rather than copied into an FPGA table; CML produces the image, UART boot simulation observes it, and only the upstream expected value decides the result.")
+  (done . (t . "2026-09-11: bounded first slice complete. compiler-corpus ordinals 2 (atom radio) and 3 (eq radio radio) both confirmed through CML -> assembler.py -> UART-loaded RTL simulation as canonical t decoded from TAG_SYMBOL+SYM_T (2,79). Comparator mutation changed expected to () and was rejected with an explicit red-gate error. Evidence: evidence/FPGA-SHARED-ORACLE-PARITY-1/rtl-sim-2026-09-11/result.json; all 17 corpus rows classified in coverage.json. No physical claim: these CML-produced images were not loaded on the board."))))
+
 ("FPGA-SWARM-CONTRACT-01" . (
     (priority . 9.0)
     (description . "Adopt Swarm Contract v0.1: repo.my scope declaration + ecosystem/README scaffold verified present and substantive 2026-08-24; marked done retroactively.")

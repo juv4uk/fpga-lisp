@@ -1,0 +1,7 @@
+{
+  "schema": "fpga-shared-oracle-parity-pin-v1",
+  "upstream_repository": "juv4uk/my-lisp",
+  "revision": "4a5dba0d1d61103385406ef2821d76661442621c",
+  "path": "tests/fixtures/conformance.my",
+  "sha256": "0830a4e47efce93e5b6dbe20f37dedb84a5cc3d78bdcd15b20b82fa71f653ea4"
+}

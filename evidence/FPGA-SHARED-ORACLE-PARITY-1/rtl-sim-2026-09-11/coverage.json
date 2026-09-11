@@ -1,0 +1,124 @@
+{
+  "corpus_sha256": "0830a4e47efce93e5b6dbe20f37dedb84a5cc3d78bdcd15b20b82fa71f653ea4",
+  "fixtures": [
+    {
+      "expected_or_error_sha256": "aa3a05d9d57c08d694cf230a36386221f56890092e54cf8d6b04fab1b2cc0702",
+      "ordinal": 1,
+      "reason": "not executed: first predicate slice starts at compiler-corpus ordinal 2",
+      "source_sha256": "fe522d12fe65c4b15411976a8194decef051ed541d65a968b6c519349201895e",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "e3b98a4da31a127d4bde6e43033f66ba274cab0eb7eb1c70ec41402bf6273dd8",
+      "ordinal": 2,
+      "source_sha256": "6cc85c16472da8bed69d4b14f2afd978d214904a6903b7d26dca6b810910f8a1",
+      "status": "confirmed"
+    },
+    {
+      "expected_or_error_sha256": "e3b98a4da31a127d4bde6e43033f66ba274cab0eb7eb1c70ec41402bf6273dd8",
+      "ordinal": 3,
+      "source_sha256": "8f4597589bb10c68cc88c820cdd998c9c9fe5329187959f63f22be90e44e97ec",
+      "status": "confirmed"
+    },
+    {
+      "expected_or_error_sha256": "aa3a05d9d57c08d694cf230a36386221f56890092e54cf8d6b04fab1b2cc0702",
+      "ordinal": 4,
+      "reason": "not executed: next G2 car/cdr/cons data-shape slice",
+      "source_sha256": "c102b9033c7db8a07b56412a4b378465c223c3ae8461c393ead1971b2988b85e",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "b77340d3171f1beec2065314b7c54812c7ad3a822f66298636475dd8dc2fbed8",
+      "ordinal": 5,
+      "reason": "not executed: next G2 car/cdr/cons data-shape slice",
+      "source_sha256": "517b5c5a36b18952d8d324e4143189e4f5763e0fbf426d562fad6b28ea714274",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "d0aa3d35582dcb80b6e9a383b387c1843b7d1c498b7c1de5df69c2d991a68aea",
+      "ordinal": 6,
+      "reason": "not executed: next G2 car/cdr/cons data-shape slice",
+      "source_sha256": "592ce207b2154a307580c93d707814abcf4684f4b22051ba1cd4dfa625bb59e9",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "27042f4e6eca7d0b2a7ee4026df2ecfa51d3339e6d122aa099118ecd8563bad9",
+      "ordinal": 7,
+      "reason": "not executed: next G8 cond branch slice",
+      "source_sha256": "3d80422cf68327a2637bfbe601ebbb8c52b9410f4c0c14af0d5d1a594392a03a",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "42e39d34359dba208c7ae34a5d9ce5f88f4013a24cbb0d388e34dcc0bcbebc0f",
+      "ordinal": 8,
+      "reason": "exact rationals have no ratified FPGA representation contract",
+      "source_sha256": "7aad8d5b880cdf544a07fd5590e98262d88d99c342d2a9cfbace07670f97d37c",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+      "ordinal": 9,
+      "reason": "not executed: closure identity slice",
+      "source_sha256": "c8cb86a68dabd66cc707a3387c14ab555026f386f88bdf76728935da4499d22c",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "2a60c58b3e43bd5e7f7f6ce8afc1d566b2e9598acfba1e6bc5755d8834ade4b6",
+      "ordinal": 10,
+      "reason": "not executed: named error-vocabulary slice",
+      "source_sha256": "601b97843fe295b749ed81b01efe1cdee68d81cd978920ed1e34d172d89f251c",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "a4c3ed04a95a3da14a9d235c83d868bed7c0f45cf7f3faa751ee8f50598d2211",
+      "ordinal": 11,
+      "reason": "not executed: tail-recursion slice",
+      "source_sha256": "8f971c4da4164870fbb214121050452634ce1286d6d8d2db3194b63581fe2fd9",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "6ae767837237ae90e545534042ce7832355055a5aef2c8a5376ae1f81c4c9041",
+      "ordinal": 12,
+      "reason": "not executed: dotted lambda-list ABI slice",
+      "source_sha256": "82a6d4714efe6369a2c7d22767c9e98fc3782239eecd9cc4b09d9f2050d6eb79",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "fc9381ee93d71614cc309a1a646297bf916a87d67c1d72cfc6ecd7e69f21648d",
+      "ordinal": 13,
+      "reason": "not executed: bare-symbol lambda-list ABI slice",
+      "source_sha256": "37bac434dfb79b2c2a39bf21f272e5e6e5280f7b31d10d5adf7fbed6e8cb503a",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "2a60c58b3e43bd5e7f7f6ce8afc1d566b2e9598acfba1e6bc5755d8834ade4b6",
+      "ordinal": 14,
+      "reason": "not executed: variadic arity-error slice",
+      "source_sha256": "0c31d8914419185862fb3770d14f8171994b00241afd45b48c650359a71b90ac",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "8029fdf189eaf082eb120225cd43061027db1feb537fc2cf7bf8695775a4f05e",
+      "ordinal": 15,
+      "reason": "not executed: lexical environment and shadowing slice",
+      "source_sha256": "484c4f6194d6a303ee74591391c63ba6381315fc33511e83e26f2639bc90298e",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "6be491f03866a8016151e40482508ecda8bdd2f02fcf554759b07856ccaa1ebd",
+      "ordinal": 16,
+      "reason": "not executed: immutable canonical-name error slice",
+      "source_sha256": "39f4fe9967be60a11e66980893cbd4375a24ba1cacff577a9726659d1c34d8de",
+      "status": "unsupported"
+    },
+    {
+      "expected_or_error_sha256": "fc9381ee93d71614cc309a1a646297bf916a87d67c1d72cfc6ecd7e69f21648d",
+      "ordinal": 17,
+      "reason": "not executed: user macro-expansion slice",
+      "source_sha256": "ead2817ac2ff1bdc4019a6b96e58e40960e78fd758cae91f777469c261f26c27",
+      "status": "unsupported"
+    }
+  ],
+  "schema": "fpga-shared-oracle-coverage-v1",
+  "upstream_revision": "4a5dba0d1d61103385406ef2821d76661442621c"
+}

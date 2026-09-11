@@ -1,0 +1,9 @@
+Loaded 44 bytes (11 instructions) from /mnt/c/GitHub/fpga-lisp/evidence/FPGA-SHARED-ORACLE-PARITY-1/rtl-sim-2026-09-11/corpus-03.bin
+Machine Halted.
+R15 = TAG:2 VAL:79
+RESULT_TAG:2
+RESULT_VAL:79
+HEAP_COUNT:1
+HEAP:0:2:900:3:0
+CML E2E OBSERVATION EMITTED
+fpga/sim/tb_cml_e2e.sv:90: $finish called at 3992970 (1s)

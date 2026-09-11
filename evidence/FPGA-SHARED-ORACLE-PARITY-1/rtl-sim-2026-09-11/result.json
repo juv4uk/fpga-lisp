@@ -1,0 +1,106 @@
+{
+  "mutation_witness": {
+    "comparator_rejected_mutation": true,
+    "mutated_expected_sha256": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+    "ordinal": 2,
+    "red_gate_error": "oracle mismatch at compiler-corpus ordinal 2: expected '()', FPGA decoded 't'",
+    "status": "detected"
+  },
+  "provenance": {
+    "cml": {
+      "binary_sha256": "2d9daa3d5ea42804931e3e3b0aeac5c9cd909cbfa8554902dc492492e2211248",
+      "source_revision": "29ffa33f0b1bfe16bebe8bda49e0caa364518f5d",
+      "worktree_status": [
+        "?? tmp_meta_eval_full.my"
+      ]
+    },
+    "fpga": {
+      "bitstream": {
+        "reason": "RTL-SIM evidence only",
+        "status": "not-produced"
+      },
+      "gate_sha256": "eec03a6db2531c2d18a80b0ce15187593f9feac5d882fadeb8abd63ec6de14db",
+      "isa_contract_sha256": "7cd79e6a05d37aa5f107fdac84fbe715b3489b72a861c3aced2e2bd1569c6bfb",
+      "rtl_source_sha256": {
+        "fpga/rtl/bootloader.sv": "fd5bf11f054171f4549dfb2c6cf4f1dc67c645bf02ef23dfb557cf7772b5fd0d",
+        "fpga/rtl/control.sv": "7e9b5e63ddb6adf81fc037a52c41c1c2fcc65d45c74182402398c546fdfc4bf9",
+        "fpga/rtl/heap.sv": "307e823fc832357e72b6953d485399ecb11ddcab5c4a3ec1f936374146718175",
+        "fpga/rtl/instruction_decoder.sv": "b7611640c2856b7b0eaca2b5cbecfe8ce04f58627ffceacda335931511419de2",
+        "fpga/rtl/lisp_data_unit.sv": "8f00e470812d9915edeea860c01666dce8b52579471763ae9015c091c621dba1",
+        "fpga/rtl/lisp_machine.sv": "b7b70d268f07c20b021cc7501a3be17d4bd8968efc5aba413e89a515ca346e47",
+        "fpga/rtl/lisp_word.sv": "bdf7f0592effb6f6f923d62656e5a6224cf2a5bedb0df9a2680d39f514c30509",
+        "fpga/rtl/registers.sv": "81ecf41482553d74bd4659e39a2575a705ea91f532af0942bba71612795dd9b7",
+        "fpga/rtl/sandhi_engine.sv": "bf13cc01428274035a749c1611c75a547bc043a006963d1c0e09efb82474be09",
+        "fpga/rtl/uart.sv": "257431cc5efa3664f7e48146d85194b39ad6e4edefdced8c69a9ab55774fd05d",
+        "fpga/rtl/upc8_unit.sv": "d191f8a316df291a4ffc350bec7cd06d36ac1425ce71b389c04fafbe6465d80e",
+        "fpga/sim/tb_cml_e2e.sv": "2c7d7be238da613c31f9341d61f9b13a538c45f968aad8f7b9d4dc914a1a3b73"
+      },
+      "simulator_sha256": "7f67f8be0ce721cbdb397451944252c2eb436fa01e53b3103c71e504e42a7f36",
+      "source_revision": "588631394f514711f57ea2a2e0984dfd893a3d9a",
+      "truth_representation": {
+        "sym_t": 79,
+        "tag_symbol": 2
+      },
+      "worktree_status": [
+        " M docs/testing.md",
+        " M fpga/sim/tb_cml_e2e.sv",
+        " M tasks.my",
+        "?? _monitor_input.txt",
+        "?? docs/shared-oracle-parity-1.md",
+        "?? evidence/FPGA-SHARED-ORACLE-PARITY-1/",
+        "?? tools/"
+      ]
+    },
+    "my_lisp": {
+      "corpus_path": "tests/fixtures/conformance.my",
+      "corpus_sha256": "0830a4e47efce93e5b6dbe20f37dedb84a5cc3d78bdcd15b20b82fa71f653ea4",
+      "repository": "juv4uk/my-lisp",
+      "revision": "4a5dba0d1d61103385406ef2821d76661442621c"
+    },
+    "physical": {
+      "reason": "the CML-produced images in this gate were not loaded onto the board",
+      "status": "not-run"
+    },
+    "target_contract": {
+      "projection_path": "target-contract.wsm",
+      "projection_sha256": "16a16774179edb60656b0027f33631cf62749a4308fb8a28c70022c1c53b3d5a",
+      "revision": "90fa2cf324d05d8a7baafcac620eb5360f05e5b3"
+    }
+  },
+  "results": [
+    {
+      "assembly_sha256": "2cce473d1762b0a72f62096f0516e873e314d5736469529ad0b451fc5789de9a",
+      "expected_sha256": "e3b98a4da31a127d4bde6e43033f66ba274cab0eb7eb1c70ec41402bf6273dd8",
+      "image_sha256": "561f78e98cf5074aaba1842152bbb913c7c8b4b260a814f127f8520dc4c8566c",
+      "observation": {
+        "decoded": "t",
+        "tag": 2,
+        "value": 79
+      },
+      "ordinal": 2,
+      "source_sha256": "6cc85c16472da8bed69d4b14f2afd978d214904a6903b7d26dca6b810910f8a1",
+      "status": "confirmed",
+      "symbol_sidecar_sha256": "8913f81fcdb36f7560ad96cdbb812d0d485ffd106d5ec7e9421887741310d4bf",
+      "transcript": "corpus-02.rtl.txt",
+      "transcript_sha256": "7a4323909d15c9fca5022e37acbfb6803d62ea2cf1f0ebf4b2e5764291762538"
+    },
+    {
+      "assembly_sha256": "a8d313cd97f0f9613d528f53cdfedf7819634cad366738e756fbc9cd4128cbb2",
+      "expected_sha256": "e3b98a4da31a127d4bde6e43033f66ba274cab0eb7eb1c70ec41402bf6273dd8",
+      "image_sha256": "1c72de5b5d653259b5c476da3122e25743f3642c20524ef2d540a0bf94522373",
+      "observation": {
+        "decoded": "t",
+        "tag": 2,
+        "value": 79
+      },
+      "ordinal": 3,
+      "source_sha256": "8f4597589bb10c68cc88c820cdd998c9c9fe5329187959f63f22be90e44e97ec",
+      "status": "confirmed",
+      "symbol_sidecar_sha256": "8913f81fcdb36f7560ad96cdbb812d0d485ffd106d5ec7e9421887741310d4bf",
+      "transcript": "corpus-03.rtl.txt",
+      "transcript_sha256": "dd3cd7bc140fb4cba117549e10e4cd86d51f2b69951d22e29737c73f95eb3ae9"
+    }
+  ],
+  "schema": "fpga-shared-oracle-parity-v1",
+  "scope": "compiler-corpus ordinals 2 and 3 only"
+}
