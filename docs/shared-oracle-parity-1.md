@@ -52,6 +52,12 @@ Evidence також записує Git revision і worktree status CML пору�
 записується як board evidence. І навпаки, один board run не стає повною
 conformance claim.
 
+Після первинного RTL-зрізу ті самі два CML-produced images були окремо
+завантажені у volatile SRAM фізичної GW5A-25A та прочитані через `COM4`.
+Обидва дали `R15 = SYMBOL(79) [0x2000004F]`. Повний transport/bitstream
+provenance і межа physical claim є в
+[`hardware-readback-2026-09-11.md`](../evidence/FPGA-SHARED-ORACLE-PARITY-1/hardware-readback-2026-09-11.md).
+
 Найменший наступний крок після цього зрізу не потребує нового opcode чи
 tag: виконати ті самі upstream source blobs для G2 (`quote`, `car`, `cdr`,
 `cons`) і G8 (`cond`) через цей самий gate. Це розширює доказ існуючого
@@ -71,3 +77,7 @@ The generic SystemVerilog harness now only emits an observation. It no longer
 asserts a stale local `SYMBOL(7)` expectation. Semantic expected values come
 only from the pinned upstream corpus. RTL evidence and physical-board evidence
 remain explicitly separate.
+
+The same two generated images were subsequently run on the physical board;
+the separate [hardware readback record](../evidence/FPGA-SHARED-ORACLE-PARITY-1/hardware-readback-2026-09-11.md)
+keeps that claim and its transport provenance distinct from RTL evidence.

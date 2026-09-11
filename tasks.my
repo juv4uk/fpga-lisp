@@ -11,7 +11,7 @@
   (capabilities . (fpga-lisp cml rtl simulation conformance evidence))
   (origin . ecosystem)
   (description . "Independent FPGA witness for the pinned my-lisp compiler corpus. Source and expected are read from my-lisp@4a5dba0d1d61103385406ef2821d76661442621c rather than copied into an FPGA table; CML produces the image, UART boot simulation observes it, and only the upstream expected value decides the result.")
-  (done . (t . "2026-09-11: bounded first slice complete. compiler-corpus ordinals 2 (atom radio) and 3 (eq radio radio) both confirmed through CML -> assembler.py -> UART-loaded RTL simulation as canonical t decoded from TAG_SYMBOL+SYM_T (2,79). Comparator mutation changed expected to () and was rejected with an explicit red-gate error. Evidence: evidence/FPGA-SHARED-ORACLE-PARITY-1/rtl-sim-2026-09-11/result.json; all 17 corpus rows classified in coverage.json. No physical claim: these CML-produced images were not loaded on the board."))))
+  (done . (t . "2026-09-11: bounded first slice complete. compiler-corpus ordinals 2 (atom radio) and 3 (eq radio radio) both confirmed through CML -> assembler.py -> UART-loaded RTL simulation as canonical t decoded from TAG_SYMBOL+SYM_T (2,79). Comparator mutation changed expected to () and was rejected with an explicit red-gate error. Evidence: evidence/FPGA-SHARED-ORACLE-PARITY-1/rtl-sim-2026-09-11/result.json; all 17 corpus rows classified in coverage.json. The same two generated images subsequently ran as separate physical-SRAM witnesses on GW5A-25A/COM4: evidence/FPGA-SHARED-ORACLE-PARITY-1/hardware-readback-2026-09-11.md. This is not a full-board-conformance or Flash-programming claim."))))
 
 ("FPGA-SWARM-CONTRACT-01" . (
     (priority . 9.0)
