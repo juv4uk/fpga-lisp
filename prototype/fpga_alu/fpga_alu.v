@@ -84,19 +84,19 @@ module fpga_alu #(
             6'd5:  rom_mask = 64'h00000000000001E0; // ec
             6'd6:  rom_mask = 64'h0000000000000180; // Ec
             6'd7:  rom_mask = 64'h000003FFFFFFFFFF; // al
-            6'd8:  rom_mask = 64'h000003FFFFFFFFFE00; // hal
-            6'd9:  rom_mask = 64'h000003FFFFFFFFFC00; // val
-            6'd10: rom_mask = 64'h000003FFFFFFFFF000; // ral
-            6'd11: rom_mask = 64'h000003FFFFFFFE0200; // Jal
+            6'd8:  rom_mask = 64'h0003FFFFFFFFFE00; // hal
+            6'd9:  rom_mask = 64'h0003FFFFFFFFFC00; // val
+            6'd10: rom_mask = 64'h0003FFFFFFFFF000; // ral
+            6'd11: rom_mask = 64'h0003FFFFFFFE0200; // Jal
             6'd12: rom_mask = 64'h0000038000000200; // Sal
             6'd13: rom_mask = 64'h0000038000000000; // Sar
-            6'd14: rom_mask = 64'h000003FFFFFFFFFC00; // yar
-            6'd15: rom_mask = 64'h0000007FFFFFFFFC00; // yay
+            6'd14: rom_mask = 64'h0003FFFFFFFFFC00; // yar
+            6'd15: rom_mask = 64'h00007FFFFFFFFC00; // yay
             6'd16: rom_mask = 64'h0000000000003C00; // yaR
             6'd17: rom_mask = 64'h000000000007FC00; // yam
             6'd18: rom_mask = 64'h00000000001FFC00; // yaY
             6'd19: rom_mask = 64'h0000000000001800; // vaw
-            6'd20: rom_mask = 64'h0000007FFFFFF78000; // may
+            6'd20: rom_mask = 64'h00007FFFFFF78000; // may
             6'd21: rom_mask = 64'h000000000007FDFF; // am
             6'd22: rom_mask = 64'h0000000000001FFF; // aw
             6'd23: rom_mask = 64'h0000000000003FFE; // iR
@@ -117,7 +117,7 @@ module fpga_alu #(
             6'd38: rom_mask = 64'h000003FFE0000000; // Kar
             6'd39: rom_mask = 64'h000003FFFFFFE000; // Jar
             6'd40: rom_mask = 64'h000000001FFFFE00; // haS
-            6'd41: rom_mask = 64'h000003FFFFFFFFFC00; // yar
+            6'd41: rom_mask = 64'h0003FFFFFFFFFC00; // yar
             default: rom_mask = 64'h0000000000000000;
         endcase
     end
