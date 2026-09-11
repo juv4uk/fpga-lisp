@@ -276,3 +276,16 @@ real iverilog with a suspected raw-value-vs-tag `JF` semantics issue.
 correction + lesson recorded in `cml/ecosystem-status.md` ("Баг №2 не
 існував", 2026-08-11 entry). Your `control.sv:147` tag-aware `JF`
 reference is what triggered the honest recheck — thank you.
+
+## [fpga-lisp] 2026-09-11 — physical TAG_TRUE replacement readback
+
+- After an owner-pressed physical RESET, native Windows `monitor.py` sent
+  `eval_all_primitives_demo.bin` (216 instructions) through FT2232 `COM4`.
+  The post-HALT monitor readback was `R9 = SYMBOL(79) [0x2000004F]` and
+  `ERR: no error`.
+- This is physical evidence that the tested `cdr`/`atom`/`eq` path returns
+  canonical `Symbol("t")`, not `TAG_TRUE`. The complete reproducible record,
+  including file hash and limits, is
+  `evidence/FPGA-TAG-TRUE-MANUFACTURED-PRIMITIVE/hardware-readback-2026-09-11.md`.
+- Це фізичний доказ лише для volatile SRAM-образу та одного шляху виконання;
+  він не стверджує permanent exFlash write чи повну ISA-conformance.
