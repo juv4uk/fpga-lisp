@@ -57,6 +57,9 @@ conformance claim.
 Обидва дали `R15 = SYMBOL(79) [0x2000004F]`. Повний transport/bitstream
 provenance і межа physical claim є в
 [`hardware-readback-2026-09-11.md`](../evidence/FPGA-SHARED-ORACLE-PARITY-1/hardware-readback-2026-09-11.md).
+Пізніше цей самий bitstream записано в постійну Flash і перевірено після
+cold boot; це вужче, окреме твердження зафіксоване в
+[`flash-cold-boot-2026-09-11.md`](../evidence/FPGA-SHARED-ORACLE-PARITY-1/flash-cold-boot-2026-09-11.md).
 
 Найменший наступний крок після цього зрізу не потребує нового opcode чи
 tag: виконати ті самі upstream source blobs для G2 (`quote`, `car`, `cdr`,
@@ -81,3 +84,6 @@ remain explicitly separate.
 The same two generated images were subsequently run on the physical board;
 the separate [hardware readback record](../evidence/FPGA-SHARED-ORACLE-PARITY-1/hardware-readback-2026-09-11.md)
 keeps that claim and its transport provenance distinct from RTL evidence.
+The current bitstream was then permanently programmed and cold-booted; the
+[Flash cold-boot record](../evidence/FPGA-SHARED-ORACLE-PARITY-1/flash-cold-boot-2026-09-11.md)
+documents that separate, narrower claim.
