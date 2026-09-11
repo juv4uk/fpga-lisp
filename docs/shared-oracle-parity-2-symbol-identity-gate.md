@@ -65,6 +65,18 @@ CML emission:  symbol table lookup by name.to_uppercase()
 witness, а потім запускає ті самі images на платі. Жодного нового machine
 tag, opcode або RTL design тут не потрібно.
 
+**Live підтвердження (2026-09-11):** my-lisp session незалежно
+підтвердила `(eq (quote radio) (quote RADIO))` -> `()` на реальному
+my-lisp (case-sensitive identity — G1/G7 контракт, не припущення); cml
+session незалежно підтвердила, що uppercase quoted-символів — свідома,
+вже задокументована в cml's `compatibility.my` конвенція
+(representational-substitution), не баг codegen. Обидві сторони
+погодились: це не завдання для одностороннього рішення жодного з трьох
+репо, а той самий "ratify-then-consume" крос-проектний контракт, що й
+TAG_BOXED (wsm-target-contract#2) і Canon-поверхні (cml#9) цієї сесії.
+fpga-lisp лишається пасивним спостерігачем цього рішення, так само як
+з `ISA-RATIONAL`.
+
 ### Межі
 
 Це не твердження, що CML уже неправильний для всіх його поточних цілей.
