@@ -20,6 +20,7 @@ manually grepping the .asm comments of whichever program is running.
 Usage: python3 gen_symbol_table.py > symbol_table.py
 """
 import glob
+import os
 import re
 import sys
 
@@ -29,7 +30,56 @@ LOADSYM_RE = re.compile(r"LOADSYM\s+R\d+,\s*(\d+)\s*;\s*'([A-Za-z0-9_?!-]+)")
 # LOADSYM literal -- no per-file comment to scrape, but every .asm that
 # .includes constants.inc shares these two ids identically, so they're
 # added to every program's table.
-SPECIAL_FORMS = {50: "quote", 80: "cond"}
+#
+# The *spelling* printed for each ("quote", "cond") is not this script's
+# to invent: it must come from my-lisp's semantic-registry.wsm, the one
+# canonical source of surface spellings (see
+# docs/canon-symbol-registry-fpga-lisp-part.md). Hardcoding the English
+# word here would silently drift the moment the registry's own English
+# surface for semantic id 0001/0007 changes -- the same class of bug
+# already found in my-lisp's LSP, wsm-my-lisp's eval.rs, and cml's
+# lower.rs/semantic.rs. fpga-lisp's hardware symbol ids (50, 80, from
+# fpga/asm/constants.inc) are a separate, fixed numbering space and are
+# NOT looked up in the registry -- only the printed name is.
+
+# fpga hardware symbol id -> semantic-registry.wsm numeric id.
+SPECIAL_FORM_REGISTRY_IDS = {50: "0001", 80: "0007"}
+
+REGISTRY_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "my-lisp", "lib", "surface", "semantic-registry.wsm",
+)
+
+# Minimal single-line scraper for exactly the "(<id> (en <word> ...) ...)"
+# shape -- not a general s-expression reader, deliberately scoped to the
+# two ids this script needs (see SPECIAL_FORM_REGISTRY_IDS).
+REGISTRY_EN_RE = re.compile(r"^\s*\((\d{4})\s+\(en\s+(\S+)\s")
+
+
+def load_special_forms(registry_path=REGISTRY_PATH):
+    """Fail-closed: raise rather than silently falling back to a guess
+    if the registry is missing or doesn't define an English surface for
+    a semantic id this script needs."""
+    wanted = set(SPECIAL_FORM_REGISTRY_IDS.values())
+    found = {}
+    with open(registry_path, "r", encoding="utf-8") as f:
+        for line in f:
+            m = REGISTRY_EN_RE.match(line)
+            if m and m.group(1) in wanted:
+                found[m.group(1)] = m.group(2)
+    missing = wanted - found.keys()
+    if missing:
+        raise ValueError(
+            f"semantic-registry.wsm at {registry_path!r} is missing an "
+            f"'en' surface for semantic id(s) {sorted(missing)}"
+        )
+    return {
+        hw_id: found[registry_id]
+        for hw_id, registry_id in SPECIAL_FORM_REGISTRY_IDS.items()
+    }
+
+
+SPECIAL_FORMS = load_special_forms()
 
 
 def scan_file(path):
