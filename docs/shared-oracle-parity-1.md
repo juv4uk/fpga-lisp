@@ -61,11 +61,14 @@ provenance і межа physical claim є в
 cold boot; це вужче, окреме твердження зафіксоване в
 [`flash-cold-boot-2026-09-11.md`](../evidence/FPGA-SHARED-ORACLE-PARITY-1/flash-cold-boot-2026-09-11.md).
 
-Найменший наступний крок після цього зрізу не потребує нового opcode чи
-tag: виконати ті самі upstream source blobs для G2 (`quote`, `car`, `cdr`,
-`cons`) і G8 (`cond`) через цей самий gate. Це розширює доказ існуючого
-mechanism, а не винаходить нову FPGA-семантику. Exact rationals лишаються
-`unsupported`, доки не ратифіковано їх representation contract.
+Raw G2 (`quote`, `car`, `cdr`, `cons`) і G8 (`cond`) execution уже
+досяжні на наявному hardware, але їх exact confirmation не можна додати
+простим decoder-рефакторингом: CML uppercases case-sensitive my-lisp
+symbols. Причину, raw observations і необхідний upstream/CML contract gate
+зафіксовано в
+[`shared-oracle-parity-2-symbol-identity-gate.md`](shared-oracle-parity-2-symbol-identity-gate.md).
+Exact rationals лишаються `unsupported`, доки не ратифіковано їх
+representation contract.
 
 ## English
 
@@ -87,3 +90,9 @@ keeps that claim and its transport provenance distinct from RTL evidence.
 The current bitstream was then permanently programmed and cold-booted; the
 [Flash cold-boot record](../evidence/FPGA-SHARED-ORACLE-PARITY-1/flash-cold-boot-2026-09-11.md)
 documents that separate, narrower claim.
+
+The existing hardware executes the next G2/G8 raw paths, but exact parity is
+blocked by CML's uppercase target-symbol representation versus my-lisp's
+case-sensitive symbol identity. The evidence and required cross-project gate
+are recorded in
+[the parity-2 symbol-identity note](shared-oracle-parity-2-symbol-identity-gate.md).
