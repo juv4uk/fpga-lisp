@@ -1,0 +1,45 @@
+; Local FPGA execution spec for Canon-bridged primitives.
+;
+; This file is fpga-lisp's own authority over HOW a Canon semantic
+; identity (my-lisp's lib/surface/semantic-registry.wsm) is executed
+; on this machine -- it does not define WHAT the identity means (that
+; stays my-lisp's authority) and it does not change any existing
+; opcode, TAG_PRIMITIVE numbering, or PRIM_* value in
+; fpga/asm/constants.inc. It is the missing link tools/gen_primitive_table.py
+; needs to build a generated Canon-id -> local-execution table instead
+; of the identity being re-typed by hand in eval_core.inc, old test
+; .asm files, and any future consumer.
+;
+; Format: (canon-id expected-en-spelling local-primitive-id opcode)
+;   canon-id             -- semantic-registry.wsm's numeric id (string, 4 digits)
+;   expected-en-spelling -- sanity cross-check only: if the registry's
+;                           "en" surface for this id is present, it must
+;                           equal this word, or generation fails closed.
+;                           If the registry's en surface is "missing"
+;                           for this id (e.g. 0104/add has no en entry
+;                           yet), the check is skipped, not failed.
+;   local-primitive-id   -- must equal the matching PRIM_* value in
+;                           fpga/asm/constants.inc (cross-checked by the
+;                           generator, not just asserted here).
+;   opcode                -- the hardware mechanism name, informational
+;                           for now (fpga-lisp does not yet have every
+;                           listed name as a literal top-level opcode --
+;                           car/cdr/cons/atom/eq are dispatched through
+;                           try_apply's primitive path in eval_core.inc,
+;                           add likewise via PRIM_ADD -- "OP_*" here
+;                           names the mechanism, not a promise that a
+;                           same-named top-level ISA opcode exists).
+;
+; Adding an entry here does NOT create hardware. It documents which
+; already-existing local primitive a Canon identity maps to. Removing
+; or renumbering an entry needs the same care as touching constants.inc
+; itself -- see that file's own header.
+
+(fpga-primitive-execution-spec
+  (0005 car  0 OP_CAR)
+  (0006 cdr  1 OP_CDR)
+  (0004 cons 2 OP_CONS)
+  (0002 atom 3 OP_ATOM)
+  (0003 eq   4 OP_EQ)
+  (0104 add  5 OP_ADD)
+)
