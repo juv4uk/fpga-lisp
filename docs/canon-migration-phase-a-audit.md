@@ -47,27 +47,72 @@
 
 ## Phase B + C: generated Canon primitive execution table
 
+**Виправлення (2026-09-12):** перша версія цього коміту помилково
+написала генератор на Python (`tools/gen_primitive_table.py` +
+`tools/test_primitive_table.py`), прямо порушивши `juv4uk/fpga-lisp#6`
+(ECO-LISP-SCRIPTS-1: "Не робити Python fallback", увесь новий
+tooling -- на `.my`/`.мій`). Обидва файли видалено і переписано як
+**`fpga/canon/gen-primitive-table.my`**, реальний my-lisp-скрипт
+(перевірений через `cargo run -p my-lisp-cli --bin my-lisp --`, той
+самий шлях, що й прецедент `scripts/symbol-table.my`).
+
 - **`fpga/canon/execution-spec.my`** -- нове, невелике, вручну
-  підтримуване джерело: яку Canon-ідентичність (`0005`, `0006`, `0004`,
-  `0002`, `0003`, `0104`) яка локальна `PRIM_*`-адреса виконує. Не
-  генерується, ревʼюється при кожній зміні, як і сам `constants.inc`.
-- **`tools/gen_primitive_table.py`** -- fail-closed генератор: читає
-  spec + реальний `semantic-registry.wsm` + реальний `constants.inc`,
-  падає (не підставляє fallback), якщо: Canon ID відсутній у реєстрі,
-  жодна поверхня не `stable`, `en`-поверхня (коли присутня)
-  розходиться зі spec, або spec's `local_primitive_id` розходиться з
-  фактичним `PRIM_*` значенням у `constants.inc`. Перевірено: усі ці
-  fail-closed шляхи реально піднімають виключення (не просто
-  теоретично прописані).
-- **`tools/test_primitive_table.py`** -- виконуваний доказ (4/4 тести
-  проходять): (1) `car`'s en/uk/sa-поверхні всі ведуть до одного
-  запису таблиці (Canon `0005` -> local primitive `0` -> `OP_CAR`); (2)
-  жодна поверхня не є неоднозначною між різними Canon ID в цій
-  таблиці; (3) `radio`/`RADIO` (та інші довільні символи) НЕ
-  зустрічаються в таблиці взагалі -- Canon identity і ordinary user
-  symbol залишаються окремими просторами; (4) всі шість
-  Canon-примітивів першої хвилі (car/cdr/cons/atom/eq/add) присутні з
-  правильним local primitive id.
+  підтримуване джерело: яку Canon-ідентичність (`5`, `6`, `4`, `2`,
+  `3`, `104`) яка локальна `PRIM_*`-адреса виконує, з ЛІТЕРАЛЬНОЮ
+  назвою константи (`PRIM_CAR`, не похідною через uppercase --
+  my-lisp принципово не має case-folding примітиву). Не генерується,
+  ревʼюється при кожній зміні, як і сам `constants.inc`.
+- **`fpga/canon/gen-primitive-table.my`** -- fail-closed генератор +
+  вбудовані evidence-перевірки в одному скрипті: читає spec + реальний
+  `semantic-registry.wsm` (через `read-file`/`read-all`, нативний
+  s-expr reader, без regex) + реальний `constants.inc` (той самий
+  reader читає `.define`-синтаксис як плоский список атомів). Падає
+  (не підставляє fallback), якщо: Canon ID відсутній у реєстрі, жодна
+  поверхня не `stable`, `en`-поверхня (коли присутня) розходиться зі
+  spec, або spec's `local-primitive-id` розходиться з фактичним
+  `PRIM_*` значенням у `constants.inc`. Перевірено: усі ці fail-closed
+  шляхи реально піднімають помилку виконання (exit code 1).
+- Вбудовані evidence-перевірки (усі 7 реально проходять під реальним
+  `my-lisp.exe`, не лише написані): (1) `car`'s en/uk/sa-поверхні всі
+  ведуть до одного запису таблиці (Canon `5` -> local primitive `0` ->
+  `OP_CAR`); (2) жодна поверхня не є неоднозначною між різними Canon ID
+  в цій таблиці; (3) `radio` І `RADIO` (окремо) НЕ зустрічаються в
+  таблиці взагалі -- Canon identity і ordinary user symbol залишаються
+  окремими просторами; (4) всі шість Canon-примітивів першої хвилі
+  (car/cdr/cons/atom/eq/add) присутні з правильним local primitive id.
+
+### Реальні баги, знайдені під час портування на my-lisp
+
+Не суто механічний переклад -- три реальні логічні баги знайдено й
+виправлено емпіричним тестуванням проти справжнього `my-lisp.exe`
+(жоден з них не існував у Python-версії, специфічні для порту):
+
+1. **`atom` не відрізняє "не знайдено" (`()`) від "знайдено, значення
+   0"** -- `PRIM_CAR`'s значення справді `0`, а `0` сам є atom.
+   `(atom const-value)` як перевірка "не знайдено" хибно спрацьовувала
+   і для дійсно знайденого нульового значення. Виправлено на явне
+   `(eq const-value (quote ()))`.
+2. **Власноруч написаний `if` як звичайна функція** eager-обчислював
+   усі три аргументи (включно з тим, що мав виконатись, лише якщо
+   умова хибна) -- зламало б `(car (quote ()))` на відсутній
+   поверхні, хоч і не проявилося на поточних 6 записах (у всіх є uk/sa).
+   Замінено на прямий `cond` (lazy за конструкцією), `if` прибрано.
+3. **`reduce`'s аргументи переплутано.** `(reduce f acc values)` --
+   не `(reduce f values acc)`, як спочатку написано; переплутаний
+   порядок призвів до того, що `reduce` одразу повертав `table`
+   некрутнутим замість акумуляції поверхневих слів, і подальший `eq`
+   на елементі-списку (не atom) впав з "eq expects two atoms".
+4. **`princ`/`print`-вивід губиться при подальшій фатальній помилці**
+   (буфер не флешиться перед абортом) -- fail-closed діагностичне
+   повідомлення через `princ` перед навмисною помилкою ніколи не
+   з'являлося на екрані. Виправлено: замість друку повідомлення,
+   воно вбудовується безпосередньо в текст помилки через
+   `(eval (string->symbol msg))` -- посилання на незв'язаний символ
+   виводить його точний текст в "unknown symbol" помилці, що реально
+   видно користувачу.
+
+Усі чотири підтверджені прогоном, не лише виправлені "на око":
+спочатку відтворено помилку, потім перевірено зникнення після фіксу.
 
 ### Що НЕ зроблено в цьому коміті (свідомо)
 
@@ -89,15 +134,35 @@ B/C generated bridge), а не "великий rewrite" -- відповідно 
 Phase A audit found the real hardcode sites (`eval_core.inc`'s
 `try_apply` manual `PRIM_*` dispatch chain; old pre-`constants.inc`
 `.asm` demos using raw numeric literals) without touching any of them
-yet. Phase B/C land in this same commit as the smallest executable
-vertical proof: `fpga/canon/execution-spec.my` (hand-maintained Canon
-id -> local primitive bridge) + `tools/gen_primitive_table.py`
-(fail-closed generator cross-checking the real
-`semantic-registry.wsm` and `constants.inc`) + `tools/test_primitive_table.py`
-(4/4 passing: car's en/uk/sa surfaces all resolve to one table entry;
-no surface is ambiguous across Canon ids; `radio`/`RADIO` never appear
-in the table; all six first-wave primitives present with correct
-local ids). No opcode, `TAG_PRIMITIVE`, `constants.inc` value, or old
-image was changed or renumbered. `eval_core.inc`'s actual dispatch is
-not yet switched to consume this table -- that is Phase D, a separate,
+yet. Phase B/C land as the smallest executable vertical proof:
+`fpga/canon/execution-spec.my` (hand-maintained Canon id -> local
+primitive bridge, literal `PRIM_*` constant names, no case-folding
+needed) + `fpga/canon/gen-primitive-table.my` (a real my-lisp script,
+run via `cargo run -p my-lisp-cli --bin my-lisp --`, matching the
+`scripts/symbol-table.my` precedent). It fails closed against the real
+`semantic-registry.wsm` and `constants.inc`, and its 7 embedded
+evidence checks all pass under the real interpreter: car's en/uk/sa
+surfaces all resolve to one table entry; no surface is ambiguous
+across Canon ids; `radio` and `RADIO` (separately) never appear in the
+table; all six first-wave primitives present with correct local ids.
+
+**Correction, 2026-09-12:** this work was first written in Python
+(`tools/gen_primitive_table.py`/`test_primitive_table.py`), directly
+violating `juv4uk/fpga-lisp#6` (ECO-LISP-SCRIPTS-1, decided the same
+day: no new Python tooling). Both files were deleted and rewritten as
+the `.my` script described above. Porting surfaced three real logic
+bugs specific to the port, none present in the Python version, each
+reproduced then confirmed fixed against the real interpreter: `atom`
+cannot distinguish "not found" from "found, value 0" (`PRIM_CAR`'s
+real value); a hand-written `if` as an ordinary function eagerly
+evaluated all three arguments instead of short-circuiting; `reduce`'s
+argument order is `(f acc values)`, not `(f values acc)`. Also found:
+`princ`/`print` output is buffered and lost when the process later
+exits on error, so the fail-closed diagnostic is now surfaced by
+referencing it as an unbound symbol instead (my-lisp's "unknown
+symbol" error embeds the exact text).
+
+No opcode, `TAG_PRIMITIVE`, `constants.inc` value, or old image was
+changed or renumbered. `eval_core.inc`'s actual dispatch is not yet
+switched to consume this table -- that is Phase D, a separate,
 deliberately later step.
