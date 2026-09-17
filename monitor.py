@@ -181,19 +181,31 @@ def cmd_reg(ser, idx, recorder=None):
         )
 
 
-def cmd_hp(ser):
+def cmd_hp(ser, recorder=None):
     ser.write(bytes([0x03]))
     hp = struct.unpack("<I", read_exact(ser, 4))[0]
     print(f"HP = {hp}")
+    if recorder is not None:
+        recorder.record(
+            input_event="monitor:hp",
+            transition_or_action="read-heap-pointer",
+            state_after_ref=f"inline:HP={hp}",
+        )
 
 
-def cmd_heap(ser, addr):
+def cmd_heap(ser, addr, recorder=None):
     ser.write(bytes([0x02, addr & 0xFF, (addr >> 8) & 0xFF]))
     car, cdr = struct.unpack("<II", read_exact(ser, 8))
     print(f"HEAP[{addr}] = ({fmt_word(car)} . {fmt_word(cdr)})")
+    if recorder is not None:
+        recorder.record(
+            input_event=f"monitor:heap:{addr}",
+            transition_or_action="read-heap-cell",
+            state_after_ref=f"inline:HEAP[{addr}]=0x{car:08X},0x{cdr:08X}",
+        )
 
 
-def cmd_err(ser):
+def cmd_err(ser, recorder=None):
     ser.write(bytes([0x04]))
     word = struct.unpack("<I", read_exact(ser, 4))[0]
     err_flag = (word >> 12) & 1
@@ -202,6 +214,12 @@ def cmd_err(ser):
         print(f"ERR: type error at pc={err_pc} (CAR/CDR/CONS on a non-CONS)")
     else:
         print("ERR: no error (halted normally via HALT)")
+    if recorder is not None:
+        recorder.record(
+            input_event="monitor:err",
+            transition_or_action="read-error-word",
+            state_after_ref=f"inline:ERR=0x{word:08X}",
+        )
 
 
 def repl(ser, recorder=None):
