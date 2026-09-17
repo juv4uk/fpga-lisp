@@ -2,6 +2,8 @@ import sys
 import time
 import struct
 import argparse
+from datetime import datetime, timezone
+import json
 import os
 
 import serial
@@ -20,6 +22,97 @@ TAG_NAMES = {
 # per monitor.py run, scoped to whichever single program was uploaded,
 # not a merge across every bootstrap demo.
 CURRENT_SYMBOLS = {}
+
+
+def make_observation_record(
+    *,
+    experiment_id,
+    run_id,
+    input_event,
+    transition_or_action,
+    state_after_ref,
+    fpga_lisp_commit,
+    build_or_bitstream_ref,
+    cycle_or_timestamp,
+    state_before_ref="UNKNOWN",
+    raw_artifact_refs=None,
+    notes=None,
+):
+    """Build one epistemically explicit, interpretation-free observation record."""
+    return {
+        "record_type": "observation",
+        "experiment_id": experiment_id,
+        "run_id": run_id,
+        "cycle_or_timestamp": cycle_or_timestamp,
+        "input_event": input_event,
+        "state_before_ref": state_before_ref,
+        "transition_or_action": transition_or_action,
+        "state_after_ref": state_after_ref,
+        "fpga_lisp_commit": fpga_lisp_commit,
+        "build_or_bitstream_ref": build_or_bitstream_ref,
+        "status": "OBSERVED",
+        "evidence_level": "OBSERVED",
+        "raw_artifact_refs": list(raw_artifact_refs or []),
+        "notes": notes,
+    }
+
+
+def append_observation(path, record):
+    """Append one JSON object as one JSONL row; never rewrite prior observations."""
+    with open(path, "a", encoding="utf-8") as f:
+        json.dump(record, f, ensure_ascii=False, sort_keys=True)
+        f.write("\n")
+
+
+def utc_timestamp():
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+class ObservationRecorder:
+    """Attach fixed run provenance to raw monitor observations."""
+
+    def __init__(
+        self,
+        *,
+        path,
+        experiment_id,
+        run_id,
+        fpga_lisp_commit,
+        build_or_bitstream_ref,
+        clock=utc_timestamp,
+    ):
+        self.path = path
+        self.experiment_id = experiment_id
+        self.run_id = run_id
+        self.fpga_lisp_commit = fpga_lisp_commit
+        self.build_or_bitstream_ref = build_or_bitstream_ref
+        self.clock = clock
+
+    def record(
+        self,
+        *,
+        input_event,
+        transition_or_action,
+        state_after_ref,
+        state_before_ref="UNKNOWN",
+        raw_artifact_refs=None,
+        notes=None,
+    ):
+        record = make_observation_record(
+            experiment_id=self.experiment_id,
+            run_id=self.run_id,
+            input_event=input_event,
+            transition_or_action=transition_or_action,
+            state_after_ref=state_after_ref,
+            state_before_ref=state_before_ref,
+            fpga_lisp_commit=self.fpga_lisp_commit,
+            build_or_bitstream_ref=self.build_or_bitstream_ref,
+            cycle_or_timestamp=self.clock(),
+            raw_artifact_refs=raw_artifact_refs,
+            notes=notes,
+        )
+        append_observation(self.path, record)
+        return record
 
 
 def load_symbols(program_name):
@@ -76,25 +169,43 @@ def read_exact(ser, n):
     return buf
 
 
-def cmd_reg(ser, idx):
+def cmd_reg(ser, idx, recorder=None):
     ser.write(bytes([0x01, idx]))
     word = struct.unpack("<I", read_exact(ser, 4))[0]
     print(f"R{idx} = {fmt_word(word)}")
+    if recorder is not None:
+        recorder.record(
+            input_event=f"monitor:reg:{idx}",
+            transition_or_action="read-register",
+            state_after_ref=f"inline:R{idx}=0x{word:08X}",
+        )
 
 
-def cmd_hp(ser):
+def cmd_hp(ser, recorder=None):
     ser.write(bytes([0x03]))
     hp = struct.unpack("<I", read_exact(ser, 4))[0]
     print(f"HP = {hp}")
+    if recorder is not None:
+        recorder.record(
+            input_event="monitor:hp",
+            transition_or_action="read-heap-pointer",
+            state_after_ref=f"inline:HP={hp}",
+        )
 
 
-def cmd_heap(ser, addr):
+def cmd_heap(ser, addr, recorder=None):
     ser.write(bytes([0x02, addr & 0xFF, (addr >> 8) & 0xFF]))
     car, cdr = struct.unpack("<II", read_exact(ser, 8))
     print(f"HEAP[{addr}] = ({fmt_word(car)} . {fmt_word(cdr)})")
+    if recorder is not None:
+        recorder.record(
+            input_event=f"monitor:heap:{addr}",
+            transition_or_action="read-heap-cell",
+            state_after_ref=f"inline:HEAP[{addr}]=0x{car:08X},0x{cdr:08X}",
+        )
 
 
-def cmd_err(ser):
+def cmd_err(ser, recorder=None):
     ser.write(bytes([0x04]))
     word = struct.unpack("<I", read_exact(ser, 4))[0]
     err_flag = (word >> 12) & 1
@@ -103,9 +214,15 @@ def cmd_err(ser):
         print(f"ERR: type error at pc={err_pc} (CAR/CDR/CONS on a non-CONS)")
     else:
         print("ERR: no error (halted normally via HALT)")
+    if recorder is not None:
+        recorder.record(
+            input_event="monitor:err",
+            transition_or_action="read-error-word",
+            state_after_ref=f"inline:ERR=0x{word:08X}",
+        )
 
 
-def repl(ser):
+def repl(ser, recorder=None):
     print("Monitor ready. Commands: reg <n> | heap <addr> | hp | err | quit")
     while True:
         try:
@@ -118,13 +235,13 @@ def repl(ser):
         cmd = parts[0].lower()
         try:
             if cmd == "reg" and len(parts) == 2:
-                cmd_reg(ser, int(parts[1]))
+                cmd_reg(ser, int(parts[1]), recorder=recorder)
             elif cmd == "heap" and len(parts) == 2:
-                cmd_heap(ser, int(parts[1]))
+                cmd_heap(ser, int(parts[1]), recorder=recorder)
             elif cmd == "hp":
-                cmd_hp(ser)
+                cmd_hp(ser, recorder=recorder)
             elif cmd == "err":
-                cmd_err(ser)
+                cmd_err(ser, recorder=recorder)
             elif cmd in ("quit", "exit"):
                 break
             else:
@@ -133,7 +250,7 @@ def repl(ser):
             print(f"No reply from board: {e}")
 
 
-def main():
+def build_arg_parser():
     parser = argparse.ArgumentParser(description="Lisp FPGA post-HALT debug monitor")
     parser.add_argument("port", help="COM port (e.g. COM3)")
     parser.add_argument("file", nargs="?", help="Optional .bin to upload before entering the monitor")
@@ -142,7 +259,38 @@ def main():
                          help="Program name for symbol-name display (matches an "
                               "entry in symbol_table.py, e.g. 'bootstrap_equal_demo'). "
                               "Defaults to file's basename when --file is given.")
-    args = parser.parse_args()
+    parser.add_argument("--evidence-jsonl",
+                        help="Append raw monitor observations to this JSONL file.")
+    parser.add_argument("--experiment-id", default="UNKNOWN",
+                        help="Experiment identifier stored with observations.")
+    parser.add_argument("--run-id", default="UNKNOWN",
+                        help="Run identifier stored with observations.")
+    parser.add_argument("--fpga-lisp-commit", default="UNKNOWN",
+                        help="Exact fpga-lisp commit for this run; UNKNOWN is preserved, never guessed.")
+    parser.add_argument("--build-or-bitstream-ref", default="UNKNOWN",
+                        help="Build/bitstream reference for this run; UNKNOWN is preserved, never guessed.")
+    return parser
+
+
+def parse_args(argv=None):
+    return build_arg_parser().parse_args(argv)
+
+
+def recorder_from_args(args):
+    if not args.evidence_jsonl:
+        return None
+    return ObservationRecorder(
+        path=args.evidence_jsonl,
+        experiment_id=args.experiment_id,
+        run_id=args.run_id,
+        fpga_lisp_commit=args.fpga_lisp_commit,
+        build_or_bitstream_ref=args.build_or_bitstream_ref,
+    )
+
+
+def main():
+    args = parse_args()
+    recorder = recorder_from_args(args)
 
     global CURRENT_SYMBOLS
     symbols_name = args.symbols or (os.path.splitext(os.path.basename(args.file))[0] if args.file else None)
@@ -160,7 +308,7 @@ def main():
             time.sleep(0.2)
             ser.reset_input_buffer()
             input("Press Enter once the board has halted... ")
-        repl(ser)
+        repl(ser, recorder=recorder)
 
 
 if __name__ == "__main__":

@@ -30,6 +30,9 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Run host-side evidence tests
+        run: python -m unittest tests/test_monitor_evidence.py
+
       - name: Assemble programs that testbenches load via $fread
         run: |
           set -euo pipefail
