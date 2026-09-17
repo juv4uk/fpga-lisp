@@ -61,6 +61,39 @@ class MonitorEvidenceTest(unittest.TestCase):
             rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
         self.assertEqual(rows, [first, second])
 
+    def test_register_read_emits_observation_from_real_monitor_path(self):
+        class FakeSerial:
+            def __init__(self, reply):
+                self.reply = bytearray(reply)
+                self.writes = []
+
+            def write(self, data):
+                self.writes.append(bytes(data))
+
+            def read(self, n):
+                out = bytes(self.reply[:n])
+                del self.reply[:n]
+                return out
+
+        class Recorder:
+            def __init__(self):
+                self.calls = []
+
+            def record(self, **kwargs):
+                self.calls.append(kwargs)
+
+        import struct
+
+        serial = FakeSerial(struct.pack("<I", 0x00000007))
+        recorder = Recorder()
+        MONITOR.cmd_reg(serial, 3, recorder=recorder)
+
+        self.assertEqual(serial.writes, [bytes([0x01, 3])])
+        self.assertEqual(len(recorder.calls), 1)
+        self.assertEqual(recorder.calls[0]["input_event"], "monitor:reg:3")
+        self.assertEqual(recorder.calls[0]["transition_or_action"], "read-register")
+        self.assertEqual(recorder.calls[0]["state_after_ref"], "inline:R3=0x00000007")
+
 
 if __name__ == "__main__":
     unittest.main()
