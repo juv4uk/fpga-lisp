@@ -126,6 +126,31 @@ class MonitorEvidenceTest(unittest.TestCase):
         self.assertEqual(len(recorder.calls), 1)
         self.assertEqual(recorder.calls[0]["state_after_ref"], "inline:R3=0x0000000B")
 
+    def test_observation_recorder_adds_run_provenance(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "observations.jsonl"
+            recorder = MONITOR.ObservationRecorder(
+                path=path,
+                experiment_id="E0",
+                run_id="run-42",
+                fpga_lisp_commit="deadbeef",
+                build_or_bitstream_ref="bitstream:e0.fs",
+                clock=lambda: "2026-09-18T00:00:42Z",
+            )
+            recorder.record(
+                input_event="monitor:reg:1",
+                transition_or_action="read-register",
+                state_after_ref="inline:R1=0x00000002",
+            )
+            row = json.loads(path.read_text(encoding="utf-8").strip())
+
+        self.assertEqual(row["experiment_id"], "E0")
+        self.assertEqual(row["run_id"], "run-42")
+        self.assertEqual(row["fpga_lisp_commit"], "deadbeef")
+        self.assertEqual(row["build_or_bitstream_ref"], "bitstream:e0.fs")
+        self.assertEqual(row["cycle_or_timestamp"], "2026-09-18T00:00:42Z")
+        self.assertEqual(row["state_before_ref"], "UNKNOWN")
+
 
 if __name__ == "__main__":
     unittest.main()
