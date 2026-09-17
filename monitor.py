@@ -2,6 +2,7 @@ import sys
 import time
 import struct
 import argparse
+import json
 import os
 
 import serial
@@ -20,6 +21,46 @@ TAG_NAMES = {
 # per monitor.py run, scoped to whichever single program was uploaded,
 # not a merge across every bootstrap demo.
 CURRENT_SYMBOLS = {}
+
+
+def make_observation_record(
+    *,
+    experiment_id,
+    run_id,
+    input_event,
+    transition_or_action,
+    state_after_ref,
+    fpga_lisp_commit,
+    build_or_bitstream_ref,
+    cycle_or_timestamp,
+    state_before_ref="UNKNOWN",
+    raw_artifact_refs=None,
+    notes=None,
+):
+    """Build one epistemically explicit, interpretation-free observation record."""
+    return {
+        "record_type": "observation",
+        "experiment_id": experiment_id,
+        "run_id": run_id,
+        "cycle_or_timestamp": cycle_or_timestamp,
+        "input_event": input_event,
+        "state_before_ref": state_before_ref,
+        "transition_or_action": transition_or_action,
+        "state_after_ref": state_after_ref,
+        "fpga_lisp_commit": fpga_lisp_commit,
+        "build_or_bitstream_ref": build_or_bitstream_ref,
+        "status": "OBSERVED",
+        "evidence_level": "OBSERVED",
+        "raw_artifact_refs": list(raw_artifact_refs or []),
+        "notes": notes,
+    }
+
+
+def append_observation(path, record):
+    """Append one JSON object as one JSONL row; never rewrite prior observations."""
+    with open(path, "a", encoding="utf-8") as f:
+        json.dump(record, f, ensure_ascii=False, sort_keys=True)
+        f.write("\n")
 
 
 def load_symbols(program_name):
