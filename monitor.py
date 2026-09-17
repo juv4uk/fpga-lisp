@@ -117,10 +117,16 @@ def read_exact(ser, n):
     return buf
 
 
-def cmd_reg(ser, idx):
+def cmd_reg(ser, idx, recorder=None):
     ser.write(bytes([0x01, idx]))
     word = struct.unpack("<I", read_exact(ser, 4))[0]
     print(f"R{idx} = {fmt_word(word)}")
+    if recorder is not None:
+        recorder.record(
+            input_event=f"monitor:reg:{idx}",
+            transition_or_action="read-register",
+            state_after_ref=f"inline:R{idx}=0x{word:08X}",
+        )
 
 
 def cmd_hp(ser):
