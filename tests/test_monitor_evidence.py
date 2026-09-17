@@ -151,6 +151,34 @@ class MonitorEvidenceTest(unittest.TestCase):
         self.assertEqual(row["cycle_or_timestamp"], "2026-09-18T00:00:42Z")
         self.assertEqual(row["state_before_ref"], "UNKNOWN")
 
+    def test_cli_builds_recorder_from_explicit_evidence_context(self):
+        args = MONITOR.parse_args(
+            [
+                "COM4",
+                "demo.bin",
+                "--evidence-jsonl",
+                "run.jsonl",
+                "--experiment-id",
+                "E0",
+                "--run-id",
+                "run-99",
+                "--fpga-lisp-commit",
+                "cafebabe",
+                "--build-or-bitstream-ref",
+                "bitstream:e0.fs",
+            ]
+        )
+        recorder = MONITOR.recorder_from_args(args)
+        self.assertEqual(str(recorder.path), "run.jsonl")
+        self.assertEqual(recorder.experiment_id, "E0")
+        self.assertEqual(recorder.run_id, "run-99")
+        self.assertEqual(recorder.fpga_lisp_commit, "cafebabe")
+        self.assertEqual(recorder.build_or_bitstream_ref, "bitstream:e0.fs")
+
+    def test_cli_without_evidence_path_keeps_monitor_non_invasive(self):
+        args = MONITOR.parse_args(["COM4"])
+        self.assertIsNone(MONITOR.recorder_from_args(args))
+
 
 if __name__ == "__main__":
     unittest.main()
