@@ -232,7 +232,7 @@ def repl(ser, recorder=None):
             print(f"No reply from board: {e}")
 
 
-def main():
+def build_arg_parser():
     parser = argparse.ArgumentParser(description="Lisp FPGA post-HALT debug monitor")
     parser.add_argument("port", help="COM port (e.g. COM3)")
     parser.add_argument("file", nargs="?", help="Optional .bin to upload before entering the monitor")
@@ -241,7 +241,38 @@ def main():
                          help="Program name for symbol-name display (matches an "
                               "entry in symbol_table.py, e.g. 'bootstrap_equal_demo'). "
                               "Defaults to file's basename when --file is given.")
-    args = parser.parse_args()
+    parser.add_argument("--evidence-jsonl",
+                        help="Append raw monitor observations to this JSONL file.")
+    parser.add_argument("--experiment-id", default="UNKNOWN",
+                        help="Experiment identifier stored with observations.")
+    parser.add_argument("--run-id", default="UNKNOWN",
+                        help="Run identifier stored with observations.")
+    parser.add_argument("--fpga-lisp-commit", default="UNKNOWN",
+                        help="Exact fpga-lisp commit for this run; UNKNOWN is preserved, never guessed.")
+    parser.add_argument("--build-or-bitstream-ref", default="UNKNOWN",
+                        help="Build/bitstream reference for this run; UNKNOWN is preserved, never guessed.")
+    return parser
+
+
+def parse_args(argv=None):
+    return build_arg_parser().parse_args(argv)
+
+
+def recorder_from_args(args):
+    if not args.evidence_jsonl:
+        return None
+    return ObservationRecorder(
+        path=args.evidence_jsonl,
+        experiment_id=args.experiment_id,
+        run_id=args.run_id,
+        fpga_lisp_commit=args.fpga_lisp_commit,
+        build_or_bitstream_ref=args.build_or_bitstream_ref,
+    )
+
+
+def main():
+    args = parse_args()
+    recorder = recorder_from_args(args)
 
     global CURRENT_SYMBOLS
     symbols_name = args.symbols or (os.path.splitext(os.path.basename(args.file))[0] if args.file else None)
@@ -259,7 +290,7 @@ def main():
             time.sleep(0.2)
             ser.reset_input_buffer()
             input("Press Enter once the board has halted... ")
-        repl(ser)
+        repl(ser, recorder=recorder)
 
 
 if __name__ == "__main__":
