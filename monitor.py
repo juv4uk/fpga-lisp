@@ -152,7 +152,7 @@ def cmd_err(ser):
         print("ERR: no error (halted normally via HALT)")
 
 
-def repl(ser):
+def repl(ser, recorder=None):
     print("Monitor ready. Commands: reg <n> | heap <addr> | hp | err | quit")
     while True:
         try:
@@ -165,7 +165,7 @@ def repl(ser):
         cmd = parts[0].lower()
         try:
             if cmd == "reg" and len(parts) == 2:
-                cmd_reg(ser, int(parts[1]))
+                cmd_reg(ser, int(parts[1]), recorder=recorder)
             elif cmd == "heap" and len(parts) == 2:
                 cmd_heap(ser, int(parts[1]))
             elif cmd == "hp":
