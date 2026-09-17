@@ -2,6 +2,7 @@ import sys
 import time
 import struct
 import argparse
+from datetime import datetime, timezone
 import json
 import os
 
@@ -61,6 +62,57 @@ def append_observation(path, record):
     with open(path, "a", encoding="utf-8") as f:
         json.dump(record, f, ensure_ascii=False, sort_keys=True)
         f.write("\n")
+
+
+def utc_timestamp():
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+class ObservationRecorder:
+    """Attach fixed run provenance to raw monitor observations."""
+
+    def __init__(
+        self,
+        *,
+        path,
+        experiment_id,
+        run_id,
+        fpga_lisp_commit,
+        build_or_bitstream_ref,
+        clock=utc_timestamp,
+    ):
+        self.path = path
+        self.experiment_id = experiment_id
+        self.run_id = run_id
+        self.fpga_lisp_commit = fpga_lisp_commit
+        self.build_or_bitstream_ref = build_or_bitstream_ref
+        self.clock = clock
+
+    def record(
+        self,
+        *,
+        input_event,
+        transition_or_action,
+        state_after_ref,
+        state_before_ref="UNKNOWN",
+        raw_artifact_refs=None,
+        notes=None,
+    ):
+        record = make_observation_record(
+            experiment_id=self.experiment_id,
+            run_id=self.run_id,
+            input_event=input_event,
+            transition_or_action=transition_or_action,
+            state_after_ref=state_after_ref,
+            state_before_ref=state_before_ref,
+            fpga_lisp_commit=self.fpga_lisp_commit,
+            build_or_bitstream_ref=self.build_or_bitstream_ref,
+            cycle_or_timestamp=self.clock(),
+            raw_artifact_refs=raw_artifact_refs,
+            notes=notes,
+        )
+        append_observation(self.path, record)
+        return record
 
 
 def load_symbols(program_name):
