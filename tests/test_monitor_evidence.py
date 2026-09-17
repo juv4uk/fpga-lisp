@@ -4,6 +4,7 @@ import sys
 import tempfile
 import types
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -93,6 +94,37 @@ class MonitorEvidenceTest(unittest.TestCase):
         self.assertEqual(recorder.calls[0]["input_event"], "monitor:reg:3")
         self.assertEqual(recorder.calls[0]["transition_or_action"], "read-register")
         self.assertEqual(recorder.calls[0]["state_after_ref"], "inline:R3=0x00000007")
+
+    def test_repl_forwards_recorder_to_register_read(self):
+        class FakeSerial:
+            def __init__(self, reply):
+                self.reply = bytearray(reply)
+                self.writes = []
+
+            def write(self, data):
+                self.writes.append(bytes(data))
+
+            def read(self, n):
+                out = bytes(self.reply[:n])
+                del self.reply[:n]
+                return out
+
+        class Recorder:
+            def __init__(self):
+                self.calls = []
+
+            def record(self, **kwargs):
+                self.calls.append(kwargs)
+
+        import struct
+
+        serial = FakeSerial(struct.pack("<I", 0x0000000B))
+        recorder = Recorder()
+        with patch("builtins.input", side_effect=["reg 3", "quit"]):
+            MONITOR.repl(serial, recorder=recorder)
+
+        self.assertEqual(len(recorder.calls), 1)
+        self.assertEqual(recorder.calls[0]["state_after_ref"], "inline:R3=0x0000000B")
 
 
 if __name__ == "__main__":
