@@ -260,6 +260,41 @@ class MonitorEvidenceTest(unittest.TestCase):
         self.assertEqual(recorder.calls[0]["input_event"], "monitor:err")
         self.assertEqual(recorder.calls[0]["state_after_ref"], "inline:ERR=0x00001011")
 
+    def test_repl_forwards_recorder_to_all_read_commands(self):
+        import struct
+
+        class FakeSerial:
+            def __init__(self, reply):
+                self.reply = bytearray(reply)
+                self.writes = []
+            def write(self, data):
+                self.writes.append(bytes(data))
+            def read(self, n):
+                out = bytes(self.reply[:n])
+                del self.reply[:n]
+                return out
+
+        class Recorder:
+            def __init__(self):
+                self.calls = []
+            def record(self, **kwargs):
+                self.calls.append(kwargs)
+
+        replies = (
+            struct.pack("<I", 12)
+            + struct.pack("<II", 0x00000002, 0x30000000)
+            + struct.pack("<I", 0x00000000)
+        )
+        serial = FakeSerial(replies)
+        recorder = Recorder()
+        with patch("builtins.input", side_effect=["hp", "heap 5", "err", "quit"]):
+            MONITOR.repl(serial, recorder=recorder)
+
+        self.assertEqual(
+            [call["input_event"] for call in recorder.calls],
+            ["monitor:hp", "monitor:heap:5", "monitor:err"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
