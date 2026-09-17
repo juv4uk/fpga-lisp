@@ -237,11 +237,11 @@ def repl(ser, recorder=None):
             if cmd == "reg" and len(parts) == 2:
                 cmd_reg(ser, int(parts[1]), recorder=recorder)
             elif cmd == "heap" and len(parts) == 2:
-                cmd_heap(ser, int(parts[1]))
+                cmd_heap(ser, int(parts[1]), recorder=recorder)
             elif cmd == "hp":
-                cmd_hp(ser)
+                cmd_hp(ser, recorder=recorder)
             elif cmd == "err":
-                cmd_err(ser)
+                cmd_err(ser, recorder=recorder)
             elif cmd in ("quit", "exit"):
                 break
             else:
