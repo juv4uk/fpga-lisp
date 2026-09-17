@@ -179,6 +179,87 @@ class MonitorEvidenceTest(unittest.TestCase):
         args = MONITOR.parse_args(["COM4"])
         self.assertIsNone(MONITOR.recorder_from_args(args))
 
+    def test_heap_pointer_read_emits_raw_observation(self):
+        import struct
+
+        class FakeSerial:
+            def __init__(self, reply):
+                self.reply = bytearray(reply)
+            def write(self, data):
+                self.write_bytes = bytes(data)
+            def read(self, n):
+                out = bytes(self.reply[:n])
+                del self.reply[:n]
+                return out
+
+        class Recorder:
+            def __init__(self):
+                self.calls = []
+            def record(self, **kwargs):
+                self.calls.append(kwargs)
+
+        serial = FakeSerial(struct.pack("<I", 12))
+        recorder = Recorder()
+        MONITOR.cmd_hp(serial, recorder=recorder)
+        self.assertEqual(serial.write_bytes, bytes([0x03]))
+        self.assertEqual(recorder.calls[0]["input_event"], "monitor:hp")
+        self.assertEqual(recorder.calls[0]["state_after_ref"], "inline:HP=12")
+
+    def test_heap_cell_read_emits_raw_observation(self):
+        import struct
+
+        class FakeSerial:
+            def __init__(self, reply):
+                self.reply = bytearray(reply)
+            def write(self, data):
+                self.write_bytes = bytes(data)
+            def read(self, n):
+                out = bytes(self.reply[:n])
+                del self.reply[:n]
+                return out
+
+        class Recorder:
+            def __init__(self):
+                self.calls = []
+            def record(self, **kwargs):
+                self.calls.append(kwargs)
+
+        serial = FakeSerial(struct.pack("<II", 0x00000002, 0x30000000))
+        recorder = Recorder()
+        MONITOR.cmd_heap(serial, 5, recorder=recorder)
+        self.assertEqual(serial.write_bytes, bytes([0x02, 5, 0]))
+        self.assertEqual(recorder.calls[0]["input_event"], "monitor:heap:5")
+        self.assertEqual(
+            recorder.calls[0]["state_after_ref"],
+            "inline:HEAP[5]=0x00000002,0x30000000",
+        )
+
+    def test_error_word_read_emits_raw_observation(self):
+        import struct
+
+        class FakeSerial:
+            def __init__(self, reply):
+                self.reply = bytearray(reply)
+            def write(self, data):
+                self.write_bytes = bytes(data)
+            def read(self, n):
+                out = bytes(self.reply[:n])
+                del self.reply[:n]
+                return out
+
+        class Recorder:
+            def __init__(self):
+                self.calls = []
+            def record(self, **kwargs):
+                self.calls.append(kwargs)
+
+        serial = FakeSerial(struct.pack("<I", 0x00001011))
+        recorder = Recorder()
+        MONITOR.cmd_err(serial, recorder=recorder)
+        self.assertEqual(serial.write_bytes, bytes([0x04]))
+        self.assertEqual(recorder.calls[0]["input_event"], "monitor:err")
+        self.assertEqual(recorder.calls[0]["state_after_ref"], "inline:ERR=0x00001011")
+
 
 if __name__ == "__main__":
     unittest.main()
