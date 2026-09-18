@@ -58,6 +58,33 @@ class GenesisManifestTest(unittest.TestCase):
             loaded = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(loaded, manifest)
 
+    def test_cli_emits_manifest_from_explicit_arguments(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "genesis.json"
+            GENESIS.main(
+                [
+                    "--output", str(path),
+                    "--timestamp", "2026-09-18T00:01:00Z",
+                    "--fpga-lisp-commit", "deadbeef",
+                    "--build-or-bitstream-ref", "bitstream:e0.fs",
+                    "--fpga-target", "GW5A-25A",
+                    "--toolchain", "Gowin EDA",
+                    "--program-ref", "bootstrap_nullp_demo.bin",
+                    "--enabled-mechanisms-ref", "isa-contract-v1",
+                    "--external-interface", "UART",
+                    "--absent-mechanism", "GC",
+                    "--seed-or-determinism", "deterministic reset",
+                ]
+            )
+            row = json.loads(path.read_text(encoding="utf-8"))
+
+        self.assertEqual(row["timestamp"], "2026-09-18T00:01:00Z")
+        self.assertEqual(row["fpga_lisp_commit"], "deadbeef")
+        self.assertEqual(row["build_or_bitstream_ref"], "bitstream:e0.fs")
+        self.assertEqual(row["external_interfaces"], ["UART"])
+        self.assertEqual(row["explicitly_absent_mechanisms"], ["GC"])
+        self.assertEqual(row["initial_register_state_ref"], "UNKNOWN")
+
 
 if __name__ == "__main__":
     unittest.main()
