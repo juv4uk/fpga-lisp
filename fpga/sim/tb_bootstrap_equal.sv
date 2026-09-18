@@ -67,13 +67,12 @@ module tb_bootstrap_equal;
         r9 = u_mac.u_regs.regs[9];
         $display("R9 (equal? '(p . q) '(p . q)) = TAG:%0d VAL:%0d", r9.tag, r9.value);
 
-        // TRUE is represented the same way every other bootstrap demo's
-        // `EQ` result is: not TAG_NIL. A structural mismatch would halt
-        // with r9 == NIL instead.
-        if (r9.tag != TAG_NIL) begin
-            $display("M32 PASSED: equal? via letrec self-recursion works, (equal? '(p . q) '(p . q)) => t");
+        // Exact witness: canonical truth is Symbol("t") = TAG_SYMBOL + 79.
+        // Any other non-NIL value is a value leak, not a PASS.
+        if (r9.tag == TAG_SYMBOL && r9.value == 28'd79) begin
+            $display("M32 PASSED: equal? returned canonical t = SYMBOL(79)");
         end else begin
-            $display("M32 FAILED: expected TRUE (non-NIL), got NIL");
+            $display("M32 FAILED: expected canonical t = TAG_SYMBOL VAL:79, got TAG:%0d VAL:%0d", r9.tag, r9.value);
         end
 
         $finish;
