@@ -62,17 +62,11 @@
   (lambda (name flat)
     (cond
       ((atom flat) (structural-kind empty-list) (quote ()))
-      ((atom flat) (structural-kind atom) (quote ()))
       ((atom flat) (structural-kind pair)
        (cond
-         ((atom (cdr flat)) (structural-kind empty-list) (quote ()))
-         ((atom (cdr flat)) (structural-kind atom) (quote ()))
-         ((atom (cdr flat)) (structural-kind pair)
-          (cond
-            ((eq (car (cdr flat)) name) (identity-relation same)
-             (car (cdr (cdr flat))))
-            ((eq (car (cdr flat)) name) (identity-relation distinct)
-             (find-const name (cdr (cdr (cdr flat)))))))))))))
+         ((eq (second flat) name) (identity-relation same) (third flat))
+         ((eq (second flat) name) (identity-relation distinct)
+          (find-const name (cdr (cdr (cdr flat))))))))))
 
 ; ----- current upstream registry shape -----
 ;
