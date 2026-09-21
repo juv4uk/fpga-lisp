@@ -67,3 +67,28 @@ jobs:
           if grep -Fq "SID8 ADMISSION FAILED" <<<"$out"; then
             exit 1
           fi
+
+      - name: Trace admitted ADD through existing primitive evaluator path
+        working-directory: fpga-lisp
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 assembler.py bootstrap_add_demo.asm
+          iverilog -g2012 -I fpga/rtl \
+            -o /tmp/tb_bootstrap_add.vvp \
+            fpga/rtl/lisp_word.sv \
+            fpga/rtl/heap.sv \
+            fpga/rtl/lisp_data_unit.sv \
+            fpga/rtl/registers.sv \
+            fpga/rtl/instruction_decoder.sv \
+            fpga/rtl/control.sv \
+            fpga/rtl/upc8_unit.sv \
+            fpga/rtl/sandhi_engine.sv \
+            fpga/rtl/uart.sv \
+            fpga/rtl/bootloader.sv \
+            fpga/rtl/lisp_machine.sv \
+            fpga/sim/tb_bootstrap_add.sv
+          out="$(vvp /tmp/tb_bootstrap_add.vvp)"
+          echo "$out"
+          grep -F "M27 PASSED: PRIM_ADD dispatch through eval works" <<<"$out"
+          grep -F "R9 (plus 3 4) = TAG:0 VAL:7" <<<"$out"
