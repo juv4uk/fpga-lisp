@@ -1,55 +1,51 @@
 ; Local FPGA execution spec for Canon-bridged primitives.
 ;
-; This file is fpga-lisp's own authority over HOW a Canon semantic
-; identity (my-lisp's lib/surface/semantic-registry.wsm) is executed
-; on this machine -- it does not define WHAT the identity means (that
-; stays my-lisp's authority) and it does not change any existing
-; opcode, TAG_PRIMITIVE numbering, or PRIM_* value in
-; fpga/asm/constants.inc. It is the small, hand-maintained bridge
-; fpga/canon/gen-primitive-table.my needs instead of the identity
-; being re-typed by hand in eval_core.inc, old test .asm files, or any
-; future consumer.
+; This file is fpga-lisp's authority over HOW an upstream Canon SID is
+; executed on this machine. It never defines WHAT that SID means.
 ;
-; Format: (canon-id expected-en-spelling local-primitive-const local-primitive-id opcode)
-;   canon-id                 -- semantic-registry.wsm's numeric id
-;   expected-en-spelling     -- sanity cross-check only: if the
-;                               registry's "en" surface for this id is
-;                               present, it must equal this word, or
-;                               generation fails closed. If the
-;                               registry's en surface is "missing" for
-;                               this id (e.g. 104/add has no en entry
-;                               yet), the check is skipped, not failed.
-;   local-primitive-const    -- the exact .define name in
-;                               fpga/asm/constants.inc (e.g. PRIM_CAR).
-;                               Given literally, not derived by case
-;                               conversion: my-lisp has no
-;                               uppercase/case-folding primitive by
-;                               design (see
-;                               docs/shared-oracle-parity-2-symbol-identity-gate.md),
-;                               and this generator does not need one.
-;   local-primitive-id       -- must equal that constant's actual
-;                               value in constants.inc (cross-checked
-;                               by the generator, not just asserted
-;                               here).
-;   opcode                   -- the hardware mechanism name,
-;                               informational for now (car/cdr/cons/
-;                               atom/eq/add are dispatched through
-;                               try_apply's primitive path in
-;                               eval_core.inc, not literal same-named
-;                               top-level opcodes -- "OP_*" here names
-;                               the mechanism, not a promise that a
-;                               same-named ISA opcode exists).
+; Canon identity comes from my-lisp's lib/surface/semantic-registry.lisp
+; as an exact eight-bit spelling. The leading reader descriptor keeps this
+; file readable by pre-#1098 my-lisp readers too; it does not turn SID into
+; a number.
+(binary 8)
+
+; Format:
+;   (canon-sid expected-surface local-primitive-const local-primitive-id opcode)
 ;
-; Adding an entry here does NOT create hardware. It documents which
-; already-existing local primitive a Canon identity maps to. Removing
-; or renumbering an entry needs the same care as touching constants.inc
-; itself -- see that file's own header.
+; canon-sid
+;   Exact upstream language identity. It is the eight bits themselves,
+;   not a decimal function number.
+;
+; expected-surface
+;   Cross-check hint only. The current upstream registry must expose this
+;   spelling for the same SID in at least one presentation namespace.
+;   Surface spelling is never identity.
+;
+; local-primitive-const / local-primitive-id
+;   fpga-lisp's local hardware execution ABI from fpga/asm/constants.inc.
+;   These values answer HOW the FPGA executes the SID and are deliberately
+;   separate from the Canon identity.
+;
+; opcode
+;   Informational hardware mechanism name. It is not the Canon identity.
+;
+; Important namespace separation:
+;   - Canon function SID: exactly 8 bits.
+;   - PRIM_* local primitive IDs: FPGA-local mechanism IDs.
+;   - LOADSYM program-local symbol IDs (currently allocated from 900):
+;     separate namespace, may require 10+ bits.
+;   - UPC8 value[9:0] transform result: data, not SID.
+;
+; The old row "(104 add ...)" was not merely a decimal rendering problem:
+; in current my-lisp Canon, add/+ is 00001100, while 01101000 names a
+; different identity (elapsed-ns). Exact-bit identity makes that drift
+; visible and fail-closed instead of silently preserving a stale number.
 
 (fpga-primitive-execution-spec
-  (5 car PRIM_CAR 0 OP_CAR)
-  (6 cdr PRIM_CDR 1 OP_CDR)
-  (4 cons PRIM_CONS 2 OP_CONS)
-  (2 atom PRIM_ATOM 3 OP_ATOM)
-  (3 eq PRIM_EQ 4 OP_EQ)
-  (104 add PRIM_ADD 5 OP_ADD)
+  (00000101 car  PRIM_CAR  0 OP_CAR)
+  (00000110 cdr  PRIM_CDR  1 OP_CDR)
+  (00000100 cons PRIM_CONS 2 OP_CONS)
+  (00000010 atom PRIM_ATOM 3 OP_ATOM)
+  (00000011 eq   PRIM_EQ   4 OP_EQ)
+  (00001100 +    PRIM_ADD  5 OP_ADD)
 )
