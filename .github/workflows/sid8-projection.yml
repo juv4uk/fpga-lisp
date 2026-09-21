@@ -1,0 +1,45 @@
+name: SID8 Canon projection
+
+on:
+  pull_request:
+    paths:
+      - "fpga/canon/**"
+      - ".github/workflows/sid8-projection.yml"
+  workflow_dispatch: {}
+
+env:
+  # Exact upstream source used as the semantic/identity authority for this witness.
+  # Update deliberately when the my-lisp Sid8 contract advances.
+  MY_LISP_SID8_COMMIT: 81d0b0ebe4bbc91f31765893ed3cc5246fa2a7db
+
+jobs:
+  projection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out fpga-lisp
+        uses: actions/checkout@v4
+        with:
+          path: fpga-lisp
+
+      - name: Check out pinned my-lisp authority
+        uses: actions/checkout@v4
+        with:
+          repository: juv4uk/my-lisp
+          ref: ${{ env.MY_LISP_SID8_COMMIT }}
+          path: my-lisp
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build pinned my-lisp CLI
+        working-directory: my-lisp
+        run: cargo build -p my-lisp-cli --bin my-lisp
+
+      - name: Execute FPGA Sid8 projection against pinned Canon
+        working-directory: fpga-lisp
+        shell: bash
+        run: |
+          set -euo pipefail
+          ../my-lisp/target/debug/my-lisp fpga/canon/gen-primitive-table.lisp             | tee /tmp/fpga-sid8-projection.txt
+          grep -F "ALL FPGA SID8 PROJECTION CHECKS PASSED" /tmp/fpga-sid8-projection.txt
