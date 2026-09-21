@@ -1,0 +1,61 @@
+name: SID8 hardware admission
+
+on:
+  pull_request:
+    paths:
+      - "fpga/canon/**"
+      - "fpga/sim/tb_sid8_admission.sv"
+      - ".github/workflows/sid8-hardware-admission.yml"
+  workflow_dispatch: {}
+
+env:
+  # Same reviewed upstream authority pin as the parent #21 projection witness.
+  MY_LISP_SID8_COMMIT: 81d0b0ebe4bbc91f31765893ed3cc5246fa2a7db
+
+jobs:
+  hardware-admission:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out fpga-lisp
+        uses: actions/checkout@v4
+        with:
+          path: fpga-lisp
+
+      - name: Check out pinned my-lisp authority
+        uses: actions/checkout@v4
+        with:
+          repository: juv4uk/my-lisp
+          ref: ${{ env.MY_LISP_SID8_COMMIT }}
+          path: my-lisp
+
+      - name: Install toolchains
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build pinned my-lisp CLI
+        working-directory: my-lisp
+        run: cargo build -p my-lisp-cli --bin my-lisp
+
+      - name: Regenerate exact 8-bit hardware admission projection
+        working-directory: fpga-lisp
+        shell: bash
+        run: |
+          set -euo pipefail
+          ../my-lisp/target/debug/my-lisp fpga/canon/gen-sid8-hardware-admission.lisp             > /tmp/sid8_to_primitive.sv
+          diff -u fpga/canon/generated/sid8_to_primitive.sv /tmp/sid8_to_primitive.sv
+
+      - name: Simulate Sid8 admission boundary
+        working-directory: fpga-lisp
+        shell: bash
+        run: |
+          set -euo pipefail
+          iverilog -g2012 -o /tmp/tb_sid8_admission.vvp             fpga/canon/generated/sid8_to_primitive.sv             fpga/sim/tb_sid8_admission.sv
+          out="$(vvp /tmp/tb_sid8_admission.vvp)"
+          echo "$out"
+          grep -F "SID8 ADMISSION PASSED" <<<"$out"
+          if grep -Fq "SID8 ADMISSION FAILED" <<<"$out"; then
+            exit 1
+          fi
