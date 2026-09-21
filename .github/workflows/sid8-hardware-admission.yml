@@ -33,6 +33,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y iverilog
+
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Build pinned my-lisp CLI
@@ -44,15 +45,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ../my-lisp/target/debug/my-lisp fpga/canon/gen-sid8-hardware-admission.lisp             > /tmp/sid8_to_primitive.sv
-          diff -u fpga/canon/generated/sid8_to_primitive.sv /tmp/sid8_to_primitive.sv
+          ../my-lisp/target/debug/my-lisp \
+            fpga/canon/gen-sid8-hardware-admission.lisp \
+            /tmp/sid8_to_primitive.sv
+          diff -u \
+            fpga/canon/generated/sid8_to_primitive.sv \
+            /tmp/sid8_to_primitive.sv
 
       - name: Simulate Sid8 admission boundary
         working-directory: fpga-lisp
         shell: bash
         run: |
           set -euo pipefail
-          iverilog -g2012 -o /tmp/tb_sid8_admission.vvp             fpga/canon/generated/sid8_to_primitive.sv             fpga/sim/tb_sid8_admission.sv
+          iverilog -g2012 \
+            -o /tmp/tb_sid8_admission.vvp \
+            fpga/canon/generated/sid8_to_primitive.sv \
+            fpga/sim/tb_sid8_admission.sv
           out="$(vvp /tmp/tb_sid8_admission.vvp)"
           echo "$out"
           grep -F "SID8 ADMISSION PASSED" <<<"$out"
