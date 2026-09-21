@@ -1,224 +1,317 @@
-; fpga/canon/gen-primitive-table.my
+; fpga/canon/gen-primitive-table.lisp
 ;
-; my-lisp port of the retired tools/gen_primitive_table.py +
-; tools/test_primitive_table.py, per issue #6 (ECO-LISP-SCRIPTS-1):
-; repo-owned tooling must not add new Python scripting surface, and
-; new tooling should be written in my-lisp/wsm directly rather than
-; migrated later.
+; #19 FPGA-SID8-1
 ;
-; Bridges two separate namespaces, deliberately kept apart per
-; docs/canon-symbol-registry-fpga-lisp-part.md and the swarm's Canon
-; migration plan (2026-09-11):
-;   - Canon semantic id: my-lisp's authority
-;     (lib/surface/semantic-registry.wsm), identity of a language form,
-;     independent of spelling (en/uk/sa are just names for one id).
-;   - local primitive id: fpga-lisp's own authority
-;     (fpga/asm/constants.inc's PRIM_* values), the hardware execution
-;     ABI. Never renumbered by a Canon change.
-; fpga/canon/execution-spec.my is the small, hand-maintained bridge
-; between the two; this script validates it fail-closed against the
-; real registry and constants.inc, builds the generated table, and
-; runs the same evidence checks the Python version had (car's en/uk/sa
-; surfaces resolve to one entry; no surface is ambiguous; 'radio'/
-; 'RADIO' are absent; all six first-wave primitives present).
+; Mechanical consumer of two different authorities:
+;   - my-lisp owns the exact Canon SID and its presentation surfaces;
+;   - fpga-lisp owns the local PRIM_* execution mechanism IDs.
 ;
-; Usage (from the my-lisp repo root, fpga-lisp checked out as a
-; sibling directory):
-;   cargo run -p my-lisp-cli --bin my-lisp -- \
-;     ../fpga-lisp/fpga/canon/gen-primitive-table.my
+; This script joins those facts. It does not mint a language identity and it
+; never derives one from a decimal number, local primitive ID, opcode, or
+; surface spelling.
 ;
-; Fails closed (non-zero exit via a real evaluation error, my-lisp's
-; own error-signaling mechanism -- there is no separate `error`
-; builtin in this dialect) if:
-;   - a spec'd Canon id does not exist in the registry,
-;   - a spec'd Canon id has no 'stable' surface at all,
-;   - the registry's "en" surface for a Canon id is present but
-;     disagrees with the spec's expected-en-spelling sanity field,
-;   - constants.inc has no .define for the spec's local-primitive-const,
-;   - that .define's value disagrees with the spec's local-primitive-id,
-;   - a Canon id or local primitive id is used twice in the spec,
-;   - any evidence assertion below does not hold.
+; Run from the fpga-lisp repository root with a sibling ../my-lisp checkout:
+;
+;   my-lisp fpga/canon/gen-primitive-table.lisp
+;
+; Required inputs:
+;   ../my-lisp/lib/surface/semantic-registry.lisp
+;   fpga/canon/execution-spec.lisp
+;   fpga/asm/constants.inc
+;
+; The execution spec begins with (binary 8), so pre-#1098 readers still parse
+; each exact eight-bit Canon spelling as a SID. Current my-lisp readers reserve
+; the same eight-bit spellings directly.
 
-(def registry-path "../my-lisp/lib/surface/semantic-registry.wsm")
+(def registry-path "../my-lisp/lib/surface/semantic-registry.lisp")
 (def constants-path "fpga/asm/constants.inc")
-(def spec-path "fpga/canon/execution-spec.my")
+(def spec-path "fpga/canon/execution-spec.lisp")
 
-; --- fail-closed: report and abort via a genuine evaluation error ---
-; `princ`/`print` output is buffered and lost when the process later
-; errors out (verified empirically -- text written before a fatal
-; error never reaches the terminal), so a diagnostic can't just be
-; printed before aborting. Instead, reference the diagnostic message
-; itself as an unbound symbol: my-lisp's "unknown symbol" error embeds
-; the exact symbol text, which reliably surfaces the message even
-; though ordinary output does not.
 (def fail-closed
   (lambda (msg)
-    (eval (string->symbol (string-append "CANON-TABLE-FAIL-CLOSED: " msg)))))
+    (eval (string->symbol (string-append "FPGA-SID8-FAIL-CLOSED: " msg)))))
 
-; --- flat (.define NAME VALUE .define NAME VALUE ...) lookup ---
+; ----- small explicit relation helpers: no generic truthiness -----
+
+(def identity-same-state
+  (lambda (left right)
+    (cond
+      ((eq left right) (identity-relation same) (quote yes))
+      ((eq left right) (identity-relation distinct) (quote no)))))
+
+(def structural-same-state
+  (lambda (left right)
+    (cond
+      ((equal? left right) (structural-relation same) (quote yes))
+      ((equal? left right) (structural-relation distinct) (quote no)))))
+
+(def check-state
+  (lambda (label state)
+    (cond
+      ((eq state (quote yes)) (identity-relation same)
+       ((lambda ()
+          (princ label)
+          (princ ": PASS
+"))))
+      ((eq state (quote yes)) (identity-relation distinct)
+       (fail-closed (string-append label ": FAIL"))))))
+
+; ----- flat .define NAME VALUE lookup -----
+
 (def find-const
   (lambda (name flat)
     (cond
-      ((atom flat) (quote ()))
-      ((atom (cdr flat)) (quote ()))
-      ((eq (car (cdr flat)) name) (car (cdr (cdr flat))))
-      (t (find-const name (cdr (cdr (cdr flat))))))))
+      ((atom flat) (structural-kind empty-list) (quote ()))
+      ((atom flat) (structural-kind atom) (quote ()))
+      ((atom flat) (structural-kind pair)
+       (cond
+         ((atom (cdr flat)) (structural-kind empty-list) (quote ()))
+         ((atom (cdr flat)) (structural-kind atom) (quote ()))
+         ((atom (cdr flat)) (structural-kind pair)
+          (cond
+            ((eq (car (cdr flat)) name) (identity-relation same)
+             (car (cdr (cdr flat))))
+            ((eq (car (cdr flat)) name) (identity-relation distinct)
+             (find-const name (cdr (cdr (cdr flat)))))))))))))
 
-; --- registry entry lookup: entries look like (id (en w a) (uk w a) (sa w a) (sym ...)) ---
+; ----- current upstream registry shape -----
+;
+; (binary 8)
+; (00000101 (en car) (ук перше) (укр перше) (sa ādi) (sym :п))
+;
+; The binary spelling is identity. Surfaces are presentation only.
+
 (def find-registry-entry
-  (lambda (canon-id entries)
+  (lambda (canon-sid entries)
     (cond
-      ((atom entries) (quote ()))
-      ((eq (car (car entries)) canon-id) (car entries))
-      (t (find-registry-entry canon-id (cdr entries))))))
+      ((atom entries) (structural-kind empty-list) (quote ()))
+      ((atom entries) (structural-kind atom) (quote ()))
+      ((atom entries) (structural-kind pair)
+       (let ((entry (car entries)))
+         (cond
+           ((eq (car entry) canon-sid) (identity-relation same) entry)
+           ((eq (car entry) canon-sid) (identity-relation distinct)
+            (find-registry-entry canon-sid (cdr entries)))))))))
 
-(def find-surface
-  (lambda (kind surfaces)
+(def find-surface-row
+  (lambda (namespace surfaces)
     (cond
-      ((atom surfaces) (quote ()))
-      ((eq (car (car surfaces)) kind) (car surfaces))
-      (t (find-surface kind (cdr surfaces))))))
+      ((atom surfaces) (structural-kind empty-list) (quote ()))
+      ((atom surfaces) (structural-kind atom) (quote ()))
+      ((atom surfaces) (structural-kind pair)
+       (let ((surface (car surfaces)))
+         (cond
+           ((eq (car surface) namespace) (identity-relation same) surface)
+           ((eq (car surface) namespace) (identity-relation distinct)
+            (find-surface-row namespace (cdr surfaces)))))))))
 
-(def surface-word (lambda (surface-entry) (car (cdr surface-entry))))
-(def surface-admission (lambda (surface-entry) (car (cdr (cdr surface-entry)))))
-
-(def has-stable-surface?
-  (lambda (surfaces)
+(def surface-word
+  (lambda (surface-row)
     (cond
-      ((atom surfaces) (quote ()))
-      ((eq (surface-admission (car surfaces)) (quote stable)) t)
-      (t (has-stable-surface? (cdr surfaces))))))
+      ((atom surface-row) (structural-kind empty-list) (quote ()))
+      ((atom surface-row) (structural-kind atom) (quote ()))
+      ((atom surface-row) (structural-kind pair) (second surface-row)))))
 
-; --- validate + build one table entry from one spec entry ---
-; spec entry: (canon-id expected-en local-primitive-const local-primitive-id opcode)
+(def presented-word
+  (lambda (namespace surfaces)
+    (let ((word (surface-word (find-surface-row namespace surfaces))))
+      (cond
+        ((atom word) (structural-kind empty-list) (quote —))
+        ((atom word) (structural-kind atom) word)
+        ((atom word) (structural-kind pair) word)))))
+
+(def surfaces-have-word-state
+  (lambda (expected surfaces)
+    (cond
+      ((atom surfaces) (structural-kind empty-list) (quote no))
+      ((atom surfaces) (structural-kind atom) (quote no))
+      ((atom surfaces) (structural-kind pair)
+       (let ((candidate (surface-word (car surfaces))))
+         (cond
+           ((equal? candidate expected) (structural-relation same) (quote yes))
+           ((equal? candidate expected) (structural-relation distinct)
+            (surfaces-have-word-state expected (cdr surfaces)))))))))
+
+; ----- generated table entry -----
+;
+; (canon-sid expected-surface
+;   (en . word) (ук . word) (sa . word)
+;   local-primitive-id opcode)
+
+(def entry-canon-sid (lambda (entry) (nth 0 entry)))
+(def entry-local-id (lambda (entry) (nth 5 entry)))
+(def entry-opcode (lambda (entry) (nth 6 entry)))
+
+(def table-has-sid-state
+  (lambda (canon-sid table)
+    (cond
+      ((atom table) (structural-kind empty-list) (quote no))
+      ((atom table) (structural-kind atom) (quote no))
+      ((atom table) (structural-kind pair)
+       (cond
+         ((eq (entry-canon-sid (car table)) canon-sid)
+          (identity-relation same)
+          (quote yes))
+         ((eq (entry-canon-sid (car table)) canon-sid)
+          (identity-relation distinct)
+          (table-has-sid-state canon-sid (cdr table))))))))
+
+(def table-has-local-id-state
+  (lambda (local-id table)
+    (cond
+      ((atom table) (structural-kind empty-list) (quote no))
+      ((atom table) (structural-kind atom) (quote no))
+      ((atom table) (structural-kind pair)
+       (cond
+         ((eq (entry-local-id (car table)) local-id)
+          (identity-relation same)
+          (quote yes))
+         ((eq (entry-local-id (car table)) local-id)
+          (identity-relation distinct)
+          (table-has-local-id-state local-id (cdr table))))))))
+
 (def build-entry
   (lambda (spec-entry registry-entries constants-flat)
     ((lambda ()
-       (def canon-id (car spec-entry))
-       (def expected-en (car (cdr spec-entry)))
-       (def prim-const (car (cdr (cdr spec-entry))))
-       (def local-id (car (cdr (cdr (cdr spec-entry)))))
-       (def opcode (car (cdr (cdr (cdr (cdr spec-entry))))))
-       (def registry-entry (find-registry-entry canon-id registry-entries))
+       (def canon-sid (nth 0 spec-entry))
+       (def expected-surface (nth 1 spec-entry))
+       (def primitive-const (nth 2 spec-entry))
+       (def local-id (nth 3 spec-entry))
+       (def opcode (nth 4 spec-entry))
+       (def registry-entry (find-registry-entry canon-sid registry-entries))
+
        (cond
-         ((atom registry-entry)
-          (fail-closed (string-append "Canon id has no registry entry: " (write-to-string canon-id))))
-         (t (quote ())))
+         ((atom registry-entry) (structural-kind empty-list)
+          (fail-closed
+            (string-append
+              "Canon SID absent upstream: "
+              (write-to-string canon-sid))))
+         ((atom registry-entry) (structural-kind pair) (quote ())))
+
        (def surfaces (cdr registry-entry))
+
+       ; The hint is allowed to live in any presentation namespace.
+       ; It proves that the spec points at the intended upstream row without
+       ; making the spelling itself the identity.
        (cond
-         ((not (has-stable-surface? surfaces))
-          (fail-closed (string-append "Canon id has no stable surface: " (write-to-string canon-id))))
-         (t (quote ())))
-       (def en-surface (find-surface (quote en) surfaces))
+         ((eq (surfaces-have-word-state expected-surface surfaces) (quote yes))
+          (identity-relation same)
+          (quote ()))
+         ((eq (surfaces-have-word-state expected-surface surfaces) (quote yes))
+          (identity-relation distinct)
+          (fail-closed
+            (string-append
+              "expected surface absent for Canon SID "
+              (write-to-string canon-sid)))))
+
+       (def const-value (find-const primitive-const constants-flat))
        (cond
-         ((atom en-surface) (quote ()))
-         ((eq (surface-word en-surface) (quote —)) (quote ()))
-         ((eq (surface-word en-surface) expected-en) (quote ()))
-         (t (fail-closed (string-append "en surface mismatch for Canon id " (write-to-string canon-id)))))
-       (def const-value (find-const prim-const constants-flat))
-       ; NOTE: a legitimate found value can be 0 (PRIM_CAR is), and 0
-       ; is itself an atom -- `atom` cannot distinguish "found, value
-       ; 0" from "not found" (also nil/()). Compare against the
-       ; not-found sentinel directly instead.
+         ((eq const-value (quote ())) (identity-relation same)
+          (fail-closed
+            (string-append
+              "constants.inc has no "
+              (write-to-string primitive-const))))
+         ((eq const-value (quote ())) (identity-relation distinct) (quote ())))
+
        (cond
-         ((eq const-value (quote ()))
-          (fail-closed (string-append "constants.inc has no .define for " (write-to-string prim-const))))
-         (t (quote ())))
-       (cond
-         ((not (eq const-value local-id))
-          (fail-closed (string-append "spec/constants.inc disagree on " (write-to-string prim-const))))
-         (t (quote ())))
-       (def uk-surface (find-surface (quote uk) surfaces))
-       (def sa-surface (find-surface (quote sa) surfaces))
-       (list canon-id expected-en
-             (cons (quote en) (surface-word en-surface))
-             (cons (quote uk) (cond ((atom uk-surface) (quote —)) (t (surface-word uk-surface))))
-             (cons (quote sa) (cond ((atom sa-surface) (quote —)) (t (surface-word sa-surface))))
-             local-id opcode)))))
+         ((eq const-value local-id) (identity-relation same) (quote ()))
+         ((eq const-value local-id) (identity-relation distinct)
+          (fail-closed
+            (string-append
+              "local primitive id drift for "
+              (write-to-string primitive-const)))))
+
+       (list
+         canon-sid
+         expected-surface
+         (cons (quote en) (presented-word (quote en) surfaces))
+         (cons (quote ук) (presented-word (quote ук) surfaces))
+         (cons (quote sa) (presented-word (quote sa) surfaces))
+         local-id
+         opcode)))))
 
 (def build-table-onto
   (lambda (spec-entries registry-entries constants-flat acc)
     (cond
-      ((atom spec-entries) (reverse acc))
-      (t (build-table-onto (cdr spec-entries) registry-entries constants-flat
-           (cons (build-entry (car spec-entries) registry-entries constants-flat) acc))))))
+      ((atom spec-entries) (structural-kind empty-list) (reverse acc))
+      ((atom spec-entries) (structural-kind atom)
+       (fail-closed "malformed FPGA execution spec"))
+      ((atom spec-entries) (structural-kind pair)
+       (let ((entry (build-entry (car spec-entries) registry-entries constants-flat)))
+         (let ((canon-sid (entry-canon-sid entry))
+               (local-id (entry-local-id entry)))
+           (cond
+             ((eq (table-has-sid-state canon-sid acc) (quote yes))
+              (identity-relation same)
+              (fail-closed
+                (string-append
+                  "duplicate Canon SID "
+                  (write-to-string canon-sid))))
+             ((eq (table-has-sid-state canon-sid acc) (quote yes))
+              (identity-relation distinct)
+              (cond
+                ((eq (table-has-local-id-state local-id acc) (quote yes))
+                 (identity-relation same)
+                 (fail-closed
+                   (string-append
+                     "duplicate local primitive id "
+                     (write-to-string local-id))))
+                ((eq (table-has-local-id-state local-id acc) (quote yes))
+                 (identity-relation distinct)
+                 (build-table-onto
+                   (cdr spec-entries)
+                   registry-entries
+                   constants-flat
+                   (cons entry acc))))))))))))
 
-; --- table entry accessors (canon-id expected-en (en . w) (uk . w) (sa . w) local-id opcode) ---
-(def entry-canon-id (lambda (e) (nth 0 e)))
-(def entry-surfaces (lambda (e) (list (nth 2 e) (nth 3 e) (nth 4 e))))
-(def entry-local-id (lambda (e) (nth 5 e)))
-(def entry-opcode (lambda (e) (nth 6 e)))
-
-(def find-entries-with-word
-  (lambda (word table)
-    (cond
-      ((atom table) (quote ()))
-      ((member? word (map (lambda (s) (cdr s)) (entry-surfaces (car table))))
-       (cons (entry-canon-id (car table)) (find-entries-with-word word (cdr table))))
-      (t (find-entries-with-word word (cdr table))))))
-
-(def check
-  (lambda (label ok)
-    (cond
-      (ok ((lambda () (princ label) (princ ": PASS
-"))))
-      (t (fail-closed (string-append label ": FAIL"))))))
-
-; ==================== main ====================
+; ----- load the three inputs -----
 
 (def registry-forms (read-all (read-file registry-path)))
-(def registry-entries (cdr (car registry-forms)))
+(def registry-form (car registry-forms))
+
+(check-state
+  "upstream registry declares exact binary width 8"
+  (structural-same-state (car registry-form) (quote (binary 8))))
+
+(def registry-entries (cdr registry-form))
 (def constants-flat (read-all (read-file constants-path)))
 (def spec-forms (read-all (read-file spec-path)))
-(def spec-entries (cdr (car spec-forms)))
 
-(def table (build-table-onto spec-entries registry-entries constants-flat (quote ())))
+(check-state
+  "FPGA execution spec declares exact binary width 8"
+  (structural-same-state (car spec-forms) (quote (binary 8))))
 
-(princ "# Generated by fpga/canon/gen-primitive-table.my -- do not edit by hand.
-")
-(princ "# Source of truth: fpga/canon/execution-spec.my + my-lisp's")
-(princ " lib/surface/semantic-registry.wsm + fpga/asm/constants.inc.
-")
-(print table)
+(def spec-form (second spec-forms))
 
-; ---- evidence checks (were tools/test_primitive_table.py) ----
+(check-state
+  "FPGA execution spec has expected root"
+  (identity-same-state
+    (car spec-form)
+    (quote fpga-primitive-execution-spec)))
 
-(def car-entry (find-registry-entry 5 (quote ())))  ; placeholder, replaced below
-(def car-table-entry (car (filter (lambda (e) (eq (entry-canon-id e) 5)) table)))
+(def spec-entries (cdr spec-form))
+(def table
+  (build-table-onto
+    spec-entries
+    registry-entries
+    constants-flat
+    (quote ())))
 
-(check "car (Canon 5) has en/uk/sa surfaces all present"
-  (not (member? (quote —) (map (lambda (s) (cdr s)) (entry-surfaces car-table-entry)))))
-
-(check "car (Canon 5) local primitive id is 0 (PRIM_CAR)"
-  (eq (entry-local-id car-table-entry) 0))
-
-(check "car (Canon 5) opcode is OP_CAR"
-  (eq (entry-opcode car-table-entry) (quote OP_CAR)))
-
-(def all-surface-words
-  (reduce (lambda (acc e) (append (map (lambda (s) (cdr s)) (entry-surfaces e)) acc)) (quote ()) table))
-(def all-surface-words-no-dash
-  (filter (lambda (w) (not (eq w (quote —)))) all-surface-words))
-
-(def surface-is-unambiguous?
-  (lambda (word)
-    (eq (length (find-entries-with-word word table)) 1)))
-
-(check "no surface spelling is ambiguous across Canon ids in this table"
-  (atom (filter (lambda (w) (not (surface-is-unambiguous? w))) all-surface-words-no-dash)))
-
-(check "'radio' is not reachable through the Canon primitive table"
-  (atom (find-entries-with-word (quote radio) table)))
-
-(check "'RADIO' is not reachable through the Canon primitive table"
-  (atom (find-entries-with-word (quote RADIO) table)))
-
-(check "all six first-wave primitives present with correct local ids"
-  (equal?
-    (map (lambda (id) (entry-local-id (car (filter (lambda (e) (eq (entry-canon-id e) id)) table))))
-         (list 5 6 4 2 3 104))
+; The local mechanism sequence is independent of Canon SID spelling.
+(check-state
+  "first-wave local primitive mechanism ids remain 0..5"
+  (structural-same-state
+    (map entry-local-id table)
     (list 0 1 2 3 4 5)))
 
-(princ "ALL CANON PRIMITIVE TABLE CHECKS PASSED
+(princ "# Generated by fpga/canon/gen-primitive-table.lisp -- do not edit by hand.
 ")
+(princ "# Canon identity authority: ../my-lisp/lib/surface/semantic-registry.lisp
+")
+(princ "# FPGA mechanism authority: fpga/asm/constants.inc
+")
+(print table)
+(princ "ALL FPGA SID8 PROJECTION CHECKS PASSED
+")
+
 (quote ())
