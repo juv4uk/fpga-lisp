@@ -305,6 +305,10 @@ def main() -> int:
     args = parser.parse_args()
 
     pin = json.loads(PIN_PATH.read_text(encoding="utf-8"))
+    if pin.get("upstream_repository") != "juv4uk/sens":
+        raise GateFailure(
+            "shared oracle pin must name the current upstream repository juv4uk/sens"
+        )
     corpus = git_show(args.my_lisp_dir, pin["revision"], pin["path"])
     digest = sha256_bytes(corpus)
     if digest != pin["sha256"]:

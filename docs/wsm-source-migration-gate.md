@@ -48,7 +48,7 @@ independent review and authority migration" — тобто явний, імен�
 | `repo.my`, `tasks.my` | агенти/swarm registry (за домовленим ім'ям файлу, не розширенням) | локально авторський |
 | `docs/reference/conformance.my` | `fixture_coverage.py` | **синхронізується** з `my-lisp` через `sync-my-lisp.yml` (`fetch "tests/fixtures/conformance.my" "docs/reference/conformance.my"`) |
 | `docs/reference/my-lisp-lib/core.my`, `meta-eval.my` | довідкові копії | те саме `sync-my-lisp.yml`, `fetch "lib/core.my" ...`, `fetch "lib/meta-eval.my" ...` |
-| `contracts/my-lisp/language-contract.my`, `lock.my` | `sync-my-lisp-contract-authority.yml` | reusable workflow **з репо `my-lisp`** (`uses: juv4uk/my-lisp/.github/workflows/sync-language-contract.yml@main`) |
+| `contracts/my-lisp/language-contract.my`, `lock.my` | `sync-my-lisp-contract-authority.yml` | reusable workflow **з репо `my-lisp`** (`uses: juv4uk/sens/.github/workflows/sync-language-contract.yml@main`) |
 
 Це найкрихкіша категорія: `sync-my-lisp.yml` жорстко зашиває точний шлях
 на боці `my-lisp` (`tests/fixtures/conformance.my`, `lib/core.my`,
