@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Systematic coverage report: docs/reference/conformance.my's fixtures
+"""Systematic coverage report: docs/reference/conformance.lisp's fixtures
 against fpga-lisp's actual hardware-verified milestones.
 
 Closes the "systematic, not ad-hoc" half of FPGA-CONFORMANCE-SUITE.
@@ -81,8 +81,8 @@ NOT_APPLICABLE = [
     ("understand", "lib/understand.my not bootstrapped"),
     ("narrate-fact", "lib/narrate.my not bootstrapped"),
     ("defmacro", "macro system not bootstrapped on hardware"),
-    ("(let ", "let/let* not bootstrapped as hardware special forms (core.my expresses them via lambda, not yet demo'd)"),
-    ("(map ", "map as a named callable not separately demo'd (would need core.my's map/map-onto letrec pair, same shape as length/reverse)"),
+    ("(let ", "let/let* not bootstrapped as hardware special forms (core.lisp expresses them via lambda, not yet demo'd)"),
+    ("(map ", "map as a named callable not separately demo'd (would need core.lisp's map/map-onto letrec pair, same shape as length/reverse)"),
     ("(filter ", "filter not bootstrapped"),
     ("(reduce ", "reduce not bootstrapped"),
     ("count-down", "100,000-deep tail call stress test -- fpga-lisp's software call stack depth under real recursion not stress-tested at this scale"),
@@ -94,7 +94,7 @@ NOT_APPLICABLE = [
     ("print", "no string/print formatting on hardware"),
     ("lambda-list) rest)", "dotted/variadic lambda-list binding beyond N-ary fixed params not demo'd"),
     ("args args", "bare-symbol variadic lambda-list not demo'd"),
-    ("list 1 2 3", "list-as-callable-primitive (core.my's (lambda args args)) not demo'd"),
+    ("list 1 2 3", "list-as-callable-primitive (core.lisp's (lambda args args)) not demo'd"),
 ]
 
 
@@ -109,7 +109,7 @@ def classify(expr):
 
 
 def main():
-    with open("docs/reference/conformance.my", "r", encoding="utf-8") as f:
+    with open("docs/reference/conformance.lisp", "r", encoding="utf-8") as f:
         text = f.read()
 
     fixtures = FIXTURE_RE.findall(text)
