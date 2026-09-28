@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Wake-up reconciliation check: does this repo's own prose (AGENTS.md,
-README.md) claim a version for isa-contract.my / language-contract.my
+README.md) claim a version for isa-contract.lisp / language-contract.lisp
 that disagrees with the live machine-readable value?
 
 Closes FPGA-STALE-REF-CHECK -- universal swarm rule #2 (2026-08-18):
@@ -22,13 +22,13 @@ from pathlib import Path
 # (contract file, live-version regex, prose files to scan, prose-claim regex)
 CHECKS = [
     (
-        "isa-contract.my",
+        "isa-contract.lisp",
         re.compile(r"\(version \. \((\d+) (\d+)\)\)"),
         ["AGENTS.md", "README.md"],
         re.compile(r"isa-contract\.my`?,? version (\d+)\.(\d+)"),
     ),
     (
-        "../my-lisp/language-contract.my",
+        "../sens/language-contract.lisp",
         re.compile(r"\(major \. (\d+)\) \(minor \. (\d+)\)"),
         ["AGENTS.md", "README.md"],
         re.compile(r"[Ll]anguage contract version \*?\*?(\d+)\.(\d+)"),
