@@ -21,10 +21,10 @@
 ;
 ; Usage: my-lisp.exe --allow-process=... is NOT needed (no process-run
 ; here) -- just:
-;   my-lisp.exe assembler.my input.asm output.bin
+;   my-lisp.exe assembler.lisp input.asm output.bin
 ; *argv* holds ("input.asm" "output.bin") when run via my-lisp-cli.
 
-(load "docs/reference/my-lisp-lib/core.my")
+(load "docs/reference/my-lisp-lib/core.lisp")
 
 ; ---------------------------------------------------------------------
 ; Small helpers core.my doesn't already provide.
@@ -215,7 +215,7 @@
 (def include-path
   (lambda (line) (unquote (second (tokenize (strip-comment line))))))
 
-; Tail-recursive accumulator, same "-onto" shape lib/core.my's own
+; Tail-recursive accumulator, same "-onto" shape lib/core.lisp's own
 ; length-onto/map-onto use -- a naive (cons (car lines) (expand-includes
 ; (cdr lines) ...)) recursion grows the Rust call stack one frame per
 ; source line (non-tail, same anti-pattern core.my's own comments warn
@@ -423,6 +423,6 @@
                   (print (string-append "Wrote binary to " output-path)))))))))))))
 
 (cond
-  ((atom *argv*) (print "Usage: my-lisp.exe assembler.my input.asm output.bin"))
-  ((atom (cdr *argv*)) (print "Usage: my-lisp.exe assembler.my input.asm output.bin"))
+  ((atom *argv*) (print "Usage: my-lisp.exe assembler.lisp input.asm output.bin"))
+  ((atom (cdr *argv*)) (print "Usage: my-lisp.exe assembler.lisp input.asm output.bin"))
   (t (assemble-file (car *argv*) (second *argv*))))
