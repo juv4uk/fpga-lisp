@@ -2,7 +2,7 @@
 ; Machine-readable contract forms are authoritative; prose is only checked
 ; for claims that explicitly mention a contract version.
 
-(load "docs/reference/my-lisp-lib/core.my")
+(load "docs/reference/my-lisp-lib/core.lisp")
 
 (def find-field
   (lambda (name tree)
@@ -72,15 +72,15 @@
 
 ; Contract 1.1 stores (version . (1 1)); language-contract stores
 ; (major . 3) and (minor . 0). The two checks intentionally remain separate.
-(let ((isa (read-field "isa-contract.my" (string->symbol "version"))))
+(let ((isa (read-field "isa-contract.lisp" (string->symbol "version"))))
   (cond
-    ((atom isa) (print "MISSING: isa-contract.my version"))
+    ((atom isa) (print "MISSING: isa-contract.lisp version"))
     (t (let ((expected (version-text (car isa) (second isa))))
-           (let ((readme (check-prose "README.md" "isa-contract.my`, version" expected)))
-           (let ((agents (check-prose "AGENTS.md" "isa-contract.my`, version" expected)))
+           (let ((readme (check-prose "README.md" "isa-contract.lisp`, version" expected)))
+           (let ((agents (check-prose "AGENTS.md" "isa-contract.lisp`, version" expected)))
              (cond (readme (fail-stale agents "stale isa contract reference"))
                    (t (fail-stale () "stale isa contract reference")))))))))
-(let ((language (read-all (read-file "../my-lisp/language-contract.my"))))
+(let ((language (read-all (read-file "../sens/language-contract.lisp"))))
   (let ((major (find-field (string->symbol "major") language)))
     (let ((minor (find-field (string->symbol "minor") language)))
       (let ((expected (version-text major minor)))
