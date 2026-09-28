@@ -1,6 +1,6 @@
-; repo.my — Swarm Contract v0.1 scope declaration for fpga-lisp.
-; See my-lisp/docs/swarm-mesh-v2.md for the full spec. Format confirmed
-; by example against my-lisp-panini/repo.my (per
+; repo.lisp — Swarm Contract v0.1 scope declaration for fpga-lisp.
+; See sens/docs/swarm-mesh-v2.md for the full spec. Format confirmed
+; by example against my-lisp-panini/repo.lisp (per
 ; shiva-sutras/docs/cross-repo-ecosystem-findings-2026-08-18.md's
 ; scope-check on this same task, SHIVA-SWARM-CONTRACT-01).
 ;
