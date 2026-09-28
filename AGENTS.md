@@ -128,15 +128,15 @@ sexpr lines to your *own* node's port (9103, not 9101):
 
 ```
 (join (capabilities (verilog isa-design fpga iverilog assembly-testing fpga-lisp)) (roles (voter)))
-(sync-tasks (file "/mnt/c/GitHub/fpga-lisp/tasks.my"))
+(sync-tasks (file "/mnt/c/GitHub/fpga-lisp/tasks.lisp"))
 ```
 
 `(join ...)` once per session. `sync-tasks` needs an **absolute path**
 (same gotcha as the old `:9999` op: relative resolves against the
-*node's* cwd, not the caller's). `tasks.my`'s field is `description`, not
+*node's* cwd, not the caller's). `tasks.lisp`'s field is `description`, not
 `context` — a wrong field name is silently dropped, not an error.
 `(next-best-action (node fpga-lisp-1))` to see what's actionable.
-`tasks.my` is this repo's plan of record (durable, git-tracked) — edit it
+`tasks.lisp` is this repo's plan of record (durable, git-tracked) — edit it
 to change what this agent is doing, re-`sync-tasks` after edits. An event
 from the swarm is a doorbell, never the fact itself — always verify
 against the actual `evidence/`/commit before acting on one.
@@ -144,9 +144,9 @@ against the actual `evidence/`/commit before acting on one.
 ## The four repositories
 
 - **my-lisp** — the semantic source of truth. Defines the language: parser,
-  evaluator, exactness model (rationals, no floats), `lib/core.my` standard
+  evaluator, exactness model (rationals, no floats), `lib/core.lisp` standard
   library. Language contract version **3.0** as of 2026-08-15
-  (`language-contract.my`'s own `(major . 3) (minor . 0)` -- don't trust a
+  (`language-contract.lisp`'s own `(major . 3) (minor . 0)` -- don't trust a
   number in this prose file over that one; re-check it directly if it's
   been a while). The 1.0->2.0 break removed `'` as a reader shorthand for
   `quote` (now part of symbols) -- a *syntax*-level change. fpga-lisp has
@@ -157,7 +157,7 @@ against the actual `evidence/`/commit before acting on one.
   Nothing else in the ecosystem may drift from what that repo says the
   language means.
 - **fpga-lisp** (this repo) — hardware implementation of the same language
-  on an FPGA. Tracks an ISA contract (`isa-contract.my`, version 1.1)
+  on an FPGA. Tracks an ISA contract (`isa-contract.lisp`, version 1.1)
   against my-lisp's semantics. Milestone-by-milestone bootstrap history and
   the current plan queue position live in `docs/lisp-machine-plan.md` —
   that file is the current, authoritative status; don't infer progress
@@ -166,7 +166,7 @@ against the actual `evidence/`/commit before acting on one.
   through real `iverilog` on push/PR, mirroring cml's setup; the exact
   list is kept in sync with `docs/testing.md`.
 - **cml** — an AOT compiler from my-lisp source to fpga-lisp's ISA. Tracks
-  conformance against both other repos (`compatibility.my`). Has CI
+  conformance against both other repos (`compatibility.lisp`). Has CI
   (`.github/workflows/`) running real `iverilog` E2E simulation.
 - **my-idea** — an observer/IDE layer, depends on my-lisp via
   cargo-git-dependency/submodule. Building toward a "System Observatory"
@@ -177,7 +177,7 @@ against the actual `evidence/`/commit before acting on one.
 `ecosystem-status.md` in this repo is an append-only prose log — current
 status, refreshed after each cross-session sync, anchored to commit shas.
 Read it before assuming anything here is stale or unverified. my-lisp's own
-`ecosystem-status.my` (a flat alist, `(read-file "ecosystem-status.my")`) is
+`ecosystem-status.lisp` (a flat alist, `(read-file "ecosystem-status.lisp")`) is
 the equivalent machine-readable view for the whole ecosystem.
 
 ## my-lisp G8 truth semantics
@@ -188,7 +188,7 @@ checks both sides of this contract directly through the bootloader and RTL.
 
 ## Conventions worth knowing before editing
 
-- `isa-contract.my` is **data, not code** — a flat alist, read via
+- `isa-contract.lisp` is **data, not code** — a flat alist, read via
   `(read-file ...)`, never `(load ...)`-ed as executable source.
 - No opcode is added lightly: the 4-bit opcode field has been full (16/16)
   since `LOADSYM`. `CALL`/`RET` and `GETTAG`/`MAKEPRIM`/`GETVAL` extend
@@ -201,9 +201,9 @@ checks both sides of this contract directly through the bootloader and RTL.
   artifact — assemble first with `python3 assembler.py <name>.asm`; the
   Guix `manifest.scm` environment has no `python` alias, only `python3`).
 - Two assemblers exist: `assembler.py` (authoritative today, what CI and
-  every testbench actually use) and `assembler.my` (a from-scratch
+  every testbench actually use) and `assembler.lisp` (a from-scratch
   reimplementation in the language itself, not wired into CI or any
-  testbench). **`assembler.my` is currently non-functional, not just
+  testbench). **`assembler.lisp` is currently non-functional, not just
   unverified**: a differential test against `assembler.py` (2026-08-12,
   see `ecosystem-status.md`) found it produces inconsistent results on
   the exact same trivial input (`call_demo.asm`, 8 lines) across two
@@ -212,9 +212,9 @@ checks both sides of this contract directly through the bootloader and RTL.
   instructions), once a native stack overflow crash. Every other tested
   `.asm` file (including every `bootstrap_*_demo.asm`) crashed the same
   way. Root cause not isolated -- plausibly a my-lisp interpreter
-  stack-depth issue triggered by `assembler.my`'s own non-tail-recursive
+  stack-depth issue triggered by `assembler.lisp`'s own non-tail-recursive
   helpers (`nth`, `contains?`), not necessarily a bug in the assembler's
-  own logic. Until root-caused and fixed, treat `assembler.my` as **not
+  own logic. Until root-caused and fixed, treat `assembler.lisp` as **not
   usable at all**, not as "a second encoder to cross-check against" --
   there is currently nothing working to compare.
 - Only `assembler.py` is a migration-to-Lisp candidate, not
@@ -253,7 +253,7 @@ rely on whatever happens to be on `$PATH` outside the shell.
 ## Cross-session coordination protocol (agreed with cml/my-lisp)
 
 1. Durable facts go in `ecosystem-status.md` (this repo) /
-   `ecosystem-status.my` (my-lisp) — written after the fact (commit done,
+   `ecosystem-status.lisp` (my-lisp) — written after the fact (commit done,
    CI green), not "plan to do X".
 2. Direct messages between sessions are for synchronous asks, not
    restating what's already in a status file.
