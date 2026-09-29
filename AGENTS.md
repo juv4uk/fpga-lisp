@@ -162,7 +162,7 @@ If this agent can use GitHub but cannot reach the owner WSL or `swarm-node`, do 
   Nothing else in the ecosystem may drift from what that repo says the
   language means.
 - **fpga-lisp** (this repo) — hardware implementation of the same language
-  on an FPGA. Tracks an ISA contract (`isa-contract.my`, version 1.1)
+  on an FPGA. Tracks an ISA contract (`isa-contract.my`, version 1.4)
   against my-lisp's semantics. Milestone-by-milestone bootstrap history and
   the current plan queue position live in `docs/lisp-machine-plan.md` —
   that file is the current, authoritative status; don't infer progress

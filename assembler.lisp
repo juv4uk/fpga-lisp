@@ -360,7 +360,16 @@
       (let ((opcode (cdr (assoc-str op OPCODES))))
         (let ((base (* opcode POW28)))
           (cond
-            ((any-eq? op (list "NOP" "HALT")) base)
+            ((eq op "NOP") base)
+
+            ((eq op "HALT")
+             (cond
+               ((atom (cdr toks)) base)
+               (t (+ base
+                     (+ (* (parse-reg (second toks)) POW24)
+                        (+ (* (parse-reg (third toks)) POW20)
+                           (+ (* (parse-reg (fourth toks)) POW16)
+                              (parse-imm (car (cdr (cdr (cdr (cdr toks))))) labels))))))))
 
             ((any-eq? op (list "LOADI" "LOADSYM"))
              (+ base (+ (* (parse-reg (second toks)) POW24)
