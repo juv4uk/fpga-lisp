@@ -166,8 +166,18 @@ def assemble_with_symbols(lines):
         instr_word = opcode_val << 28
         
         try:
-            if op in ['NOP', 'HALT']:
+            if op == 'NOP':
                 pass
+
+            elif op == 'HALT':
+                # Bare HALT remains 0xB0000000. ISA 1.4 also permits the
+                # exact structural field form: HALT Rd Rs1 Rs2 Imm.
+                if len(parts) == 5:
+                    rd = parse_reg(parts[1])
+                    rs1 = parse_reg(parts[2])
+                    rs2 = parse_reg(parts[3])
+                    imm = parse_imm(parts[4], labels)
+                    instr_word |= (rd << 24) | (rs1 << 20) | (rs2 << 16) | (imm & 0xFFFF)
                 
             elif op in ['LOADI', 'LOADSYM']:
                 rd = parse_reg(parts[1])

@@ -30,6 +30,13 @@ class SymbolInterningTest(unittest.TestCase):
         self.assertEqual(symbols, {})
         self.assertEqual(machine_code[0], (9 << 28) | (1 << 24) | 42)
 
+    def test_halt_structural_fields_preserve_bare_halt_and_encode_type_trap(self):
+        machine_code = ASSEMBLER.assemble([
+            "HALT",
+            "HALT R0 R0 R1 0",
+        ])
+        self.assertEqual(machine_code, [0xB0000000, 0xB0010000])
+
 
 if __name__ == "__main__":
     unittest.main()
