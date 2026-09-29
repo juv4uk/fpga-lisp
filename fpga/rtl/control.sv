@@ -219,6 +219,12 @@ module control (
                     if (opcode == OP_JMP || opcode == OP_JF) begin
                         perf_jumps <= perf_jumps + 1;
                     end
+                    // ISA 1.4 target-owned runtime error mechanism.
+                    if (opcode == OP_HALT && rd == 4'd0 && rs1 == 4'd0 &&
+                        rs2 == 4'd1 && imm == 16'd0) begin
+                        err_flag <= 1'b1;
+                        err_pc <= pc;
+                    end
                     if (opcode == OP_JMP) begin
                         if (rs1 != 0) begin
                             pc <= reg_rd_data_a.value[11:0];

@@ -7,7 +7,7 @@
 ; releases and implementation-only RTL changes are independent.
 
 ((kind . fpga-lisp-isa)
- (version . (1 3))
+ (version . (1 4))
  (word . ((bits . 32) (tag-bits . 4) (payload-bits . 28)))
  (tags . ((fixnum . 0) (cons . 1) (symbol . 2) (nil . 3)
           (true . 4) (primitive . 5)))
@@ -28,6 +28,8 @@
      (setcdr . ((opcode . atom) (rs2 . nonzero) (scope . bootstrap-internal)))
      (call . ((opcode . jmp) (rd . nonzero) (rs1 . 0)))
      (ret . ((opcode . jmp) (rd . 0) (rs1 . nonzero)))
+     (trap-type . ((opcode . halt) (rd . 0) (rs1 . 0) (rs2 . 1) (immediate . 0)
+                   (scope . runtime-error-mechanism)))
      (upc8-decode    . ((opcode . mov) (rs2 . 4) (scope . phonetic)))
      (upc8-transform . ((opcode . mov) (rs2 . 5) (scope . phonetic)))
      (upc8-predicate . ((opcode . mov) (rs2 . 6) (scope . phonetic)))
@@ -57,5 +59,7 @@
  (truth . ((false-tags . (nil))
            (jf-branches-only-on . (nil))
            (my-lisp-g8-conformant . t)))
- (errors . ((ldu-error . halt-and-record-pc)))
- (notes . "ISA 1.3 adds the Sūtra-processor (sandhi rule engine) as an encoded-mode extension of MOV: rs2=7 (upc8-sandhi) applies one Pāṇinian sandhi rule to a pair of UPC-8 class-10 sounds packed in rs1.value[15:8]=prev_code, [7:0]=curr_code. Result in rd.value[17:16]=mode (00=passthrough, 01=single code, 10=two codes), [15:8]=result_1, [7:0]=result_0. Rule order: savarṇa-dīrgha (6.1.101) → guṇa (6.1.87) → yaṇ i/v embryo (6.1.77). ISA 1.2 adds the UPC-8 phonetic engine as an encoded-mode extension of MOV: rs2=4 (upc8-decode) returns a 28-bit class/canonical/position bit-mask for a syllable byte in bits [7:0]; rs2=5 (upc8-transform) applies a phonological transform encoded by rs1's input byte bits [10:8] with input syllable in bits [7:0]; rs2=6 (upc8-predicate) returns a 4-bit boolean class mask (is_class10+ac_14+an+ik). Scope: phonetic; requires the upc8_unit RTL. ISA 1.1 preserves every 1.0 program image byte-for-byte and adds an optional extended boot header for initializing up to 16 registers with already-tagged words before CPU start. JF remains conformant to my-lisp G8: only NIL is false and fixnum 0 is true. R0 carries the complete evaluated argument list for dotted and bare-symbol lambda parameters. LOADI and LOADSYM zero-extend a 16-bit immediate; SETCDR is not an eval-visible Lisp primitive. 2026-09-02: ATOM and EQ's positive result is now canonical Symbol(\"t\") (SYM_T = 79, fpga/asm/symbol-table.inc), routed through the same TAG_SYMBOL mechanism LOADSYM already uses for any interned symbol -- not the standalone `true` tag (value 4) declared above, which no RTL producer emits anymore. That tag stays declared in this contract for backward image compatibility (ISA 1.1 preserves 1.0 program images byte-for-byte) but is no longer produced by ATOM/EQ; t is an ordinary bootstrap symbol, not a manufactured hardware primitive."))
+ (errors . ((ldu-error . halt-and-record-pc)
+            (type-error . ((mechanism . trap-type)
+                           (observation . (err-flag err-pc))))))
+ (notes . "ISA 1.4 adds a backward-compatible HALT encoded mode for compiler-requested Type failure: exact rd=0, rs1=0, rs2=1, immediate=0 latches err_flag=1 and err_pc=current PC then enters ST_HALT; ordinary HALT with all lower fields zero is unchanged. FPGA owns only this runtime-error mechanism; the language/compiler decides when Type is required. ISA 1.3 adds the Sūtra-processor (sandhi rule engine) as an encoded-mode extension of MOV: rs2=7 (upc8-sandhi) applies one Pāṇinian sandhi rule to a pair of UPC-8 class-10 sounds packed in rs1.value[15:8]=prev_code, [7:0]=curr_code. Result in rd.value[17:16]=mode (00=passthrough, 01=single code, 10=two codes), [15:8]=result_1, [7:0]=result_0. Rule order: savarṇa-dīrgha (6.1.101) → guṇa (6.1.87) → yaṇ i/v embryo (6.1.77). ISA 1.2 adds the UPC-8 phonetic engine as an encoded-mode extension of MOV: rs2=4 (upc8-decode) returns a 28-bit class/canonical/position bit-mask for a syllable byte in bits [7:0]; rs2=5 (upc8-transform) applies a phonological transform encoded by rs1's input byte bits [10:8] with input syllable in bits [7:0]; rs2=6 (upc8-predicate) returns a 4-bit boolean class mask (is_class10+ac_14+an+ik). Scope: phonetic; requires the upc8_unit RTL. ISA 1.1 preserves every 1.0 program image byte-for-byte and adds an optional extended boot header for initializing up to 16 registers with already-tagged words before CPU start. JF remains conformant to my-lisp G8: only NIL is false and fixnum 0 is true. R0 carries the complete evaluated argument list for dotted and bare-symbol lambda parameters. LOADI and LOADSYM zero-extend a 16-bit immediate; SETCDR is not an eval-visible Lisp primitive. 2026-09-02: ATOM and EQ's positive result is now canonical Symbol(\"t\") (SYM_T = 79, fpga/asm/symbol-table.inc), routed through the same TAG_SYMBOL mechanism LOADSYM already uses for any interned symbol -- not the standalone `true` tag (value 4) declared above, which no RTL producer emits anymore. That tag stays declared in this contract for backward image compatibility (ISA 1.1 preserves 1.0 program images byte-for-byte) but is no longer produced by ATOM/EQ; t is an ordinary bootstrap symbol, not a manufactured hardware primitive."))
