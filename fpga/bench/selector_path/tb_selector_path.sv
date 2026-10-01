@@ -55,7 +55,8 @@ module tb_selector_path;
         @(posedge clk);
         dyn_start = 0; static_start = 0;
         wait(dyn_done && static_done);
-        @(posedge clk);
+        repeat (2) @(posedge clk);
+        #1;
         if (dyn_i != 5) begin
             $display("DYNAMIC wrong op count %0d expected 5", dyn_i); failures = failures + 1;
         end
