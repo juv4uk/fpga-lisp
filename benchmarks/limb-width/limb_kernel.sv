@@ -10,10 +10,8 @@ module limb_kernel #(
 );
     logic [W:0] add_ext;
 
-    always_comb begin
-        add_ext = {1'b0, a} + {1'b0, b} + cin;
-        sum = add_ext[W-1:0];
-        carry = add_ext[W];
-        product = a * b;
-    end
+    assign add_ext = {1'b0, a} + {1'b0, b} + cin;
+    assign sum = add_ext[W-1:0];
+    assign carry = add_ext[W];
+    assign product = a * b;
 endmodule
