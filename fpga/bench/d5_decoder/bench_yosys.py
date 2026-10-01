@@ -27,7 +27,7 @@ def synth(top: str) -> dict[str, object]:
     script = (
         f"read_verilog -sv {RTL}; "
         f"hierarchy -check -top {top}; "
-        "proc; opt; techmap; opt; stat"
+        "proc; opt; memory; memory_map; opt; techmap; opt; stat"
     )
     proc = subprocess.run(
         ["yosys", "-Q", "-p", script],
