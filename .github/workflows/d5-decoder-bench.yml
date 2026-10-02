@@ -1,0 +1,42 @@
+name: D5 decoder benchmark
+
+on:
+  pull_request:
+    paths:
+      - "fpga/bench/d5_decoder/**"
+      - ".github/workflows/d5-decoder-bench.yml"
+  push:
+    branches: [master]
+    paths:
+      - "fpga/bench/d5_decoder/**"
+      - ".github/workflows/d5-decoder-bench.yml"
+  workflow_dispatch: {}
+
+jobs:
+  d5-decoder:
+    name: D5 decoder RTL + Yosys cost
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out fpga-lisp
+        uses: actions/checkout@v4
+
+      - name: Install Icarus Verilog and Yosys
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog yosys
+
+      - name: Run D5 decoder evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$(bash fpga/bench/d5_decoder/run.sh)"
+          echo "$out"
+          {
+            echo "## D5 decoder benchmark"
+            echo
+            echo "```text"
+            echo "$out"
+            echo "```"
+            echo
+            echo "Cost evidence only. This workflow does not assign SENS semantics."
+          } >> "$GITHUB_STEP_SUMMARY"
