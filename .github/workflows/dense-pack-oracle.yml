@@ -1,4 +1,4 @@
-name: Dense pack capacity oracle
+name: Dense pack benchmark
 
 on:
   pull_request:
@@ -14,13 +14,18 @@ on:
 
 jobs:
   dense-pack-oracle:
-    name: D3 D5 D7 packing oracle
+    name: D3 D5 D7 packing oracle + RTL mapper
     runs-on: ubuntu-latest
     steps:
       - name: Check out fpga-lisp
         uses: actions/checkout@v4
 
-      - name: Run packing oracle
+      - name: Install RTL tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog yosys
+
+      - name: Run capacity and round-trip oracle
         shell: bash
         run: |
           set -euo pipefail
@@ -33,6 +38,22 @@ jobs:
             echo "\`\`\`text"
             echo "$out"
             echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run address mapper RTL + generic Yosys cost
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$(bash fpga/bench/dense_pack/run.sh)"
+          echo "$out"
+          grep -q "PASS dense-pack address maps" <<<"$out"
+          {
             echo
-            echo "Capacity/correctness oracle only; not vendor hardware evidence."
+            echo "## Dense pack address mapper"
+            echo
+            echo "\`\`\`text"
+            echo "$out"
+            echo "\`\`\`"
+            echo
+            echo "Generic mapper cost only; vendor BSRAM/P&R remains fpga-lisp#50."
           } >> "$GITHUB_STEP_SUMMARY"
