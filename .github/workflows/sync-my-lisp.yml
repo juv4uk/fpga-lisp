@@ -26,7 +26,7 @@ jobs:
           set -euo pipefail
           mkdir -p docs/reference/my-lisp-lib
           fetch() {
-            gh api "repos/juv4uk/my-lisp/contents/$1" --jq '.content' | base64 -d > "$2"
+            gh api "repos/juv4uk/sens/contents/$1" --jq '.content' | base64 -d > "$2"
           }
           fetch "tests/fixtures/conformance.my" "docs/reference/conformance.my"
           fetch "docs/language-core.md" "docs/reference/language-core.md"
@@ -40,7 +40,7 @@ jobs:
           title: "Sync reference files from my-lisp"
           body: |
             Automated sync of supporting reference files fpga-lisp mirrors from
-            [my-lisp](https://github.com/juv4uk/my-lisp) under `docs/reference/`:
+            [my-lisp](https://github.com/juv4uk/sens) under `docs/reference/`:
 
             - `tests/fixtures/conformance.my` — implementation-independent conformance fixtures
             - `docs/language-core.md` — explanatory language-core prose
