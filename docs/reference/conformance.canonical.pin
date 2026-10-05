@@ -1,11 +1,9 @@
-# Canonical conformance pointer
+Canonical conformance reference snapshot
 
-This directory previously held a STALE local copy (see
-docs/conformance-adversarial-report-2026-08-23.md, finding F1).
-The file conformance.my is now byte-identical to the canonical:
+source repo : juv4uk/sens
+source rev  : 19f0e58b419320ffdce448f5166f576a1b4eb5bc
+path        : tests/fixtures/conformance.lisp
+sha256      : e942f74e14cfcbf9a45c93bffe589d3dac517268eb695b25b85df6e811d2f12e
 
-source repo : my-lisp @ bedece7
-path        : tests/fixtures/conformance.my
-sha256      : 4bd36e99585bf710261773c4e92d053090fee74954b049121e9c6116ff474429
-
-Do not edit here. Update by copying from my-lisp and refreshing this pin.
+This file pins the live docs/reference/conformance.lisp mirror only.
+Historical evidence pins under evidence/ remain immutable and are not advanced by this reference sync.
