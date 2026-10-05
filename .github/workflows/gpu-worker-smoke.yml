@@ -1,0 +1,33 @@
+name: Shared CUDA worker smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gpu-worker:
+    runs-on: [self-hosted, gpu, gtx-1050-ti]
+    timeout-minutes: 5
+    env:
+      CML_GPU_WORKER_SOCKET: /run/user/1008/cml-gpu-worker.sock
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Probe shared GPU worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/lib/wsl/lib/nvidia-smi             --query-gpu=name,compute_cap,memory.total             --format=csv,noheader
+          test "$(cml-gpu-worker ping)" = "pong"
+          cml-gpu-worker probe
+
+      - name: Execute real CUDA witness
+        shell: bash
+        run: |
+          set -euo pipefail
+          result="$(cml-gpu-worker add-i32 7 1 2 3 4)"
+          test "$result" = "8 9 10 11"
+          echo "GPU_SHARED_WORKER_GREEN repo=$GITHUB_REPOSITORY result=$result"
