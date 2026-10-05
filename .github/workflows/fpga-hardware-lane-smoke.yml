@@ -1,0 +1,66 @@
+name: FPGA hardware lane smoke
+
+on:
+  pull_request:
+    paths:
+      - "scripts/fpga-runner-lane"
+      - "scripts/fpga_runner_lane.py"
+      - ".github/workflows/fpga-hardware-lane-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted, guix]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Probe physical COM4 lane
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/fpga-runner-lane
+          out="$(scripts/fpga-runner-lane probe)"
+          echo "$out"
+          python3 - "$out" <<'PY'
+          import json, sys
+          row = json.loads(sys.argv[1])
+          assert row["ok"] is True, row
+          assert row["port"] == "COM4", row
+          assert "VID:PID=0403:6010" in row["hwid"], row
+          print("FPGA_RUNNER_PROBE_GREEN", row["description"])
+          PY
+
+      - name: Prove single-owner lock is fail-closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          lock="${XDG_RUNTIME_DIR:-/tmp}/fpga-lisp-com4.lock"
+          (
+            exec 8>"$lock"
+            flock 8
+            sleep 3
+          ) &
+          holder=$!
+          sleep 0.2
+
+          set +e
+          FPGA_LANE_WAIT_SECONDS=1 scripts/fpga-runner-lane probe             >/tmp/fpga-lane-busy.out 2>&1
+          rc=$?
+          set -e
+
+          wait "$holder"
+          cat /tmp/fpga-lane-busy.out
+          test "$rc" -eq 75
+          grep -F "FPGA_LANE_BUSY" /tmp/fpga-lane-busy.out
+          echo "FPGA_RUNNER_LOCK_GREEN rc=$rc"
+
+      - name: Re-probe after lock release
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/fpga-runner-lane probe
+          echo "FPGA_RUNNER_LANE_GREEN"
