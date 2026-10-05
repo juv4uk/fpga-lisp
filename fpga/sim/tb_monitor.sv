@@ -38,9 +38,11 @@ module tb_monitor;
         #20 rst_n = 1;
         #100;
 
-        // Program: LOADSYM R1,#2 ; LOADSYM R2,#3 ; CONS R3,R1,R2 ; HALT
-        send_uart_byte(8'd4);
+        // Program: seed R4, then allocate one pair and HALT. R4 is deliberately
+        // omitted from the second run below so soft-rearm must clear it.
+        send_uart_byte(8'd5);
         send_uart_byte(8'd0); // program length hi byte
+        send_uart_word(32'h94000009); // LOADSYM R4, #9
         send_uart_word(32'h91000002); // LOADSYM R1, #2
         send_uart_word(32'h92000003); // LOADSYM R2, #3
         send_uart_word(32'h33120000); // CONS R3, R1, R2
@@ -95,8 +97,51 @@ module tb_monitor;
             errors = errors + 1;
         end
 
+        // --- Soft rearm command: no external rst_n pulse follows. ---
+        send_uart_byte(8'h0B);
+        wait(!halted);
+        #100;
+
+        // Second program: same pair allocation, but R4 is not written.
+        // A correct rearm clears registers and heap before returning the
+        // bootloader to WAIT_LENGTH.
+        send_uart_byte(8'd4);
+        send_uart_byte(8'd0);
+        send_uart_word(32'h91000002);
+        send_uart_word(32'h92000003);
+        send_uart_word(32'h33120000);
+        send_uart_word(32'hB0000000);
+
+        wait(halted);
+        #50;
+
+        // Heap pointer must be 1, not 2: LDU state was reset between jobs.
+        fork
+            send_uart_byte(8'h03);
+            recv_word(word0);
+        join
+        $display("HP after soft rearm = 0x%08x", word0);
+        if (word0 !== 32'd1) begin
+            $display("FAIL: expected HP=1 after soft rearm");
+            errors = errors + 1;
+        end
+
+        // R4 was seeded only by the first job. It must be cleared by rearm.
+        fork
+            begin
+                send_uart_byte(8'h01);
+                send_uart_byte(8'd4);
+            end
+            recv_word(word0);
+        join
+        $display("R4 after soft rearm = 0x%08x", word0);
+        if (word0 !== 32'd0) begin
+            $display("FAIL: expected R4=0 after soft rearm");
+            errors = errors + 1;
+        end
+
         if (errors == 0) begin
-            $display("M08 PASSED: UART monitor (REG/HEAP/HP) works");
+            $display("M08 PASSED: UART monitor + soft rearm works");
         end else begin
             $display("M08 FAILED: %0d error(s)", errors);
         end
@@ -105,7 +150,7 @@ module tb_monitor;
     end
 
     initial begin
-        #6_000_000; // watchdog
+        #12_000_000; // watchdog
         $display("WATCHDOG TIMEOUT: test hung");
         $finish;
     end
