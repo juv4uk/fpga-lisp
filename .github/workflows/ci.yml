@@ -10,10 +10,16 @@ on:
   push:
     branches: [master]
   pull_request:
+    types: [opened, synchronize, reopened, closed]
   workflow_dispatch: {}
+
+concurrency:
+  group: fpga-sim-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   simulate:
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: [self-hosted, guix]
     timeout-minutes: 15
     steps:
