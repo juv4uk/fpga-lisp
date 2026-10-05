@@ -14,16 +14,20 @@ on:
 
 jobs:
   simulate:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, guix]
     timeout-minutes: 15
     steps:
       - name: Check out fpga-lisp
         uses: actions/checkout@v4
 
-      - name: Install Icarus Verilog
+      - name: Ensure Icarus Verilog
         run: |
-          sudo apt-get update
-          sudo apt-get install -y iverilog
+          if command -v iverilog >/dev/null 2>&1; then
+            iverilog -V | head -n 1
+          else
+            sudo apt-get update
+            sudo apt-get install -y iverilog
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
