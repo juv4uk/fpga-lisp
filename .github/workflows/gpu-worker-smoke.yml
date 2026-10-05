@@ -14,8 +14,6 @@ jobs:
       CML_GPU_WORKER_SOCKET: /run/user/1008/cml-gpu-worker.sock
 
     steps:
-      - uses: actions/checkout@v5
-
       - name: Probe shared GPU worker
         shell: bash
         run: |
