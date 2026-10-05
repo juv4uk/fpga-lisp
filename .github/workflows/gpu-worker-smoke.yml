@@ -8,10 +8,10 @@ permissions:
 
 jobs:
   gpu-worker:
-    runs-on: [self-hosted, gpu, gtx-1050-ti]
+    runs-on: [self-hosted, Linux, X64, gpu, gtx-1050-ti, cuda-12.6]
     timeout-minutes: 5
     env:
-      CML_GPU_WORKER_SOCKET: /run/user/1008/cml-gpu-worker.sock
+      CML_GPU_WORKER_SOCKET: /run/cml-gpu-worker/worker.sock
 
     steps:
       - name: Probe shared GPU worker
