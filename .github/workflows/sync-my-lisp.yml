@@ -4,8 +4,8 @@ name: Sync SENS reference files
 # material under docs/reference/ (conformance fixtures, language-core prose,
 # and the canonical bootstrap library/meta-eval) and opens a PR when upstream
 # has changed. The authoritative machine-readable language-contract.lisp is
-# synchronized separately into contracts/SENS/ by
-# sync-SENS-contract-authority.yml.
+# synchronized separately into contracts/my-lisp/ by
+# sync-my-lisp-contract-authority.yml.
 
 on:
   schedule:
@@ -14,7 +14,7 @@ on:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, guix]
     steps:
       - name: Check out fpga-lisp
         uses: actions/checkout@v4
@@ -52,9 +52,9 @@ jobs:
             - `lib/meta-eval.lisp` — the metacircular eval/apply reference
 
             The authoritative machine-readable `language-contract.lisp` is synced
-            separately under `contracts/SENS/` with an exact revision lock.
+            separately under `contracts/my-lisp/` with an exact revision lock.
 
             Review the diff before merging — a conformance-contract change may
             mean fpga-lisp's own eval needs a matching update.
-          branch: sync/SENS-reference
+          branch: sync/sens-reference
           delete-branch: true
