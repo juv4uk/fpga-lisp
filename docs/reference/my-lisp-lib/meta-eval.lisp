@@ -1,228 +1,1307 @@
-; A metacircular evaluator: my-eval interprets my-lisp source (read as data,
-; e.g. via `read`) using only my-lisp's own primitives. Primitives —
-; car/cdr/cons/atom/eq/arithmetic — are dispatched to directly, not
-; reimplemented, exactly like McCarthy's own 1960 eval/apply: his eval
-; called car/cdr/cons/atom/eq as given, it didn't redefine them.
+; Metacircular evaluator: my-eval interprets my-lisp source as Lisp data.
 ;
-; Environments here are plain association lists of (symbol . value) pairs,
-; not the host's real Environment — my-lisp has no way to reach that from
-; inside the language. `env-lookup`'s "not found" case returns the atom
-; itself rather than erroring: this is what makes numbers/strings/`t`
-; self-evaluate without a symbol?/numberp? primitive. It works because `eq`
-; only requires both operands be atoms, not the same type — comparing a
-; number against an alist's symbol keys always safely returns false, never
-; a crash, so lookup falls through to "not found -> return as-is" for any
-; non-symbol atom, and for any symbol that genuinely isn't bound.
+; Contract 6.0 ownership boundary:
+; the finite Canon 0+7 surface-name set is resolved before the metacircular
+; lexical environment and cannot be used by language binders. Callable Canon
+; spellings resolve to first-class `(primitive identity)` values; quote/cond
+; remain syntax-only. Ordinary non-Canon primitives such as +, -, *, <, =, >
+; still live in the metacircular environment model and remain shadowable.
 ;
-; This is a demonstration, not part of the always-loaded bootstrap library:
-; lib/core.my never depends on it, and nothing here changes what any other
-; my-lisp program can do. Load it deliberately (see docs/quote-tutorial.md).
+; The actual primitive operation is still supplied by the native substrate;
+; this evaluator owns name resolution, Canon-first lookup, ordinary lexical
+; shadowing, application shape, macro expansion, closure environments, chained
+; comparison policy, shared top-level definition-frame visibility, self-recursive
+; and dependency-aware finite mutually recursive top-level function binding,
+; variadic/dotted lambda parameter binding, and named failure observations for
+; unresolved names, non-callable values, lambda/macro arity mismatch, invalid
+; lambda-list structure, and reserved Canon binding attempts.
 ;
-; Not McCarthy-complete: single-arity `atom`/`eq`/`car`/`cdr`/`cons` and
-; two-argument `+`/`-`/`*` only (the real primitives are variadic where it
-; matters, like `+`); no `defmacro`, `def`, `list`, or comparison operators
-; inside interpreted programs. Deliberately minimal, easy to extend the
-; same way for anyone who wants to.
-;
-; Метациркулярний evaluator: my-eval інтерпретує my-lisp-код (прочитаний як
-; дані, напр. через `read`), використовуючи лише власні примітиви my-lisp.
-; Примітиви — car/cdr/cons/atom/eq/арифметика — диспетчеризуються напряму,
-; не переписуються заново, точно як власний eval/apply Маккарті 1960 року:
-; його eval викликав car/cdr/cons/atom/eq як дані, не перевизначав їх.
-;
-; Середовища тут — звичайні асоціативні списки пар (символ . значення), не
-; справжній Environment хоста — my-lisp не має способу дістатись до нього
-; зсередини мови. Випадок "не знайдено" в `env-lookup` повертає сам атом,
-; а не помилку: саме це змушує числа/рядки/`t` самообчислюватись без
-; примітиву symbol?/numberp?. Працює це тому, що `eq` вимагає лише, щоб обидва
-; операнди були атомами, не одного типу — порівняння числа з символьними
-; ключами asoc-списку завжди безпечно повертає false, ніколи не падає, тож
-; lookup провалюється до "не знайдено -> повернути як є" для будь-якого
-; несимвольного атома, і для будь-якого символу, що справді не зв'язаний.
-;
-; Це демонстрація, не частина завжди завантажуваної bootstrap-бібліотеки:
-; lib/core.my ніколи від нього не залежить, і ніщо тут не змінює те, що може
-; будь-яка інша my-lisp-програма. Завантажувати навмисно (див.
-; docs/quote-tutorial.md).
-;
-; Не McCarthy-повний: лише одноарністні `atom`/`eq`/`car`/`cdr`/`cons` і
-; двоаргументні `+`/`-`/`*` (справжні примітиви варіативні там, де це
-; важливо, напр. `+`); немає `list` чи операторів порівняння всередині
-; інтерпретованих програм. Навмисно мінімальний, легко розширити так само
-; тому, хто захоче.
-;
-; `def`/`defmacro` (2026-08-09): `my-eval` сам (вирази) лишається чистою
-; функцією `(expr, env) -> value` — `def` не вписується в цю форму, бо йому
-; треба *повернути новий env*, не лише значення. Тому `def`/`defmacro`
-; обробляються окремим рівнем — `my-eval-top-form`/`my-eval-program` — який
-; існує лише для послідовності верхньорівневих форм (як `lib/core.my`), не
-; всередині виразу. Середовище тут — незмінний asoc-список (`cons`), тож
-; `def` не *мутує* фрейм (на відміну від справжнього `def` у хост-мові,
-; `environment.rs:70`) — він створює новий, розширений env і повертає його,
-; `my-eval-program` явно протягує цей env до наступної форми. Чесна межа:
-; рекурсивний **верхньорівневий** `def` (функція, що викликає саму себе за
-; іменем) НЕ підтримується — замикання захоплює env *до* власного
-; зв'язування, тож рекурсивний виклик усередині тіла не знайде себе. Це
-; окрема, більша задача (потрібна якась форма відкладеного/само-посилального
-; зв'язування), навмисно не вирішена тут, а не прихована.
-;
-; Metazirkulärer Evaluator: my-eval interpretiert my-lisp-Quellcode
-; (gelesen als Daten, z. B. via `read`) nur mit my-lisps eigenen Primitiven.
-; Primitive — car/cdr/cons/atom/eq/Arithmetik — werden direkt dispatcht,
-; nicht neu implementiert, genau wie McCarthys eigenes eval/apply von 1960:
-; sein eval rief car/cdr/cons/atom/eq als gegeben auf, ohne sie neu zu
-; definieren.
-;
-; Umgebungen sind hier gewöhnliche Assoziationslisten aus (Symbol . Wert)
-; -Paaren, nicht die echte Environment des Hosts — my-lisp hat keine
-; Möglichkeit, diese aus der Sprache heraus zu erreichen. Der
-; "nicht gefunden"-Fall von `env-lookup` gibt das Atom selbst zurück statt
-; einen Fehler auszulösen: das lässt Zahlen/Zeichenketten/`t` ohne ein
-; symbol?/numberp?-Primitiv selbstauswerten. Das funktioniert, weil `eq`
-; nur verlangt, dass beide Operanden Atome sind, nicht denselben Typ — der
-; Vergleich einer Zahl mit den Symbol-Schlüsseln einer Alist liefert immer
-; sicher false, nie einen Absturz, sodass die Suche für jedes
-; Nicht-Symbol-Atom und für jedes tatsächlich ungebundene Symbol auf
-; "nicht gefunden -> unverändert zurückgeben" durchfällt.
-;
-; Dies ist eine Demonstration, kein Teil der stets geladenen
-; Bootstrap-Bibliothek: lib/core.my hängt nie davon ab, und nichts hier
-; ändert, was ein anderes my-lisp-Programm kann. Bewusst laden (siehe
-; docs/quote-tutorial.md).
-;
-; Nicht McCarthy-vollständig: nur einstellige `atom`/`eq`/`car`/`cdr`/`cons`
-; und zweistellige `+`/`-`/`*` (die echten Primitive sind variadisch, wo es
-; zählt, wie `+`); kein `defmacro`, `def`, `list` oder Vergleichsoperatoren
-; innerhalb interpretierter Programme. Bewusst minimal, für jeden auf
-; dieselbe Weise erweiterbar, der das möchte.
+; This remains an explicit self-hosting witness, not the always-loaded runtime.
+; Full named-error parity is still a known gap and must not be claimed as
+; complete self-hosting.
 
-; `(atom (car expr))` guards the keyword dispatch below: `eq` requires both
-; operands be atoms, and a call whose head is itself a list — like
-; `((lambda (x) x) 5)` — has a non-atom `(car expr)`, which would make
-; `(eq (car expr) 'quote)` a Type error instead of just falling through to
-; application. Checking `atom` first, before any `eq` against a keyword
-; symbol, keeps that case a plain (if redundant-looking) application.
-; `(atom (car expr))` захищає диспетчеризацію ключових слів нижче: `eq`
-; вимагає, щоб обидва операнди були атомами, а виклик, чия голова сама є
-; списком — як `((lambda (x) x) 5)` — має неатомарний `(car expr)`, що
-; зробило б `(eq (car expr) 'quote)` помилкою типу замість простого
-; провалу до застосування. Перевірка `atom` спершу, до будь-якого `eq` з
-; ключовим символом, лишає цей випадок звичайним (хай і на вигляд
-; надлишковим) застосуванням.
-; `(atom (car expr))` schützt die Schlüsselwort-Dispatch unten: `eq`
-; verlangt, dass beide Operanden Atome sind, und ein Aufruf, dessen Kopf
-; selbst eine Liste ist — wie `((lambda (x) x) 5)` — hat ein
-; nicht-atomares `(car expr)`, was `(eq (car expr) 'quote)` zu einem
-; Typfehler machen würde statt einfach zur Anwendung durchzufallen. Zuerst
-; `atom` zu prüfen, vor jedem `eq` gegen ein Schlüsselwort-Symbol, hält
-; diesen Fall eine gewöhnliche (wenn auch redundant wirkende) Anwendung.
-(def my-eval
-  (lambda (expr env)
-    (cond
-      ((atom expr) (env-lookup expr env))
-      ((atom (car expr))
-       (cond
-         ((eq (car expr) (quote quote)) (second expr))
-         ((eq (car expr) (quote cond)) (my-eval-cond (cdr expr) env))
-         ((eq (car expr) (quote lambda)) (list (quote closure) (second expr) (cdr (cdr expr)) env))
-         ((eq (car expr) (quote atom)) (atom (my-eval (second expr) env)))
-         ((eq (car expr) (quote eq)) (eq (my-eval (second expr) env) (my-eval (third expr) env)))
-         ((eq (car expr) (quote car)) (car (my-eval (second expr) env)))
-         ((eq (car expr) (quote cdr)) (cdr (my-eval (second expr) env)))
-         ((eq (car expr) (quote cons)) (cons (my-eval (second expr) env) (my-eval (third expr) env)))
-         ((eq (car expr) (quote +)) (+ (my-eval (second expr) env) (my-eval (third expr) env)))
-         ((eq (car expr) (quote -)) (- (my-eval (second expr) env) (my-eval (third expr) env)))
-         ((eq (car expr) (quote *)) (* (my-eval (second expr) env) (my-eval (third expr) env)))
-         ((my-macro? (env-lookup (car expr) env))
-          (my-eval (my-apply (env-lookup (car expr) env) (cdr expr)) env))
-         (t (my-apply (my-eval (car expr) env) (my-eval-list (cdr expr) env)))))
-      (t (my-apply (my-eval (car expr) env) (my-eval-list (cdr expr) env))))))
+(00001001 my-primitive
+  (00001000 (name)
+    (00100111 (00000001 primitive) name)))
 
-; A macro call's args are passed to `my-apply` unevaluated (`(cdr expr)`
-; directly, not `my-eval-list`'d) — the macro body builds an expansion from
-; the raw argument forms, then `my-eval` runs *that* expansion once more,
-; the same two-step shape (expand, then evaluate the result) real
-; `defmacro` uses in the host language.
-; Аргументи виклику макроса передаються `my-apply` неоцінені (`(cdr expr)`
-; напряму, не через `my-eval-list`) — тіло макроса будує розгортку із сирих
-; форм аргументів, тоді `my-eval` виконує *цю розгортку* ще раз — та сама
-; двокрокова форма (розгорнути, тоді обчислити результат), яку справжній
-; `defmacro` використовує в хост-мові.
-(def my-macro?
-  (lambda (value)
-    (cond
-      ((atom value) (quote ()))
-      (t (eq (car value) (quote macro))))))
+(00001001 my-error
+  (00001000 (kind detail)
+    (00100111 (00000001 error) kind detail)))
 
-(def my-eval-cond
-  (lambda (clauses env)
-    (cond
-      ((atom clauses) (quote ()))
-      ((my-eval (car (car clauses)) env) (my-eval (second (car clauses)) env))
-      (t (my-eval-cond (cdr clauses) env)))))
+; Internal evaluator outcomes carry provenance that interpreted Lisp data cannot
+; forge. The tag is a native closure identity, not a symbol or list shape that
+; a program could reproduce with quote/cons. Public my-eval/my-apply unwrap the
+; envelope, so the observable interface stays unchanged.
+(00001001 my-result-ok-token
+  (00001000 (value) value))
 
-(def my-eval-list
-  (lambda (exprs env)
-    (cond
-      ((atom exprs) (quote ()))
-      (t (cons (my-eval (car exprs) env) (my-eval-list (cdr exprs) env))))))
+(00001001 my-result-fail-token
+  (00001000 (value) value))
 
-(def bind-params
-  (lambda (params args env)
-    (cond
-      ((atom params) env)
-      (t (cons (cons (car params) (car args))
-               (bind-params (cdr params) (cdr args) env))))))
+(00001001 my-result-ok
+  (00001000 (value)
+    (00000100 my-result-ok-token value)))
 
-(def my-eval-body
-  (lambda (body env)
-    (cond
-      ((atom (cdr body)) (my-eval (car body) env))
-      (t ((lambda () (my-eval (car body) env) (my-eval-body (cdr body) env)))))))
+(00001001 my-result-fail
+  (00001000 (error)
+    (00000100 my-result-fail-token error)))
 
-(def my-apply
-  (lambda (fn args)
-    (cond
-      ((eq (car fn) (quote closure))
-       (my-eval-body (third fn) (bind-params (second fn) args (car (cdr (cdr (cdr fn)))))))
-      ((eq (car fn) (quote macro))
-       (my-eval-body (third fn) (bind-params (second fn) args (car (cdr (cdr (cdr fn)))))))
-      (t (list (quote not-callable) fn)))))
+(00001001 my-result-fail?
+  (00001000 (result)
+    (00000111
+      ((00000010 result) () (00000001 ()))
+      ((00000010 result) (1) (00000001 ()))
+      (t (00000011 (00000101 result) my-result-fail-token)))))
 
-(def env-lookup
-  (lambda (name env)
-    (cond
-      ((atom env) name)
-      ((eq (car (car env)) name) (cdr (car env)))
-      (t (env-lookup name (cdr env))))))
+(00001001 my-result-value
+  (00001000 (result)
+    (00000110 result)))
 
-; Top-level form sequencing — `def`/`defmacro` live here, not in `my-eval`
-; itself (see the file-header note). `my-eval-top-form` returns
-; `(new-env . value)`; `def`/`defmacro` extend `env` by consing a new
-; binding onto the front (same shadowing rule as a real alist environment —
-; the newest binding for a name wins), everything else evaluates normally
-; and passes `env` through unchanged.
-; Послідовність верхньорівневих форм — `def`/`defmacro` живуть тут, не в
-; самому `my-eval` (див. примітку на початку файлу). `my-eval-top-form`
-; повертає `(новий-env . значення)`; `def`/`defmacro` розширюють `env`,
-; додаючи нове зв'язування спереду (те саме правило затінення, що й у
-; справжньому asoc-середовищі — найновіше зв'язування для імені перемагає),
-; усе інше обчислюється звично й передає `env` без змін.
-(def my-eval-top-form
-  (lambda (form env)
-    (cond
-      ((atom form) (cons env (my-eval form env)))
-      ((eq (car form) (quote def))
-       (let ((value (my-eval (third form) env)))
-         (cons (cons (cons (second form) value) env) value)))
-      ((eq (car form) (quote defmacro))
-       (let ((macro-val (list (quote macro) (third form) (cdr (cdr (cdr form))) env)))
-         (cons (cons (cons (second form) macro-val) env) macro-val)))
-      (t (cons env (my-eval form env))))))
+; Surface spellings are not owned here. The generated projection loaded before
+; this evaluator maps every admitted runtime spelling to the numeric semantic ID
+; from lib/surface/semantic-registry.lisp. This file owns only the mapping from
+; those opaque IDs to evaluator mechanisms.
+(00001001 my-semantic-id?
+  (00001000 (name semantic-id)
+    (00000111
+      ((00100010 name semantic-id) t)
+      (t (00100010 (my-semantic-id-for-surface name) semantic-id)))))
 
-(def my-eval-program
-  (lambda (forms env)
-    (let ((result (my-eval-top-form (car forms) env)))
-      (cond
-        ((atom (cdr forms)) result)
-        (t (my-eval-program (cdr forms) (car result)))))))
+(00001001 my-canon-identity
+  (00001000 (name)
+    (10011100 ((semantic-id (00000111
+                         ((00100010 name 00000001) 00000001)
+                         ((00100010 name 00000010) 00000010)
+                         ((00100010 name 00000011) 00000011)
+                         ((00100010 name 00000100) 00000100)
+                         ((00100010 name 00000101) 00000101)
+                         ((00100010 name 00000110) 00000110)
+                         ((00100010 name 00000111) 00000111)
+                         (t (my-semantic-id-for-surface name)))))
+      (00000111
+        ((00100010 semantic-id 00000001) (00000001 quote))
+        ((00100010 semantic-id 00000010) (00000001 atom))
+        ((00100010 semantic-id 00000011) (00000001 eq))
+        ((00100010 semantic-id 00000100) (00000001 cons))
+        ((00100010 semantic-id 00000101) (00000001 car))
+        ((00100010 semantic-id 00000110) (00000001 cdr))
+        ((00100010 semantic-id 00000111) (00000001 cond))
+        (t (00000001 ()))))))
+
+(00001001 my-lambda-name?
+  (00001000 (name)
+    (my-semantic-id? name 00001000)))
+
+(00001001 my-define-name?
+  (00001000 (name)
+    (my-semantic-id? name 00001001)))
+
+(00001001 my-defmacro-name?
+  (00001000 (name)
+    (my-semantic-id? name 00001010)))
+
+(00001001 my-def-compat-name?
+  (00001000 (name)
+    (my-semantic-id? name 00001011)))
+
+(00001001 my-definition-name?
+  (00001000 (name)
+    (00000111
+      ((my-define-name? name) t)
+      ((my-def-compat-name? name) t)
+      (t (00000001 ())))))
+
+(00001001 my-canon-name?
+  (00001000 (name)
+    (00000111
+      ((my-canon-identity name) t)
+      (t (00000001 ())))))
+
+(00001001 my-canon-callable-identity?
+  (00001000 (identity-ref)
+    (00000111
+      ((00000011 identity-ref (00000001 atom)) t)
+      ((00000011 identity-ref (00000001 eq)) t)
+      ((00000011 identity-ref (00000001 cons)) t)
+      ((00000011 identity-ref (00000001 car)) t)
+      ((00000011 identity-ref (00000001 cdr)) t)
+      (t (00000001 ())))))
+
+(00001001 my-canon-quote-name?
+  (00001000 (name)
+    (00000011 (my-canon-identity name) (00000001 quote))))
+
+(00001001 my-canon-cond-name?
+  (00001000 (name)
+    (00000011 (my-canon-identity name) (00000001 cond))))
+
+(00001001 my-canon-binding-error
+  (00001000 (name)
+    (my-error
+      (00000001 invalid-form)
+      (00100111 (00000001 canonical-name-immutable) name))))
+
+; Root primitive meanings are represented as values. Canon is handled first.
+; Ordinary non-Canon boundary spellings are resolved to exact SENS identities
+; here; the primitive value carried by the evaluator never uses the human
+; spelling as its identity.
+(00001001 my-default-binding
+  (00001000 (name)
+    (10011100 ((identity-ref (my-canon-identity name)))
+      (00000111
+        ((my-canon-callable-identity? identity-ref) (my-primitive identity-ref))
+        ((my-canon-name? name) (my-canon-binding-error name))
+        ((my-semantic-id? name 00001100) (my-primitive 00001100))
+        ((my-semantic-id? name 00001101) (my-primitive 00001101))
+        ((my-semantic-id? name 00001110) (my-primitive 00001110))
+        ((my-semantic-id? name 00011010) (my-primitive 00011010))
+        ((my-semantic-id? name 00011100) (my-primitive 00011100))
+        ((my-semantic-id? name 00011011) (my-primitive 00011011))
+        ((my-semantic-id? name 01001100)
+         (my-primitive 01001100))
+        ((my-semantic-id? name 01000011)
+         (my-primitive 01000011))
+        (t name)))))
+
+; ADR-009 shared definition frame.
+;
+; The metacircular environment remains finite Lisp data. A binding whose key is
+; the non-symbol internal sentinel 0 stores the mutable-in-the-language-model
+; top-level frame as an ordinary alist:
+;
+;   ((0 . ((latest . value) ...)) . lexical-outer-env)
+;
+; User binders are symbols, so the sentinel cannot collide with a legal source
+; binding. Local lexical bindings are consed before this marker. At closure call
+; time only the marker payload is refreshed from the caller; local captured
+; bindings before it are preserved. This models shared frame identity without
+; dynamic scope and without a cyclic host object.
+(00001001 my-shared-frame-binding?
+  (00001000 (binding)
+    (00000111
+      ((00000010 binding) () (00000001 ()))
+      ((00000010 binding) (1) (00000001 ()))
+      (t (00000011 (00000101 binding) 0)))))
+
+(00001001 my-frame-bound?
+  (00001000 (name frame)
+    (00000111
+      ((00000010 frame) () (00000001 ()))
+      ((00000010 frame) (1) (00000001 ()))
+      ((00000011 (00000101 (00000101 frame)) name) t)
+      (t (my-frame-bound? name (00000110 frame))))))
+
+(00001001 my-frame-lookup
+  (00001000 (name frame)
+    (00000111
+      ((00000011 (00000101 (00000101 frame)) name) (00000110 (00000101 frame)))
+      (t (my-frame-lookup name (00000110 frame))))))
+
+(00001001 my-env-has-shared-frame?
+  (00001000 (env-ref)
+    (00000111
+      ((00000010 env-ref) () (00000001 ()))
+      ((00000010 env-ref) (1) (00000001 ()))
+      ((my-shared-frame-binding? (00000101 env-ref)) t)
+      (t (my-env-has-shared-frame? (00000110 env-ref))))))
+
+(00001001 my-shared-frame-value
+  (00001000 (env-ref)
+    (00000111
+      ((00000010 env-ref) () (00000001 ()))
+      ((00000010 env-ref) (1) (00000001 ()))
+      ((my-shared-frame-binding? (00000101 env-ref)) (00000110 (00000101 env-ref)))
+      (t (my-shared-frame-value (00000110 env-ref))))))
+
+(00001001 my-ensure-shared-frame
+  (00001000 (env-ref)
+    (00000111
+      ((my-env-has-shared-frame? env-ref) env-ref)
+      (t (00000100 (00000100 0 (00000001 ())) env-ref)))))
+
+(00001001 my-replace-shared-frame
+  (00001000 (env-ref frame)
+    (00000111
+      ((00000010 env-ref) () env-ref)
+      ((00000010 env-ref) (1) env-ref)
+      ((my-shared-frame-binding? (00000101 env-ref))
+       (00000100 (00000100 0 frame) (00000110 env-ref)))
+      (t
+       (00000100 (00000101 env-ref)
+             (my-replace-shared-frame (00000110 env-ref) frame))))))
+
+(00001001 my-refresh-shared-frame
+  (00001000 (captured-env caller-env)
+    (00000111
+      ((my-env-has-shared-frame? captured-env)
+       (00000111
+         ((my-env-has-shared-frame? caller-env)
+          (my-replace-shared-frame
+            captured-env
+            (my-shared-frame-value caller-env)))
+         (t captured-env)))
+      (t captured-env))))
+
+; Definitions update the shared marker when one is active. Outside
+; my-eval-program this falls back to the historical plain-alist extension, so
+; direct my-eval-top-form use remains compatible.
+(00001001 my-env-define
+  (00001000 (name value env-ref)
+    (00000111
+      ((00000010 env-ref) () (00000100 (00000100 name value) env-ref))
+      ((00000010 env-ref) (1) (00000100 (00000100 name value) env-ref))
+      ((my-shared-frame-binding? (00000101 env-ref))
+       (00000100
+         (00000100 0
+               (00000100 (00000100 name value)
+                     (00000110 (00000101 env-ref))))
+         (00000110 env-ref)))
+      (t
+       (00000100 (00000101 env-ref)
+             (my-env-define name value (00000110 env-ref)))))))
+
+; Contract 6.0: Canon outranks the lexical alist even if a hostile/pre-existing
+; environment contains the same text. Non-Canon names retain ordinary lookup.
+(00001001 env-lookup
+  (00001000 (name env-ref)
+    (10011100 ((identity-ref (my-canon-identity name)))
+      (00000111
+        ((my-canon-callable-identity? identity-ref) (my-primitive identity-ref))
+        ((my-canon-name? name) (my-canon-binding-error name))
+        ((00000010 env-ref) () (my-default-binding name))
+        ((00000010 env-ref) (1) (my-default-binding name))
+        ((my-shared-frame-binding? (00000101 env-ref))
+         (00000111
+           ((my-frame-bound? name (00000110 (00000101 env-ref)))
+            (my-frame-lookup name (00000110 (00000101 env-ref))))
+           (t (env-lookup name (00000110 env-ref)))))
+        ((00000011 (00000101 (00000101 env-ref)) name) (00000110 (00000101 env-ref)))
+        (t (env-lookup name (00000110 env-ref)))))))
+
+(00001001 env-bound?
+  (00001000 (name env-ref)
+    (00000111
+      ((my-canon-name? name) t)
+      ((00000010 env-ref) () (00000001 ()))
+      ((00000010 env-ref) (1) (00000001 ()))
+      ((my-shared-frame-binding? (00000101 env-ref))
+       (00000111
+         ((my-frame-bound? name (00000110 (00000101 env-ref))) t)
+         (t (env-bound? name (00000110 env-ref)))))
+      ((00000011 (00000101 (00000101 env-ref)) name) t)
+      (t (env-bound? name (00000110 env-ref))))))
+
+(00001001 my-primitive?
+  (00001000 (value)
+    (00000111
+      ((00000010 value) () (00000001 ()))
+      ((00000010 value) (1) (00000001 ()))
+      (t (00000011 (00000101 value) (00000001 primitive))))))
+
+; UnknownSymbol belongs to name resolution, not application. A symbol produced
+; as a value (for example by quote) is not an unresolved lookup and therefore
+; must later fail as not-callable/Type if placed in operator position.
+;
+; `symbol?` itself is language-owned in core.lisp, derived without a Rust builtin,
+; so this distinction adds no primitive to the closed Canon.
+(00001001 my-unresolved-name?
+  (00001000 (name env-ref)
+    (00000111
+      ((00100011 name)
+       (00000111
+         ((00000011 name t) (00000001 ()))
+         ((my-canon-name? name) (00000001 ()))
+         ((env-bound? name env-ref) (00000001 ()))
+         ((my-primitive? (my-default-binding name)) (00000001 ()))
+         (t t)))
+      (t (00000001 ())))))
+
+(00001001 my-macro?
+  (00001000 (value)
+    (00000111
+      ((00000010 value) () (00000001 ()))
+      ((00000010 value) (1) (00000001 ()))
+      (t (00000011 (00000101 value) (00000001 macro))))))
+
+(00001001 my-closure?
+  (00001000 (value)
+    (00000111
+      ((00000010 value) () (00000001 ()))
+      ((00000010 value) (1) (00000001 ()))
+      (t (00000011 (00000101 value) (00000001 closure))))))
+
+; A recursive closure is finite Lisp data. It does not require a cyclic host
+; Environment. At call time my-apply reconstructs the one self-binding that
+; the function needs. Contract 6 guarantees that this name is never Canon.
+;
+; Shape:
+;   (recursive-closure name params body captured-env)
+(00001001 my-recursive-closure?
+  (00001000 (value)
+    (00000111
+      ((00000010 value) () (00000001 ()))
+      ((00000010 value) (1) (00000001 ()))
+      (t (00000011 (00000101 value) (00000001 recursive-closure))))))
+
+; A mutually-recursive group is also finite Lisp data. Every member stores the
+; same raw group and captured outer environment; my-apply reconstructs the
+; group's bindings at call time rather than relying on a cyclic host object.
+;
+; Shape:
+;   (recursive-group-closure name params body group captured-env)
+(00001001 my-group-closure?
+  (00001000 (value)
+    (00000111
+      ((00000010 value) () (00000001 ()))
+      ((00000010 value) (1) (00000001 ()))
+      (t (00000011 (00000101 value) (00000001 recursive-group-closure))))))
+
+(00001001 my-lambda-form?
+  (00001000 (form)
+    (00000111
+      ((00000010 form) () (00000001 ()))
+      ((00000010 form) (1) (00000001 ()))
+      ((00000010 (00000101 form)) () (my-lambda-name? (00000101 form)))
+      ((00000010 (00000101 form)) (1) (my-lambda-name? (00000101 form)))
+      (t (00000001 ())))))
+
+(00001001 my-lambda-def-form?
+  (00001000 (form)
+    (00000111
+      ((00000010 form) () (00000001 ()))
+      ((00000010 form) (1) (00000001 ()))
+      ((my-definition-name? (00000101 form))
+       (00000111
+         ((my-canon-name? (00101111 form)) (00000001 ()))
+         (t (my-lambda-form? (00110000 form)))))
+      (t (00000001 ())))))
+
+(00001001 my-fourth
+  (00001000 (values)
+    (00000101 (00000110 (00000110 (00000110 values))))))
+
+(00001001 my-fifth
+  (00001000 (values)
+    (00000101 (00000110 (00000110 (00000110 (00000110 values)))))))
+
+(00001001 my-sixth
+  (00001000 (values)
+    (00000101 (00000110 (00000110 (00000110 (00000110 (00000110 values))))))))
+
+(00001001 my-compare-two
+  (00001000 (operator left right)
+    (00000111
+      ((00000011 operator 00011010) (00011010 left right))
+      ((00000011 operator 00011100) (00011100 left right))
+      ((00000011 operator 00011011) (00011011 left right))
+      (t (00000001 ())))))
+
+; Chained comparison semantics are Lisp-owned: values arrive already
+; evaluated, adjacent pairs are compared left-to-right, and evaluation stops
+; at the first false pair.
+; NOTE: my-compare-two returns exact-Q 1/0, not t/(). Since 0 is truthy
+; in my-lisp (only Nil and Bool(false) are falsy), we MUST use a 3-part
+; clause matching the exact-Q YES result (1) — not a 2-part clause.
+(00001001 my-compare-chain
+  (00001000 (operator values)
+    (00000111
+      ((00000010 (00000110 values)) () t)
+      ((00000010 (00000110 values)) (1) t)
+      ((00000011 (my-compare-two operator (00000101 values) (00101111 values)) 1)
+       (my-compare-chain operator (00000110 values)))
+      (t (00000001 ())))))
+
+; Primitive *identity* is a Lisp value. This function is the narrow bridge
+; from that identity to the admitted native operation mechanism.
+(00001001 my-apply-primitive
+  (00001000 (name args)
+    (00000111
+      ((00000011 name (00000001 atom)) (00000010 (00000101 args)))
+      ((00000011 name (00000001 eq))   (00000011 (00000101 args) (00101111 args)))
+      ((00000011 name (00000001 car))  (00000101 (00000101 args)))
+      ((00000011 name (00000001 cdr))  (00000110 (00000101 args)))
+      ((00000011 name (00000001 cons)) (00000100 (00000101 args) (00101111 args)))
+      ((00000011 name 00001100) (00001100 (00000101 args) (00101111 args)))
+      ((00000011 name 00001101) (00001101 (00000101 args) (00101111 args)))
+      ((00000011 name 00001110) (00001110 (00000101 args) (00101111 args)))
+      ((00000011 name 00011010) (my-compare-chain 00011010 args))
+      ((00000011 name 00011100) (my-compare-chain 00011100 args))
+      ((00000011 name 00011011) (my-compare-chain 00011011 args))
+      ((00000011 name 01001100)
+       (01001100 (00000101 args)))
+      ((00000011 name 01000011)
+       (01000011 (00000101 args)))
+      (t (00100111 (00000001 unknown-primitive) name)))))
+
+; Lambda-list arity is derivable from Lisp list structure itself:
+;   (x y)        -> exact 2
+;   (x y . rest) -> at least 2
+;   args         -> at least 0
+; No host metadata is required.
+(00001001 my-fixed-param-count
+  (00001000 (params)
+    (00000111
+      ((00000010 params) () 0)
+      ((00000010 params) (1) 0)
+      (t (00001100 1 (my-fixed-param-count (00000110 params)))))))
+
+(00001001 my-rest-param?
+  (00001000 (params)
+    (00000111
+      ((00000010 params) () (00000111
+         ((00000011 params (00000001 ())) (00000001 ()))
+         (t t)))
+      ((00000010 params) (1) (00000111
+         ((00000011 params (00000001 ())) (00000001 ()))
+         (t t)))
+      (t (my-rest-param? (00000110 params))))))
+
+(00001001 my-arity-ok?
+  (00001000 (params args)
+    (10011100 ((fixed (my-fixed-param-count params))
+          (received (00101000 args)))
+      (00000111
+        ((my-rest-param? params)
+         (00000111
+           ((00011010 received fixed) 1 (00000001 ()))
+           ((00011010 received fixed) 0 t)))
+        (t
+         (00000111
+           ((00011100 received fixed) 1 t)
+           ((00011100 received fixed) 0 (00000001 ()))))))))
+
+(00001001 my-arity-detail
+  (00001000 (params args)
+    (10011100 ((fixed (my-fixed-param-count params))
+          (received (00101000 args)))
+      (00100111
+        (00000001 expected)
+        (00000111
+          ((my-rest-param? params) (00100111 (00000001 at-least) fixed))
+          (t (00100111 (00000001 exact) fixed)))
+        (00000001 received)
+        received))))
+
+(00001001 my-arity-error
+  (00001000 (params args)
+    (my-error (00000001 arity) (my-arity-detail params args))))
+
+; Lambda-list validation is syntax semantics, not application semantics.
+; Contract 6 adds reserved-Canon rejection to the existing structural checks.
+(00001001 my-symbol-member?
+  (00001000 (name names)
+    (00000111
+      ((00000010 names) () (00000001 ()))
+      ((00000010 names) (1) (00000001 ()))
+      ((00000011 name (00000101 names)) t)
+      (t (my-symbol-member? name (00000110 names))))))
+
+(00001001 my-lambda-list-error-pairs
+  (00001000 (params seen)
+    (00000111
+      ((00000010 params) () (00000111
+         ((00000011 params (00000001 ())) (00000001 ()))
+         ((00100011 params)
+          (00000111
+            ((my-canon-name? params)
+             (00100111 (00000001 canonical-parameter) params))
+            ((my-symbol-member? params seen)
+             (00100111 (00000001 duplicate-parameter) params))
+            (t (00000001 ()))))
+         (t (00100111 (00000001 invalid-rest) params))))
+      ((00000010 params) (1) (00000111
+         ((00000011 params (00000001 ())) (00000001 ()))
+         ((00100011 params)
+          (00000111
+            ((my-canon-name? params)
+             (00100111 (00000001 canonical-parameter) params))
+            ((my-symbol-member? params seen)
+             (00100111 (00000001 duplicate-parameter) params))
+            (t (00000001 ()))))
+         (t (00100111 (00000001 invalid-rest) params))))
+      ((00100011 (00000101 params))
+       (00000111
+         ((my-canon-name? (00000101 params))
+          (00100111 (00000001 canonical-parameter) (00000101 params)))
+         ((my-symbol-member? (00000101 params) seen)
+          (00100111 (00000001 duplicate-parameter) (00000101 params)))
+         (t
+          (my-lambda-list-error-pairs
+            (00000110 params)
+            (00000100 (00000101 params) seen)))))
+      (t (00100111 (00000001 non-symbol-parameter) (00000101 params))))))
+
+(00001001 my-lambda-list-error
+  (00001000 (params)
+    (00000111
+      ((00000010 params) () (00000111
+         ((00000011 params (00000001 ())) (00000001 ()))
+         ((00100011 params)
+          (00000111
+            ((my-canon-name? params)
+             (00100111 (00000001 canonical-parameter) params))
+            (t (00000001 ()))))
+         (t (00100111 (00000001 invalid-parameters) params))))
+      ((00000010 params) (1) (00000111
+         ((00000011 params (00000001 ())) (00000001 ()))
+         ((00100011 params)
+          (00000111
+            ((my-canon-name? params)
+             (00100111 (00000001 canonical-parameter) params))
+            (t (00000001 ()))))
+         (t (00100111 (00000001 invalid-parameters) params))))
+      (t (my-lambda-list-error-pairs params (00000001 ()))))))
+
+(00001001 my-lambda-invalid-form
+  (00001000 (problem)
+    (my-error
+      (00000001 invalid-form)
+      (00000100 (00000001 lambda-parameters) problem))))
+
+(00001001 my-make-closure
+  (00001000 (params body env-ref)
+    (10011100 ((problem (my-lambda-list-error params)))
+      (00000111
+        ((00000010 problem) () (00100111 (00000001 closure) params body env-ref))
+        ((00000010 problem) (1) (00100111 (00000001 closure) params body env-ref))
+        (t (my-lambda-invalid-form problem))))))
+
+; Return the first malformed lambda-list in a top-level recursive group.
+; Canon-named definitions never enter a recursive group; my-lambda-def-form?
+; routes them to the ordinary top-form rejection path first.
+(00001001 my-lambda-def-group-error
+  (00001000 (forms)
+    (00000111
+      ((00000010 forms) () (00000001 ()))
+      ((00000010 forms) (1) (00000001 ()))
+      (t
+       (10011100 ((problem
+               (my-lambda-list-error (00101111 (00110000 (00000101 forms))))))
+         (00000111
+           ((00000010 problem) () (my-lambda-def-group-error (00000110 forms)))
+           ((00000010 problem) (1) (my-lambda-def-group-error (00000110 forms)))
+           (t problem)))))))
+
+; Parameter binding owns only the successful path. Arity and Canon-name
+; validity are checked before this function is entered.
+(00001001 bind-params
+  (00001000 (params args env-ref)
+    (00000111
+      ((00000010 params) () (00000111
+         ((00000011 params (00000001 ())) env-ref)
+         (t (00000100 (00000100 params args) env-ref))))
+      ((00000010 params) (1) (00000111
+         ((00000011 params (00000001 ())) env-ref)
+         (t (00000100 (00000100 params args) env-ref))))
+      (t (00000100 (00000100 (00000101 params) (00000101 args))
+               (bind-params (00000110 params) (00000110 args) env-ref))))))
+
+(00001001 my-eval-list-result
+  (00001000 (exprs env-ref)
+    (00000111
+      ((00000010 exprs) () (my-result-ok (00000001 ())))
+      ((00000010 exprs) (1) (my-result-ok (00000001 ())))
+      (t
+       (10011100 ((head-result (my-eval-result (00000101 exprs) env-ref)))
+         (00000111
+           ((my-result-fail? head-result) head-result)
+           (t
+            (10011100 ((tail-result (my-eval-list-result (00000110 exprs) env-ref)))
+              (00000111
+                ((my-result-fail? tail-result) tail-result)
+                (t
+                 (my-result-ok
+                   (00000100
+                     (my-result-value head-result)
+                     (my-result-value tail-result)))))))))))))
+
+(00001001 my-eval-list
+  (00001000 (exprs env-ref)
+    (my-result-value (my-eval-list-result exprs env-ref))))
+
+(00001001 my-eval-body-result
+  (00001000 (body env-ref)
+    (00000111
+      ((00000010 (00000110 body)) () (my-eval-result (00000101 body) env-ref))
+      ((00000010 (00000110 body)) (1) (my-eval-result (00000101 body) env-ref))
+      (t
+       (10011100 ((first-result (my-eval-result (00000101 body) env-ref)))
+         (00000111
+           ((my-result-fail? first-result) first-result)
+           (t (my-eval-body-result (00000110 body) env-ref))))))))
+
+(00001001 my-eval-body
+  (00001000 (body env-ref)
+    (my-result-value (my-eval-body-result body env-ref))))
+
+(00001001 my-cond-has-migration-clause?
+  (00001000 (clauses)
+    (00000111
+      ((00000010 clauses) () (00000001 ()))
+      ((00000010 clauses) (1) (00000001 ()))
+      ((00000010 (00000101 clauses)) () (my-cond-has-migration-clause? (00000110 clauses)))
+      ((00000010 (00000101 clauses)) (1) (my-cond-has-migration-clause? (00000110 clauses)))
+      ((00000011 (00101000 (00000101 clauses)) 2) (1) t)
+      ((00000011 (00101000 (00000101 clauses)) 2) (0)
+       (my-cond-has-migration-clause? (00000110 clauses))))))
+
+(00001001 my-eval-cond-result-mode
+  (00001000 (clauses env-ref migration-compatibility?)
+    (00000111
+      ((00000010 clauses) () (00000111
+         (migration-compatibility? (my-result-ok (00000001 ())))
+         (t
+          (my-result-fail
+            (my-error (00000001 unsatisfied-conditional) (00000001 cond))))))
+      ((00000010 clauses) (1) (00000111
+         (migration-compatibility? (my-result-ok (00000001 ())))
+         (t
+          (my-result-fail
+            (my-error (00000001 unsatisfied-conditional) (00000001 cond))))))
+      (t
+       (10011100 ((clause (00000101 clauses)))
+         (00000111
+           ; #217 canonical path: evaluate only the query. The expected result
+           ; is already Lisp data in the interpreted program and must never be
+           ; executed as code. Match it structurally, then evaluate the branch.
+           ((00000011 (00101000 clause) 3) (1)
+            (10011100 ((test-result (my-eval-result (00000101 clause) env-ref)))
+              (00000111
+                ((my-result-fail? test-result) test-result)
+                ((00100010 (my-result-value test-result) (00101111 clause))
+                 (1)
+                 (my-eval-result (00110000 clause) env-ref))
+                ((00100010 (my-result-value test-result) (00101111 clause))
+                 (0)
+                 (my-eval-cond-result-mode
+                   (00000110 clauses) env-ref migration-compatibility?)))))
+           ; Historical two-part clauses remain migration-only, mirroring the
+           ; native evaluator until their callers are moved to explicit result
+           ; matching. This path intentionally retains old truthiness.
+           ((00000011 (00101000 clause) 2) (1)
+            (10011100 ((test-result (my-eval-result (00000101 clause) env-ref)))
+              (00000111
+                ((my-result-fail? test-result) test-result)
+                ((my-result-value test-result)
+                 (my-eval-result (00101111 clause) env-ref))
+                (t
+                 (my-eval-cond-result-mode
+                   (00000110 clauses) env-ref migration-compatibility?)))))
+           (t
+            (my-result-fail
+              (my-error
+                (00000001 invalid-form)
+                (00100111 (00000001 cond-clause) clause))))))))))
+
+(00001001 my-eval-cond-result
+  (00001000 (clauses env-ref)
+    (my-eval-cond-result-mode
+      clauses env-ref (my-cond-has-migration-clause? clauses))))
+
+(00001001 my-eval-cond
+  (00001000 (clauses env-ref)
+    (my-result-value (my-eval-cond-result clauses env-ref))))
+
+(00001001 my-take-lambda-def-group
+  (00001000 (forms)
+    (00000111
+      ((00000010 forms) () (00000001 ()))
+      ((00000010 forms) (1) (00000001 ()))
+      ((my-lambda-def-form? (00000101 forms))
+       (00000100 (00000101 forms)
+             (my-take-lambda-def-group (00000110 forms))))
+      (t (00000001 ())))))
+
+(00001001 my-drop-lambda-def-group
+  (00001000 (forms)
+    (00000111
+      ((00000010 forms) () (00000001 ()))
+      ((00000010 forms) (1) (00000001 ()))
+      ((my-lambda-def-form? (00000101 forms))
+       (my-drop-lambda-def-group (00000110 forms)))
+      (t forms))))
+
+(00001001 my-group-closure-from-def
+  (00001000 (form group captured-env)
+    (10011100 ((lambda-form (00110000 form)))
+      (00100111 (00000001 recursive-group-closure)
+            (00101111 form)
+            (00101111 lambda-form)
+            (00000110 (00000110 lambda-form))
+            group
+            captured-env))))
+
+; Application-time reconstruction keeps SCC members as lexical bindings around
+; the refreshed shared frame. This retains finite group recursion.
+(00001001 my-build-group-env-onto
+  (00001000 (forms group captured-env out)
+    (00000111
+      ((00000010 forms) () out)
+      ((00000010 forms) (1) out)
+      (t
+       (10011100 ((form (00000101 forms)))
+         (my-build-group-env-onto
+           (00000110 forms)
+           group
+           captured-env
+           (00000100
+             (00000100 (00101111 form)
+                   (my-group-closure-from-def form group captured-env))
+             out)))))))
+
+(00001001 my-build-group-env
+  (00001000 (group captured-env)
+    (my-build-group-env-onto group group captured-env captured-env)))
+
+; Program-time installation is different: SCC members are top-level definitions
+; and therefore belong to the shared definition frame rather than to a lexical
+; prefix that could become a stale snapshot for later closures.
+(00001001 my-install-group-env-onto
+  (00001000 (forms group captured-env out)
+    (00000111
+      ((00000010 forms) () out)
+      ((00000010 forms) (1) out)
+      (t
+       (10011100 ((form (00000101 forms)))
+         (my-install-group-env-onto
+           (00000110 forms)
+           group
+           captured-env
+           (my-env-define
+             (00101111 form)
+             (my-group-closure-from-def form group captured-env)
+             out)))))))
+
+(00001001 my-install-group-env
+  (00001000 (group captured-env)
+    (my-install-group-env-onto group group captured-env captured-env)))
+
+; caller-env is optional only for compatibility with the old experimental
+; meta-eval-mutual wrapper. Main my-eval always passes it. When present it is
+; used solely to refresh the shared top-level marker in a captured environment.
+; Internal application returns an outcome envelope. This keeps evaluator
+; failures distinct from ordinary Lisp data whose printed shape happens to be
+; `(error ...)`.
+(00001001 my-apply-result
+  (00001000 (fn args caller-env)
+    (00000111
+      ((00000010 fn) () (my-result-fail (my-error (00000001 not-callable) fn)))
+      ((00000010 fn) (1) (my-result-fail (my-error (00000001 not-callable) fn)))
+      ((my-primitive? fn)
+       (my-result-ok (my-apply-primitive (00101111 fn) args)))
+      ((my-closure? fn)
+       (00000111
+         ((my-arity-ok? (00101111 fn) args)
+          (my-eval-body-result
+            (00110000 fn)
+            (bind-params
+              (00101111 fn)
+              args
+              (my-refresh-shared-frame
+                (my-fourth fn)
+                caller-env))))
+         (t
+          (my-result-fail (my-arity-error (00101111 fn) args)))))
+      ((my-recursive-closure? fn)
+       (00000111
+         ((my-arity-ok? (00110000 fn) args)
+          (10011100 ((captured
+                  (my-refresh-shared-frame
+                    (my-fifth fn)
+                    caller-env)))
+            (10011100 ((self-env
+                    (00000100 (00000100 (00101111 fn) fn)
+                          captured)))
+              (my-eval-body-result
+                (my-fourth fn)
+                (bind-params
+                  (00110000 fn)
+                  args
+                  self-env)))))
+         (t
+          (my-result-fail (my-arity-error (00110000 fn) args)))))
+      ((my-group-closure? fn)
+       (00000111
+         ((my-arity-ok? (00110000 fn) args)
+          (10011100 ((captured
+                  (my-refresh-shared-frame
+                    (my-sixth fn)
+                    caller-env)))
+            (10011100 ((group-env
+                    (my-build-group-env (my-fifth fn) captured)))
+              (my-eval-body-result
+                (my-fourth fn)
+                (bind-params
+                  (00110000 fn)
+                  args
+                  group-env)))))
+         (t
+          (my-result-fail (my-arity-error (00110000 fn) args)))))
+      ((my-macro? fn)
+       (00000111
+         ((my-arity-ok? (00101111 fn) args)
+          (my-eval-body-result
+            (00110000 fn)
+            (bind-params
+              (00101111 fn)
+              args
+              (my-refresh-shared-frame
+                (my-fourth fn)
+                caller-env))))
+         (t
+          (my-result-fail (my-arity-error (00101111 fn) args)))))
+      (t
+       (my-result-fail (my-error (00000001 not-callable) fn))))))
+
+(00001001 my-apply
+  (00001000 (fn args . caller-env-rest)
+    (10011100 ((caller-env
+            (00000111
+              ((00000010 caller-env-rest) () (00000001 ()))
+              ((00000010 caller-env-rest) (1) (00000001 ()))
+              (t (00000101 caller-env-rest)))))
+      (my-result-value (my-apply-result fn args caller-env)))))
+
+; Evaluate one ordinary application with explicit operator-first and
+; left-to-right argument sequencing. Recursive evaluation stays inside the
+; outcome channel until this application has produced a value or its first
+; failure.
+(00001001 my-eval-application-result
+  (00001000 (expr env-ref)
+    (10011100 ((fn-result (my-eval-result (00000101 expr) env-ref)))
+      (00000111
+        ((my-result-fail? fn-result) fn-result)
+        (t
+         (10011100 ((fn (my-result-value fn-result)))
+           (00000111
+             ((my-macro? fn)
+              (00000111
+                ((my-arity-ok? (00101111 fn) (00000110 expr))
+                 (10011100 ((expansion-result
+                         (my-apply-result fn (00000110 expr) env-ref)))
+                   (00000111
+                     ((my-result-fail? expansion-result) expansion-result)
+                     (t
+                      (my-eval-result
+                        (my-result-value expansion-result)
+                        env-ref)))))
+                (t
+                 (my-result-fail
+                   (my-arity-error (00101111 fn) (00000110 expr))))))
+             (t
+              (10011100 ((args-result
+                      (my-eval-list-result (00000110 expr) env-ref)))
+                (00000111
+                  ((my-result-fail? args-result) args-result)
+                  (t
+                   (my-apply-result
+                     fn
+                     (my-result-value args-result)
+                     env-ref))))))))))))
+
+(00001001 my-eval-result
+  (00001000 (expr env-ref)
+    (00000111
+      ((00000010 expr) () (00000111
+         ((my-unresolved-name? expr env-ref)
+          (my-result-fail
+            (my-error (00000001 unbound-symbol) expr)))
+         (t
+          (my-result-ok (env-lookup expr env-ref)))))
+      ((00000010 expr) (1) (00000111
+         ((my-unresolved-name? expr env-ref)
+          (my-result-fail
+            (my-error (00000001 unbound-symbol) expr)))
+         (t
+          (my-result-ok (env-lookup expr env-ref)))))
+      ((00000010 (00000101 expr)) () (00000111
+         ((my-canon-quote-name? (00000101 expr))
+          (my-result-ok (00101111 expr)))
+         ((my-canon-cond-name? (00000101 expr))
+          (my-eval-cond-result (00000110 expr) env-ref))
+         ((my-lambda-name? (00000101 expr))
+          (10011100 ((problem (my-lambda-list-error (00101111 expr))))
+            (00000111
+              ((00000010 problem) () (my-result-ok
+                 (my-make-closure
+                   (00101111 expr)
+                   (00000110 (00000110 expr))
+                   env-ref)))
+              ((00000010 problem) (1) (my-result-ok
+                 (my-make-closure
+                   (00101111 expr)
+                   (00000110 (00000110 expr))
+                   env-ref)))
+              (t
+               (my-result-fail
+                 (my-lambda-invalid-form problem))))))
+         (t
+          (my-eval-application-result expr env-ref))))
+      ((00000010 (00000101 expr)) (1) (00000111
+         ((my-canon-quote-name? (00000101 expr))
+          (my-result-ok (00101111 expr)))
+         ((my-canon-cond-name? (00000101 expr))
+          (my-eval-cond-result (00000110 expr) env-ref))
+         ((my-lambda-name? (00000101 expr))
+          (10011100 ((problem (my-lambda-list-error (00101111 expr))))
+            (00000111
+              ((00000010 problem) () (my-result-ok
+                 (my-make-closure
+                   (00101111 expr)
+                   (00000110 (00000110 expr))
+                   env-ref)))
+              ((00000010 problem) (1) (my-result-ok
+                 (my-make-closure
+                   (00101111 expr)
+                   (00000110 (00000110 expr))
+                   env-ref)))
+              (t
+               (my-result-fail
+                 (my-lambda-invalid-form problem))))))
+         (t
+          (my-eval-application-result expr env-ref))))
+      (t
+       (my-eval-application-result expr env-ref)))))
+
+(00001001 my-eval
+  (00001000 (expr env-ref)
+    (my-result-value (my-eval-result expr env-ref))))
+
+; Top-level sequencing. `def` and `defmacro` return `(new-env . value)` so
+; the environment can be threaded explicitly to the next form. Under
+; my-eval-program, my-env-define updates the ADR-009 shared definition frame;
+; direct calls without a marker retain the historical plain-alist behavior.
+;
+; Contract 6 rejects Canon definition names before value construction.
+(00001001 my-eval-top-form
+  (00001000 (form env-ref)
+    (00000111
+      ((00000010 form) () (00000100 env-ref (my-eval form env-ref)))
+      ((00000010 form) (1) (00000100 env-ref (my-eval form env-ref)))
+      ((my-definition-name? (00000101 form))
+       (00000111
+         ((my-canon-name? (00101111 form))
+          (00000100 env-ref (my-canon-binding-error (00101111 form))))
+         (t
+          (10011100 ((value-form (00110000 form)))
+            (00000111
+              ((my-lambda-form? value-form)
+               (10011100 ((problem (my-lambda-list-error (00101111 value-form))))
+                 (00000111
+                   ((00000010 problem) () (10011100 ((value
+                            (00100111 (00000001 recursive-closure)
+                                  (00101111 form)
+                                  (00101111 value-form)
+                                  (00000110 (00000110 value-form))
+                                  env-ref)))
+                      (00000100
+                        (my-env-define (00101111 form) value env-ref)
+                        value)))
+                   ((00000010 problem) (1) (10011100 ((value
+                            (00100111 (00000001 recursive-closure)
+                                  (00101111 form)
+                                  (00101111 value-form)
+                                  (00000110 (00000110 value-form))
+                                  env-ref)))
+                      (00000100
+                        (my-env-define (00101111 form) value env-ref)
+                        value)))
+                   (t (00000100 env-ref (my-lambda-invalid-form problem))))))
+              (t
+               (10011100 ((value (my-eval value-form env-ref)))
+                 (00000100
+                   (my-env-define (00101111 form) value env-ref)
+                   value))))))))
+      ((my-defmacro-name? (00000101 form))
+       (00000111
+         ((my-canon-name? (00101111 form))
+          (00000100 env-ref (my-canon-binding-error (00101111 form))))
+         (t
+          (10011100 ((macro-val
+                  (00100111 (00000001 macro)
+                        (00110000 form)
+                        (00000110 (00000110 (00000110 form)))
+                        env-ref)))
+            (00000100
+              (my-env-define (00101111 form) macro-val env-ref)
+              macro-val)))))
+      (t (00000100 env-ref (my-eval form env-ref))))))
+
+; Dependency analysis for top-level lambda definitions stays in Lisp data.
+; A graph entry is `(name dependencies)`, where dependencies are only free
+; references to names from the same contiguous lambda-definition block.
+(00001001 my-params-bind-name?
+  (00001000 (name params)
+    (00000111
+      ((00000010 params) () (00000111
+         ((00000011 params (00000001 ())) (00000001 ()))
+         ((00000011 params name) t)
+         (t (00000001 ()))))
+      ((00000010 params) (1) (00000111
+         ((00000011 params (00000001 ())) (00000001 ()))
+         ((00000011 params name) t)
+         (t (00000001 ()))))
+      ((00000011 (00000101 params) name) t)
+      (t (my-params-bind-name? name (00000110 params))))))
+
+(00001001 my-forms-reference-name?
+  (00001000 (forms name)
+    (00000111
+      ((00000010 forms) () (00000001 ()))
+      ((00000010 forms) (1) (00000001 ()))
+      ((my-form-references-name? (00000101 forms) name) t)
+      (t (my-forms-reference-name? (00000110 forms) name)))))
+
+(00001001 my-form-references-name?
+  (00001000 (form name)
+    (00000111
+      ((00000010 form) () (00000111
+         ((00100011 form) (00000011 form name))
+         (t (00000001 ()))))
+      ((00000010 form) (1) (00000111
+         ((00100011 form) (00000011 form name))
+         (t (00000001 ()))))
+      ((00000010 (00000101 form)) () (00000111
+         ; Quoted data is not a lexical dependency.
+         ((my-canon-quote-name? (00000101 form)) (00000001 ()))
+         ; A nested lambda can shadow a candidate top-level name.
+         ((my-lambda-name? (00000101 form))
+          (00000111
+            ((my-params-bind-name? name (00101111 form)) (00000001 ()))
+            (t (my-forms-reference-name? (00000110 (00000110 form)) name))))
+         (t (my-forms-reference-name? form name))))
+      ((00000010 (00000101 form)) (1) (00000111
+         ; Quoted data is not a lexical dependency.
+         ((my-canon-quote-name? (00000101 form)) (00000001 ()))
+         ; A nested lambda can shadow a candidate top-level name.
+         ((my-lambda-name? (00000101 form))
+          (00000111
+            ((my-params-bind-name? name (00101111 form)) (00000001 ()))
+            (t (my-forms-reference-name? (00000110 (00000110 form)) name))))
+         (t (my-forms-reference-name? form name))))
+      (t (my-forms-reference-name? form name)))))
+
+(00001001 my-lambda-def-references-name?
+  (00001000 (form name)
+    (10011100 ((lambda-form (00110000 form)))
+      (00000111
+        ((my-params-bind-name? name (00101111 lambda-form)) (00000001 ()))
+        (t (my-forms-reference-name? (00000110 (00000110 lambda-form)) name))))))
+
+(00001001 my-lambda-def-names
+  (00001000 (forms)
+    (00000111
+      ((00000010 forms) () (00000001 ()))
+      ((00000010 forms) (1) (00000001 ()))
+      (t (00000100 (00101111 (00000101 forms))
+               (my-lambda-def-names (00000110 forms)))))))
+
+(00001001 my-def-dependencies
+  (00001000 (form candidates)
+    (00000111
+      ((00000010 candidates) () (00000001 ()))
+      ((00000010 candidates) (1) (00000001 ()))
+      ((my-lambda-def-references-name? form (00000101 candidates))
+       (00000100 (00000101 candidates)
+             (my-def-dependencies form (00000110 candidates))))
+      (t (my-def-dependencies form (00000110 candidates))))))
+
+(00001001 my-build-dependency-graph-with-names
+  (00001000 (forms names)
+    (00000111
+      ((00000010 forms) () (00000001 ()))
+      ((00000010 forms) (1) (00000001 ()))
+      (t
+       (00000100
+         (00100111
+           (00101111 (00000101 forms))
+           (my-def-dependencies (00000101 forms) names))
+         (my-build-dependency-graph-with-names (00000110 forms) names))))))
+
+(00001001 my-build-dependency-graph
+  (00001000 (forms)
+    (10011100 ((names (my-lambda-def-names forms)))
+      (my-build-dependency-graph-with-names forms names))))
+
+(00001001 my-graph-dependencies
+  (00001000 (name graph)
+    (00000111
+      ((00000010 graph) () (00000001 ()))
+      ((00000010 graph) (1) (00000001 ()))
+      ((00000011 name (00000101 (00000101 graph))) (00101111 (00000101 graph)))
+      (t (my-graph-dependencies name (00000110 graph))))))
+
+(00001001 my-graph-dependencies-reach?
+  (00001000 (dependencies target graph visited)
+    (00000111
+      ((00000010 dependencies) () (00000001 ()))
+      ((00000010 dependencies) (1) (00000001 ()))
+      ((00000011 (00000101 dependencies) target) t)
+      ((my-symbol-member? (00000101 dependencies) visited)
+       (my-graph-dependencies-reach?
+         (00000110 dependencies) target graph visited))
+      ((my-graph-reaches?
+         (00000101 dependencies)
+         target
+         graph
+         (00000100 (00000101 dependencies) visited))
+       t)
+      (t
+       (my-graph-dependencies-reach?
+         (00000110 dependencies) target graph visited)))))
+
+(00001001 my-graph-reaches?
+  (00001000 (from target graph visited)
+    (my-graph-dependencies-reach?
+      (my-graph-dependencies from graph)
+      target
+      graph
+      (00000100 from visited))))
+
+; The SCC containing `name` is the set of block names mutually reachable
+; with it. `name` itself is always retained so an acyclic node is a singleton
+; component; only components with 2+ members use recursive-group-closure.
+(00001001 my-scc-names
+  (00001000 (name candidates graph)
+    (00000111
+      ((00000010 candidates) () (00000001 ()))
+      ((00000010 candidates) (1) (00000001 ()))
+      ((00000011 name (00000101 candidates))
+       (00000100 (00000101 candidates)
+             (my-scc-names name (00000110 candidates) graph)))
+      ((my-graph-reaches? name (00000101 candidates) graph (00000001 ()))
+       (00000111
+         ((my-graph-reaches? (00000101 candidates) name graph (00000001 ()))
+          (00000100 (00000101 candidates)
+                (my-scc-names name (00000110 candidates) graph)))
+         (t (my-scc-names name (00000110 candidates) graph))))
+      (t (my-scc-names name (00000110 candidates) graph)))))
+
+(00001001 my-select-defs-by-names
+  (00001000 (forms names)
+    (00000111
+      ((00000010 forms) () (00000001 ()))
+      ((00000010 forms) (1) (00000001 ()))
+      ((my-symbol-member? (00101111 (00000101 forms)) names)
+       (00000100 (00000101 forms)
+             (my-select-defs-by-names (00000110 forms) names)))
+      (t (my-select-defs-by-names (00000110 forms) names)))))
+
+(00001001 my-remove-defs-by-names
+  (00001000 (forms names)
+    (00000111
+      ((00000010 forms) () (00000001 ()))
+      ((00000010 forms) (1) (00000001 ()))
+      ((my-symbol-member? (00101111 (00000101 forms)) names)
+       (my-remove-defs-by-names (00000110 forms) names))
+      (t
+       (00000100 (00000101 forms)
+             (my-remove-defs-by-names (00000110 forms) names))))))
+
+(00001001 my-last-lambda-def-name
+  (00001000 (forms)
+    (00000111
+      ((00000010 (00000110 forms)) () (00101111 (00000101 forms)))
+      ((00000010 (00000110 forms)) (1) (00101111 (00000101 forms)))
+      (t (my-last-lambda-def-name (00000110 forms))))))
+
+(00001001 my-eval-lambda-components
+  (00001000 (forms graph env-ref final-name)
+    (00000111
+      ((00000010 forms) () (00000100 env-ref (env-lookup final-name env-ref)))
+      ((00000010 forms) (1) (00000100 env-ref (env-lookup final-name env-ref)))
+      (t
+       (10011100 ((name (00101111 (00000101 forms))))
+         (10011100 ((component-names
+                 (my-scc-names
+                   name
+                   (my-lambda-def-names forms)
+                   graph)))
+           (00000111
+             ; A singleton stays on the ordinary top-level path. That path
+             ; already gives self-recursive definitions a finite
+             ; recursive-closure without falsely inventing a group.
+             ((00000010 (00000110 component-names)) () (10011100 ((result (my-eval-top-form (00000101 forms) env-ref)))
+                (my-eval-lambda-components
+                  (00000110 forms)
+                  graph
+                  (00000101 result)
+                  final-name)))
+             ((00000010 (00000110 component-names)) (1) (10011100 ((result (my-eval-top-form (00000101 forms) env-ref)))
+                (my-eval-lambda-components
+                  (00000110 forms)
+                  graph
+                  (00000101 result)
+                  final-name)))
+             (t
+              (10011100 ((component
+                      (my-select-defs-by-names forms component-names)))
+                (10011100 ((group-env (my-install-group-env component env-ref)))
+                  (my-eval-lambda-components
+                    (my-remove-defs-by-names forms component-names)
+                    graph
+                    group-env
+                    final-name)))))))))))
+
+(00001001 my-eval-lambda-block
+  (00001000 (forms env-ref)
+    (10011100 ((graph (my-build-dependency-graph forms))
+          (final-name (my-last-lambda-def-name forms)))
+      (my-eval-lambda-components forms graph env-ref final-name))))
+
+; `my-eval-program` validates each contiguous top-level non-Canon
+; lambda-definition block, builds its explicit dependency graph, and gives
+; recursive-group-closure only to real multi-member strongly-connected
+; components. Independent or one-way-dependent definitions stay on the
+; ordinary singleton path. This prevents adjacency itself from inventing
+; recursion while keeping finite Lisp data for genuine mutual recursion.
+;
+; For every non-empty program ADR-009 installs one finite shared-frame marker.
+; Recursive calls reuse that same marker. An empty form list remains a valid
+; no-op program and preserves the supplied environment exactly, so TASK-001's
+; empty-program witness is unchanged.
+(00001001 my-eval-program
+  (00001000 (forms env-ref)
+    (00000111
+      ((00000010 forms) () (00000100 env-ref (00000001 ())))
+      ((00000010 forms) (1) (00000100 env-ref (00000001 ())))
+      (t
+       (10011100 ((program-env (my-ensure-shared-frame env-ref)))
+         (00000111
+           ((my-lambda-def-form? (00000101 forms))
+            (10011100 ((block (my-take-lambda-def-group forms)))
+              (10011100 ((problem (my-lambda-def-group-error block)))
+                (00000111
+                  ((00000010 problem) () (10011100 ((rest (my-drop-lambda-def-group forms)))
+                     (10011100 ((block-result
+                             (my-eval-lambda-block block program-env)))
+                       (00000111
+                         ((00000010 rest) () block-result)
+                         ((00000010 rest) (1) block-result)
+                         (t
+                          (my-eval-program
+                            rest
+                            (00000101 block-result)))))))
+                  ((00000010 problem) (1) (10011100 ((rest (my-drop-lambda-def-group forms)))
+                     (10011100 ((block-result
+                             (my-eval-lambda-block block program-env)))
+                       (00000111
+                         ((00000010 rest) () block-result)
+                         ((00000010 rest) (1) block-result)
+                         (t
+                          (my-eval-program
+                            rest
+                            (00000101 block-result)))))))
+                  (t
+                   (00000100
+                     program-env
+                     (my-lambda-invalid-form problem)))))))
+           (t
+            (10011100 ((result (my-eval-top-form (00000101 forms) program-env)))
+              (00000111
+                ((00000010 (00000110 forms)) () result)
+                ((00000010 (00000110 forms)) (1) result)
+                (t
+                 (my-eval-program
+                   (00000110 forms)
+                   (00000101 result))))))))))))
