@@ -1,11 +1,11 @@
-name: Sync my-lisp reference files
+name: Sync SENS reference files
 
-# Pulls the small set of my-lisp files fpga-lisp keeps as reference
+# Pulls the small set of SENS files fpga-lisp keeps as reference
 # material under docs/reference/ (conformance fixtures, language-core prose,
 # and the canonical bootstrap library/meta-eval) and opens a PR when upstream
-# has changed. The authoritative machine-readable language-contract.my is
-# synchronized separately into contracts/my-lisp/ by
-# sync-my-lisp-contract-authority.yml.
+# has changed. The authoritative machine-readable language-contract.lisp is
+# synchronized separately into contracts/SENS/ by
+# sync-SENS-contract-authority.yml.
 
 on:
   schedule:
@@ -19,38 +19,42 @@ jobs:
       - name: Check out fpga-lisp
         uses: actions/checkout@v4
 
-      - name: Fetch reference files from my-lisp
+      - name: Fetch reference files from SENS
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.SENS_READ_TOKEN || github.token }}
         run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "SENS_READ_TOKEN is required for private cross-repo reference sync" >&2
+            exit 1
+          fi
           set -euo pipefail
           mkdir -p docs/reference/my-lisp-lib
           fetch() {
             gh api "repos/juv4uk/sens/contents/$1" --jq '.content' | base64 -d > "$2"
           }
-          fetch "tests/fixtures/conformance.my" "docs/reference/conformance.my"
+          fetch "tests/fixtures/conformance.lisp" "docs/reference/conformance.lisp"
           fetch "docs/language-core.md" "docs/reference/language-core.md"
-          fetch "lib/core.my" "docs/reference/my-lisp-lib/core.my"
-          fetch "lib/meta-eval.my" "docs/reference/my-lisp-lib/meta-eval.my"
+          fetch "lib/core.lisp" "docs/reference/my-lisp-lib/core.lisp"
+          fetch "lib/meta-eval.lisp" "docs/reference/my-lisp-lib/meta-eval.lisp"
 
       - name: Open a PR if anything changed
         uses: peter-evans/create-pull-request@v6
         with:
-          commit-message: "Sync reference files from my-lisp"
-          title: "Sync reference files from my-lisp"
+          commit-message: "Sync reference files from SENS"
+          title: "Sync reference files from SENS"
           body: |
             Automated sync of supporting reference files fpga-lisp mirrors from
-            [my-lisp](https://github.com/juv4uk/sens) under `docs/reference/`:
+            [SENS](https://github.com/juv4uk/sens) under `docs/reference/`:
 
-            - `tests/fixtures/conformance.my` — implementation-independent conformance fixtures
+            - `tests/fixtures/conformance.lisp` — implementation-independent conformance fixtures
             - `docs/language-core.md` — explanatory language-core prose
-            - `lib/core.my` — the canonical bootstrapped standard library
-            - `lib/meta-eval.my` — the metacircular eval/apply reference
+            - `lib/core.lisp` — the canonical bootstrapped standard library
+            - `lib/meta-eval.lisp` — the metacircular eval/apply reference
 
-            The authoritative machine-readable `language-contract.my` is synced
-            separately under `contracts/my-lisp/` with an exact revision lock.
+            The authoritative machine-readable `language-contract.lisp` is synced
+            separately under `contracts/SENS/` with an exact revision lock.
 
             Review the diff before merging — a conformance-contract change may
             mean fpga-lisp's own eval needs a matching update.
-          branch: sync/my-lisp-reference
+          branch: sync/SENS-reference
           delete-branch: true
