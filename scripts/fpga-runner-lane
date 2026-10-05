@@ -5,8 +5,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 LOCK_DIR="${XDG_RUNTIME_DIR:-/tmp}"
 LOCK_PATH="${FPGA_LANE_LOCK:-$LOCK_DIR/fpga-lisp-com4.lock}"
 WAIT_SECONDS="${FPGA_LANE_WAIT_SECONDS:-120}"
-WINDOWS_PYTHON="${FPGA_LANE_WINDOWS_PYTHON:-/mnt/c/Users/user/AppData/Local/Programs/Python/Python312/python.exe}"
-HELPER="${FPGA_LANE_HELPER:-$SCRIPT_DIR/fpga_runner_lane.py}"
+CLIENT="${FPGA_LANE_CLIENT:-$SCRIPT_DIR/fpga_runner_lane.py}"
 
 mkdir -p "$(dirname "$LOCK_PATH")"
 exec 9>"$LOCK_PATH"
@@ -15,14 +14,9 @@ if ! flock -w "$WAIT_SECONDS" 9; then
   exit 75
 fi
 
-if [[ ! -x "$WINDOWS_PYTHON" ]]; then
-  echo "FPGA_LANE_NO_WINDOWS_PYTHON path=$WINDOWS_PYTHON" >&2
-  exit 69
-fi
-if [[ ! -f "$HELPER" ]]; then
-  echo "FPGA_LANE_NO_HELPER path=$HELPER" >&2
+if [[ ! -f "$CLIENT" ]]; then
+  echo "FPGA_LANE_NO_CLIENT path=$CLIENT" >&2
   exit 69
 fi
 
-HELPER_WINDOWS="$(wslpath -w "$HELPER")"
-exec "$WINDOWS_PYTHON" "$HELPER_WINDOWS" "$@"
+exec python3 "$CLIENT" "$@"

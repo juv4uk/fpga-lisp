@@ -1,169 +1,144 @@
 #!/usr/bin/env python3
-"""Native-Windows serial helper for the shared local FPGA runner lane."""
+"""WSL-side client for the single-owner native-Windows FPGA runner bridge."""
 
 import argparse
+import base64
 import json
+import os
 import pathlib
+import socket
 import struct
-import sys
-import time
-
-import serial
-import serial.tools.list_ports
+import subprocess
 
 
-def read_exact(port, size):
-    data = bytearray()
-    while len(data) < size:
-        chunk = port.read(size - len(data))
-        if not chunk:
-            raise TimeoutError(f"expected {size} bytes, got {len(data)}")
-        data.extend(chunk)
-    return bytes(data)
+def default_host():
+    override = os.environ.get("FPGA_BRIDGE_HOST")
+    if override:
+        return override
+    output = subprocess.check_output(
+        ["ip", "route", "show", "default"], text=True, timeout=2
+    )
+    fields = output.split()
+    try:
+        return fields[fields.index("via") + 1]
+    except (ValueError, IndexError) as error:
+        raise RuntimeError(
+            f"cannot resolve WSL Windows-host gateway from: {output!r}"
+        ) from error
 
 
-def probe(args):
-    ports = {
-        p.device: {"description": p.description, "hwid": p.hwid}
-        for p in serial.tools.list_ports.comports()
-    }
-    info = ports.get(args.port)
-    if info is None:
-        raise RuntimeError(f"{args.port} not present")
-    started = time.perf_counter_ns()
-    with serial.Serial(
-        args.port,
-        args.baud,
-        timeout=args.timeout,
-        write_timeout=args.timeout,
-    ) as port:
-        opened = port.is_open
-    elapsed_us = (time.perf_counter_ns() - started) / 1000.0
-    print(
-        json.dumps(
-            {
-                "ok": bool(opened),
-                "port": args.port,
-                "baud": args.baud,
-                "description": info["description"],
-                "hwid": info["hwid"],
-                "open_close_us": round(elapsed_us, 1),
-            },
-            sort_keys=True,
-        )
+def transact(host, port, payload, timeout):
+    wire = (json.dumps(payload, sort_keys=True) + "\n").encode("utf-8")
+    with socket.create_connection((host, port), timeout=timeout) as sock:
+        sock.settimeout(timeout)
+        sock.sendall(wire)
+        chunks = bytearray()
+        while b"\n" not in chunks:
+            chunk = sock.recv(4096)
+            if not chunk:
+                break
+            chunks.extend(chunk)
+    if not chunks:
+        raise RuntimeError("FPGA bridge returned no response")
+    response = json.loads(bytes(chunks).split(b"\n", 1)[0].decode("utf-8"))
+    if response.get("ok") is not True:
+        raise RuntimeError(response.get("error", f"FPGA bridge rejected request: {response}"))
+    return response
+
+
+def add_common(payload, args):
+    payload["port"] = args.serial_port
+    payload["baud"] = args.baud
+    payload["timeout"] = args.serial_timeout
+    return payload
+
+
+def command_ping(args):
+    return transact(args.host, args.bridge_port, {"op": "ping"}, args.bridge_timeout)
+
+
+def command_probe(args):
+    return transact(
+        args.host,
+        args.bridge_port,
+        add_common({"op": "probe"}, args),
+        args.bridge_timeout,
     )
 
 
-def monitor(args):
-    with serial.Serial(
-        args.port,
-        args.baud,
-        timeout=args.timeout,
-        write_timeout=args.timeout,
-    ) as port:
-        port.reset_input_buffer()
-        started = time.perf_counter_ns()
-        port.write(bytes([0x01, args.register]))
-        port.flush()
-        value = struct.unpack("<I", read_exact(port, 4))[0]
-        register_us = (time.perf_counter_ns() - started) / 1000.0
-
-        started = time.perf_counter_ns()
-        port.write(bytes([0x04]))
-        port.flush()
-        error_status = struct.unpack("<I", read_exact(port, 4))[0]
-        error_us = (time.perf_counter_ns() - started) / 1000.0
-
-    print(
-        json.dumps(
-            {
-                "ok": error_status == 0,
-                "port": args.port,
-                "register": args.register,
-                "result_word": value,
-                "error_status": error_status,
-                "register_read_us": round(register_us, 1),
-                "error_read_us": round(error_us, 1),
-            },
-            sort_keys=True,
-        )
+def command_monitor(args):
+    return transact(
+        args.host,
+        args.bridge_port,
+        add_common({"op": "monitor", "register": args.register}, args),
+        args.bridge_timeout,
     )
-    if error_status != 0:
-        raise SystemExit(2)
 
 
-def execute_bin(args):
-    repo = pathlib.Path(args.repo)
-    sys.path.insert(0, str(repo))
-    import job_transport
-
+def command_execute_bin(args):
     data = pathlib.Path(args.file).read_bytes()
     if not data or len(data) % 4:
         raise RuntimeError("binary must be a non-empty sequence of 32-bit words")
-    count = len(data) // 4
-    if count > 4095:
-        raise RuntimeError(f"program too long: {count} words")
+    word_count = len(data) // 4
+    if word_count > 4095:
+        raise RuntimeError(f"program too long: {word_count} words")
 
-    request = b"CMLJ" + struct.pack("<HBBH", 1, args.register, 0, count) + data
-    started = time.perf_counter_ns()
-    response = job_transport.execute(
-        args.port,
-        args.baud,
-        args.timeout,
-        args.reset_wait,
-        args.halt_wait,
-        request,
+    request = b"CMLJ" + struct.pack("<HBBH", 1, args.register, 0, word_count) + data
+    payload = add_common(
+        {
+            "op": "execute",
+            "request_b64": base64.b64encode(request).decode("ascii"),
+            "reset_wait": args.reset_wait,
+            "halt_wait": args.halt_wait,
+            "soft_rearm": args.soft_rearm,
+            "rearm_wait": args.rearm_wait,
+        },
+        args,
     )
-    elapsed_ms = (time.perf_counter_ns() - started) / 1_000_000.0
-
-    if len(response) != 14 or response[:4] != b"CMLR":
-        raise RuntimeError(f"bad bridge response: {response.hex()}")
-    version, value, error_status = struct.unpack("<HII", response[4:])
-    print(
-        json.dumps(
-            {
-                "ok": version == 1 and error_status == 0,
-                "port": args.port,
-                "program": str(args.file),
-                "program_words": count,
-                "protocol_version": version,
-                "result_word": value,
-                "error_status": error_status,
-                "elapsed_ms": round(elapsed_ms, 3),
-            },
-            sort_keys=True,
-        )
-    )
-    if version != 1 or error_status != 0:
-        raise SystemExit(2)
+    result = transact(args.host, args.bridge_port, payload, args.bridge_timeout)
+    result.setdefault("program_words", word_count)
+    result.setdefault("program", str(args.file))
+    return result
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Native Windows UART side of the single-owner FPGA runner lane"
+        description="WSL client for the native Windows COM4 FPGA runner bridge"
     )
-    parser.add_argument("--port", default="COM4")
+    parser.add_argument("--host", default=default_host())
+    parser.add_argument(
+        "--bridge-port",
+        type=int,
+        default=int(os.environ.get("FPGA_BRIDGE_PORT", "8765")),
+    )
+    parser.add_argument("--bridge-timeout", type=float, default=10.0)
+    parser.add_argument("--port", dest="serial_port", default="COM4")
     parser.add_argument("--baud", type=int, default=115200)
-    parser.add_argument("--timeout", type=float, default=2.0)
+    parser.add_argument("--timeout", dest="serial_timeout", type=float, default=2.0)
+
     sub = parser.add_subparsers(dest="command", required=True)
 
+    command = sub.add_parser("ping")
+    command.set_defaults(func=command_ping)
+
     command = sub.add_parser("probe")
-    command.set_defaults(func=probe)
+    command.set_defaults(func=command_probe)
 
     command = sub.add_parser("monitor")
     command.add_argument("--register", type=int, default=9, choices=range(16))
-    command.set_defaults(func=monitor)
+    command.set_defaults(func=command_monitor)
 
     command = sub.add_parser("execute-bin")
-    command.add_argument("--repo", default=r"C:\GitHub\fpga-lisp")
     command.add_argument("--file", required=True)
     command.add_argument("--register", type=int, default=9, choices=range(16))
     command.add_argument("--reset-wait", type=float, default=3.0)
     command.add_argument("--halt-wait", type=float, default=2.0)
-    command.set_defaults(func=execute_bin)
+    command.add_argument("--soft-rearm", action="store_true")
+    command.add_argument("--rearm-wait", type=float, default=0.05)
+    command.set_defaults(func=command_execute_bin)
 
     args = parser.parse_args()
-    args.func(args)
+    print(json.dumps(args.func(args), sort_keys=True))
 
 
 if __name__ == "__main__":
