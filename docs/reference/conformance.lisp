@@ -1,29 +1,27 @@
-; PROVENANCE: synced from canonical my-lisp/tests/fixtures/conformance.my
-; source commit: 2eb4ad1 on 2026-08-24; contract 3.0.
-; This is a reference copy; my-lisp remains semantic authority.
-
 ; tests/fixtures/conformance.my — the implementation-independent contract
 ; (see CLAUDE.md): any future my-lisp implementation — C, HDL, whatever —
 ; should reproduce these results once it has the seven primitives and
 ; lambda/def/defmacro right. One flat alist per fixture, one fixture per
 ; top-level form (read via `read-all`, not one big wrapping list) —
-; appending a fixture is just adding one more line at the end, never
-; touching a shared closing paren. Values never edited in place. Fact
-; keys (expr/expected/error/mode) are the contract itself; tag keys
+; appending a fixture is normally just adding one more line at the end, never
+; touching a shared closing paren. Git preserves historical values; this file
+; itself is the CURRENT contract, so a ratified semantic cutover may update an
+; existing fact key when the old result has been explicitly superseded.
+; Fact keys (expr/expected/error/mode) are the contract itself; tag keys
 ; (tier/axioms/role/note) are this project's own classification of that
 ; contract, kept in the same record on purpose (2026-08-09) — my-lisp
 ; can tell them apart by name without two physically separate files.
-((expr . "(quote radio)") (expected . "radio") (tier . 1) (axioms . (G3)) (role . "constitutive"))
-((expr . "(atom (quote radio))") (expected . "t") (tier . 1) (axioms . (G2)) (role . "constitutive"))
-((expr . "(atom (quote ()))") (expected . "t") (tier . 1) (axioms . (G2)) (role . "constitutive"))
-((expr . "(atom (quote (radio antenna)))") (expected . "()") (tier . 1) (axioms . (G2)) (role . "constitutive"))
-((expr . "(eq (quote radio) (quote radio))") (expected . "t") (tier . 1) (axioms . (G1)) (role . "constitutive"))
-((expr . "(eq (quote radio) (quote antenna))") (expected . "()") (tier . 1) (axioms . (G1)) (role . "constitutive"))
-((expr . "(car (quote (radio antenna)))") (expected . "radio") (tier . 1) (axioms . (G2)) (role . "constitutive"))
-((expr . "(cdr (quote (radio antenna)))") (expected . "(antenna)") (tier . 1) (axioms . (G2)) (role . "constitutive"))
-((expr . "(cons (quote radio) (quote (antenna)))") (expected . "(radio antenna)") (tier . 1) (axioms . (G2)) (role . "constitutive"))
-((expr . "(cond (() (quote wrong)) (t (quote right)))") (expected . "right") (tier . 1) (axioms . (G8)) (role . "constitutive"))
-((expr . "(/ 5 6 8 7)") (expected . "5/336") (tier . 2) (axioms . (S1)))
+((expr . "(quote radio)") (expected . "radio") (tier . 1) (axioms . (G3)) (role . "constitutive") (compiler-corpus . t) (wsm-native . ((status . pending))) (meta-eval . t))
+((expr . "(00000010 (quote radio))") (expected . "(1)") (tier . 1) (axioms . (G2)) (role . "constitutive") (compiler-corpus . t) (wsm-native . ((status . pending))) (meta-eval . t))
+((expr . "(00000010 (quote ()))") (expected . "()") (tier . 1) (axioms . (G2)) (role . "constitutive") (meta-eval . t))
+((expr . "(00000010 (quote (radio antenna)))") (expected . "(0)") (tier . 1) (axioms . (G2)) (role . "constitutive") (meta-eval . t))
+((expr . "(00000011 (quote radio) (quote radio))") (expected . "(1)") (tier . 1) (axioms . (G1)) (role . "constitutive") (compiler-corpus . t) (wsm-native . ((status . pending))) (meta-eval . t))
+((expr . "(00000011 (quote radio) (quote antenna))") (expected . "(0)") (tier . 1) (axioms . (G1)) (role . "constitutive") (meta-eval . t))
+((expr . "(car (quote (radio antenna)))") (expected . "radio") (tier . 1) (axioms . (G2)) (role . "constitutive") (compiler-corpus . t) (wsm-native . ((status . pending))) (meta-eval . t))
+((expr . "(cdr (quote (radio antenna)))") (expected . "(antenna)") (tier . 1) (axioms . (G2)) (role . "constitutive") (compiler-corpus . t) (wsm-native . ((status . pending))) (meta-eval . t))
+((expr . "(cons (quote radio) (quote (antenna)))") (expected . "(radio antenna)") (tier . 1) (axioms . (G2)) (role . "constitutive") (compiler-corpus . t) (wsm-native . ((status . pending))) (meta-eval . t))
+((expr . "(за-умовою (() (як-є wrong)) ((тотожне? (як-є x) (як-є x)) (як-є right)))") (expected . "right") (tier . 1) (axioms . (G8)) (role . "constitutive") (compiler-corpus . t) (wsm-native . ((status . pending))) (meta-eval . t))
+((expr . "(/ 5 6 8 7)") (expected . "5/336") (tier . 2) (axioms . (S1)) (compiler-corpus . t) (meta-eval-gap . t) (wsm-native . ((status . pending))))
 ((expr . "(+ (/ 1 3) (/ 1 3))") (expected . "2/3") (tier . 2) (axioms . (S1)))
 ((expr . "(- 1 (/ 1 3))") (expected . "2/3") (tier . 2) (axioms . (S1)))
 ((expr . "(* (/ 2 3) (/ 9 4))") (expected . "3/2") (tier . 2) (axioms . (S1)))
@@ -38,7 +36,9 @@
 ((expr . "12345678901234567890.12345678901234567890") (expected . "123456789012345678901234567890123456789/10000000000000000000") (tier . 2) (axioms . (S1)))
 ((expr . "1e100") (expected . "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000") (tier . 2) (axioms . (S1)))
 ((expr . "1e-100") (expected . "1/10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000") (tier . 2) (axioms . (S1)))
-((expr . ".") (error . "UnknownSymbol") (tier . 2) (axioms . (S2)))
+; A lone `.` is reader punctuation (#1696), not a malformed number: outside a
+; dotted pair it is a Parse error, so it no longer belongs to this family.
+; Covered by parser::tests::a_lone_dot_outside_a_dotted_pair_is_a_parse_error.
 ((expr . ".e3") (error . "UnknownSymbol") (tier . 2) (axioms . (S2)))
 ((expr . "1e") (error . "UnknownSymbol") (tier . 2) (axioms . (S2)))
 ((expr . "1e+") (error . "UnknownSymbol") (tier . 2) (axioms . (S2)))
@@ -59,8 +59,17 @@
 ((expr . "(def 1e100001 5)") (error . "NumericOverflow") (tier . 2) (axioms . (S3)))
 ((expr . "1ee3") (error . "UnknownSymbol") (tier . 2) (axioms . (S2)))
 ((expr . "--0.5") (error . "UnknownSymbol") (tier . 2) (axioms . (S2)))
-((expr . "+") (expected . "#<builtin +>") (tier . 2) (since-contract . (2 1)) (requires . (first-class-builtins builtin-add)) (axioms . (S2)))
-((expr . "-") (expected . "#<builtin ->") (tier . 2) (since-contract . (2 1)) (requires . (first-class-builtins builtin-subtract)) (axioms . (S2)))
+; Reframed 2026-09-11: the original expected value here was the printed
+; representation string "#<builtin +>" -- that pinned display FORMAT as
+; contract, not the actual fact contract 2.1 needs (that a bare `+`/`-`
+; reference is first-class: passable as an ordinary value, callable when
+; applied). Display representation is free to vary (docs/COMPILER-AUTHORITY-BOUNDARY.md,
+; #66) -- callability is not. Passing the bare builtin into a lambda and
+; calling it there proves first-classness without coupling the fixture
+; to Value::Builtin's current print format, which a future
+; Lisp/CML/FPGA-backed `+` need not reproduce byte-for-byte.
+((expr . "((lambda (f) (f 3 4)) +)") (expected . "7") (tier . 2) (since-contract . (2 1)) (requires . (first-class-builtins builtin-add)) (axioms . (S2)) (note . "bare + passed as an ordinary value and called -- proves first-classness without pinning #<builtin +>'s print format as contract"))
+((expr . "((lambda (f) (f 10 4)) -)") (expected . "6") (tier . 2) (since-contract . (2 1)) (requires . (first-class-builtins builtin-subtract)) (axioms . (S2)) (note . "same reframing for -"))
 ((expr . ".5") (expected . "1/2") (tier . 2) (axioms . (S1)))
 ((expr . "-.5") (expected . "-1/2") (tier . 2) (axioms . (S1)))
 ((expr . "5.") (expected . "5") (tier . 2) (axioms . (S1)))
@@ -71,27 +80,40 @@
 ((expr . "-0.0") (expected . "0") (tier . 2) (axioms . (S1)))
 ((expr . "0.0") (expected . "0") (tier . 2) (axioms . (S1)))
 ((expr . "(/ 1 0.0)") (error . "DivisionByZero") (tier . 2) (since-contract . (3 0)) (axioms . (S2)))
-((expr . "(eq 3 3)") (expected . "t") (tier . 1) (axioms . (G1)) (role . "constitutive"))
-((expr . "(eq 3 4)") (expected . "()") (tier . 1) (axioms . (G1)) (role . "constitutive"))
-((expr . "(eq \"radio\" \"radio\")") (expected . "t") (tier . 1) (axioms . (G1)) (role . "constitutive"))
-((expr . "(eq \"\\r\" \"r\")") (expected . "()") (tier . 1) (axioms . (G1)) (role . "constitutive") (note . "\\r must be the real carriage-return byte (0x0D), not the letter r — found broken in a real fpga-lisp bug, fixed 2026-08-10"))
-((expr . "(cond (() (quote first)) (() (quote second)) (t (quote third)))") (expected . "third") (tier . 1) (axioms . (G8)) (role . "constitutive"))
+((expr . "(00000011 3 3)") (expected . "(1)") (tier . 1) (axioms . (G1)) (role . "constitutive") (meta-eval . t))
+((expr . "(00000011 3 4)") (expected . "(0)") (tier . 1) (axioms . (G1)) (role . "constitutive") (meta-eval . t))
+((expr . "(00000011 \"radio\" \"radio\")") (expected . "(1)") (tier . 1) (axioms . (G1)) (role . "constitutive") (requires . (strings)) (meta-eval . t))
+((expr . "(00000011 \"\\r\" \"r\")") (expected . "(0)") (tier . 1) (axioms . (G1)) (role . "constitutive") (requires . (strings)) (note . "\\r must be the real carriage-return byte (0x0D), not the letter r — found broken in a real fpga-lisp bug, fixed 2026-08-10") (meta-eval . t))
+((expr . "(cond (() (quote first)) (() (quote second)) (t (quote third)))") (expected . "third") (tier . 1) (axioms . (G8)) (role . "constitutive") (meta-eval . t))
 ((expr . "(second (quote (radio antenna signal)))") (expected . "antenna") (tier . 3) (axioms . (G5)))
 ((expr . "(third (quote (radio antenna signal)))") (expected . "signal") (tier . 3) (axioms . (G5)))
 ((expr . "(not (quote ()))") (expected . "t") (tier . 3) (axioms . (G5)))
 ((expr . "(not (quote radio))") (expected . "()") (tier . 3) (axioms . (G5)))
+((expr . "(and)") (expected . "t") (tier . 3) (axioms . (G5 G8)) (note . "vacuous and -- neutral element, added 2026-08-27 after grep confirmed and/or were absent from both core.my and Rust builtins entirely; chess-lisp-zero had to bootstrap its own copy"))
+((expr . "(or)") (expected . "()") (tier . 3) (axioms . (G5 G8)) (note . "vacuous or -- neutral element"))
+((expr . "(symbol? (gensym \"temp-\"))") (expected . "t") (tier . 3) (axioms . (G5)) (note . "gensym, added 2026-08-27 (see docs/macro-hygiene-2026-08-27.md) -- returns a real symbol, built entirely from existing primitives (mono-ns/write-to-string/string-append/string->symbol), no new Rust code"))
+((expr . "(00000011 (gensym \"temp-\") (gensym \"temp-\"))") (expected . "(0)") (tier . 3) (axioms . (G5)) (note . "two calls with the same prefix are never eq -- the actual property that matters for a fresh-name generator, not just a type check"))
+((expr . "(string-prefix? \"temp-\" (symbol->string (gensym \"temp-\")))") (expected . "t") (tier . 3) (axioms . (G5)) (note . "the caller's prefix is genuinely preserved in the generated name, not discarded"))
+((expr . "(and t t t)") (expected . "t") (tier . 3) (axioms . (G5)))
+((expr . "(and t (quote ()) t)") (expected . "()") (tier . 3) (axioms . (G5)))
+((expr . "(and t 42)") (expected . "42") (tier . 3) (axioms . (G5)) (note . "and/or return the actual value of the deciding form, not just t/() -- matches Common Lisp/Scheme, not a plain boolean-only and/or"))
+((expr . "(or (quote ()) (quote ()) t)") (expected . "t") (tier . 3) (axioms . (G5)))
+((expr . "(or (quote ()) (quote ()) (quote ()))") (expected . "()") (tier . 3) (axioms . (G5)))
+((expr . "(or (quote ()) 7)") (expected . "7") (tier . 3) (axioms . (G5)))
+((expr . "(and (quote ()) (undefined-symbol))") (expected . "()") (tier . 3) (axioms . (G5)) (note . "proves real short-circuit, not eager evaluation: undefined-symbol would raise UnknownSymbol if and ever evaluated it"))
+((expr . "(or t (undefined-symbol))") (expected . "t") (tier . 3) (axioms . (G5)) (note . "same short-circuit proof for or"))
 ((expr . "(length (quote (radio antenna signal)))") (expected . "3") (tier . 3) (axioms . (G5)))
 ((expr . "(length (quote ()))") (expected . "0") (tier . 3) (axioms . (G5)))
 ((expr . "(reverse (quote (radio antenna signal)))") (expected . "(signal antenna radio)") (tier . 3) (axioms . (G5)))
 ((expr . "(append (quote (radio)) (quote (antenna signal)))") (expected . "(radio antenna signal)") (tier . 3) (axioms . (G5)))
 ((expr . "(map (lambda (x) (+ x 1)) (quote (1 2 3)))") (expected . "(2 3 4)") (tier . 3) (axioms . (G5)))
-((expr . "(filter (lambda (x) (eq x 2)) (quote (1 2 3 2)))") (expected . "(2 2)") (tier . 3) (axioms . (G5)))
+((expr . "(filter (lambda (x) (00000011 x 2)) (quote (1 2 3 2)))") (expected . "(2 2)") (tier . 3) (axioms . (G5)))
 ((expr . "(reduce (lambda (acc x) (+ acc x)) 0 (quote (1 2 3 4)))") (expected . "10") (tier . 3) (axioms . (G5)))
-((expr . "(< 1 2 3)") (expected . "t") (tier . 2) (axioms . ()))
-((expr . "(< 1 3 2)") (expected . "()") (tier . 2) (axioms . ()))
-((expr . "(> 3 2 1)") (expected . "t") (tier . 2) (axioms . ()))
-((expr . "(= 1 1 1)") (expected . "t") (tier . 2) (axioms . ()))
-((expr . "(= 1/2 0.5)") (expected . "t") (tier . 2) (axioms . (G1 S1)))
+((expr . "(< 1 2 3)") (expected . "t") (tier . 2) (axioms . ()) (meta-eval . t))
+((expr . "(< 1 3 2)") (expected . "()") (tier . 2) (axioms . ()) (meta-eval . t))
+((expr . "(> 3 2 1)") (expected . "t") (tier . 2) (axioms . ()) (meta-eval . t))
+((expr . "(= 1 1 1)") (expected . "t") (tier . 2) (axioms . ()) (meta-eval . t))
+((expr . "(= 1/2 0.5)") (expected . "t") (tier . 2) (axioms . (G1 S1)) (meta-eval . t))
 ((expr . "(<= 1 1 2)") (expected . "t") (tier . 2) (axioms . ()))
 ((expr . "(>= 2 2 1)") (expected . "t") (tier . 2) (axioms . ()))
 ((expr . "(print 42)") (expected . "42") (tier . 2) (axioms . ()))
@@ -99,7 +121,7 @@
 ((expr . "(eval (read \"(+ 1 2)\"))") (expected . "3") (tier . 2) (axioms . (G3)))
 ((expr . "(car 5)") (error . "Type") (tier . 1) (axioms . (S2)) (role . "constitutive"))
 ((expr . "(car (quote ()))") (error . "Type") (tier . 1) (axioms . (S2)) (role . "constitutive"))
-((expr . "(eq (quote (1)) (quote (2)))") (error . "Type") (tier . 1) (axioms . (S2)) (role . "constitutive"))
+((expr . "(00000011 (quote (1)) (quote (2)))") (error . "Type") (tier . 1) (axioms . (S2)) (role . "constitutive"))
 ((expr . "(undefined-symbol)") (error . "UnknownSymbol") (tier . 1) (axioms . (S2)) (note . "symbol lookup is core semantics (tier 1 explicitly lists \"symbols\"); not actually borderline with tier 2"))
 ((expr . "(lambda (x))") (error . "Arity") (tier . 2) (axioms . (S2)))
 ((expr . "(quote a b)") (error . "Arity") (tier . 1) (axioms . (S2)) (role . "constitutive"))
@@ -107,9 +129,9 @@
 ((expr . "(/ 1 0)") (error . "DivisionByZero") (tier . 2) (since-contract . (3 0)) (axioms . (S2)))
 ((expr . "(let ((x 1) (y 2)) (+ x y))") (expected . "3") (tier . 3) (axioms . (G5)))
 ((expr . "(let* ((x 1) (y (+ x 1))) y)") (expected . "2") (tier . 3) (axioms . (G5)))
-((expr . "(equal? (quote (1 (2 3) 4)) (quote (1 (2 3) 4)))") (expected . "t") (tier . 3) (axioms . (G5)))
-((expr . "(equal? (quote (1 2)) (quote (1 2 3)))") (expected . "()") (tier . 3) (axioms . (G5)))
-((expr . "(eq (lambda (x) x) (lambda (x) x))") (expected . "()") (tier . 2) (axioms . (G1)) (role . "constitutive"))
+((expr . "(equal? (quote (1 (2 3) 4)) (quote (1 (2 3) 4)))") (expected . "(1)") (tier . 3) (axioms . (G5)))
+((expr . "(equal? (quote (1 2)) (quote (1 2 3)))") (expected . "(0)") (tier . 3) (axioms . (G5)))
+((expr . "(00000011 (lambda (x) x) (lambda (x) x))") (expected . "(0)") (tier . 2) (axioms . (G1)) (role . "constitutive") (compiler-corpus . t) (meta-eval-gap . t) (wsm-native . ((status . pending))))
 ((expr . "(unify (quote a) (quote a) (quote ()))") (expected . "()") (tier . 3) (axioms . ()))
 ((expr . "(unify (quote (var x)) (quote a) (quote ()))") (expected . "((x . a))") (tier . 3) (axioms . ()))
 ((expr . "(unify (quote (var x)) (quote (var x)) (quote ()))") (expected . "()") (tier . 3) (axioms . ()))
@@ -118,22 +140,22 @@
 ((expr . "(let ((rules (quote (((parent alice bob)))))) (reason (quote (parent alice bob)) rules))") (expected . "((() (proved (parent alice bob) (parent alice bob) ())))") (tier . 3) (axioms . ()))
 ((expr . "(let ((rules (quote (((parent alice bob)))))) (reason (list (quote parent) (logic-var (quote x)) (quote bob)) rules))") (expected . "((((x . alice)) (proved (parent (var x) bob) (parent alice bob) ())))") (tier . 3) (axioms . ()))
 ((expr . "(let ((rules (quote (((bird (var x)) (animal (var x)) (not (penguin (var x)))) ((animal tweety)) ((animal pingu)) ((penguin pingu)))))) (reason (list (quote bird) (logic-var (quote x))) rules))") (expected . "(((((x . 0) . tweety) (x var (x . 0))) (proved (bird (var x)) (bird (var (x . 0))) ((proved (animal (var (x . 0))) (animal tweety) ()) (proved-not (penguin (var (x . 0))))))))") (tier . 3) (axioms . ()))
-((expr . "(equal? (quote (p . 0)) (cons (quote p) 0))") (expected . "t") (tier . 1) (axioms . (G2)))
-((expr . "(car (quote (a b . c)))") (expected . "a") (tier . 1) (axioms . (G2)) (role . "constitutive"))
-((expr . "(cdr (cdr (quote (a b . c))))") (expected . "c") (tier . 1) (axioms . (G2)) (role . "constitutive"))
+((expr . "(equal? (quote (p . 0)) (cons (quote p) 0))") (expected . "(1)") (tier . 1) (axioms . (G2)))
+((expr . "(car (quote (a b . c)))") (expected . "a") (tier . 1) (axioms . (G2)) (role . "constitutive") (meta-eval . t))
+((expr . "(cdr (cdr (quote (a b . c))))") (expected . "c") (tier . 1) (axioms . (G2)) (role . "constitutive") (meta-eval . t))
 ((expr . "(unify (quote (var x)) (quote (f (var x))) (quote ()))") (expected . "fail") (tier . 3) (axioms . ()) (note . "occurs-check, principle 3 evidence — prevents building an infinite structure, not a G/S axiom"))
-((expr . "(defmacro foo)") (error . "Arity") (tier . 2) (axioms . (S2)) (note . "defmacro validates arity like any other special form"))
+((expr . "(defmacro foo)") (error . "Arity") (tier . 2) (axioms . (S2)) (note . "defmacro validates arity like any other special form") (compiler-corpus . t) (wsm-native . ((status . pending))))
 ((expr . "(defmacro 5 (x) x)") (error . "InvalidForm") (tier . 2) (axioms . (S2)) (note . "defmacro validates its name is a symbol, not just its arity"))
-((expr . "(def count-down (lambda (n) (cond ((eq n 0) (quote done)) (t (count-down (- n 1)))))) (count-down 100000)") (expected . "done") (tier . 2) (axioms . (S3)) (note . "100,000-deep self-tail-call through the real evaluator stays O(1) host-stack usage regardless of recursion depth — previously only exercised by crates/my-lisp/tests/stack_safety.rs (Rust-specific), not the implementation-independent contract; a non-tail-call-optimizing future core would fail here, not just in production"))
+((expr . "(def count-down (lambda (n) (за-умовою ((тотожне? n 0) (як-є done)) ((тотожне? n n) (count-down (- n 1)))))) (count-down 100000)") (expected . "done") (tier . 2) (axioms . (S3)) (note . "100,000-deep self-tail-call under current exact D3 control: EQ(n,0) selects the base case with D1:1; EQ(n,n) is the explicit admitted numeric fallback guard; no bare-T truthiness") (compiler-corpus . t) (meta-eval-gap . t) (wsm-native . ((status . pending))))
 ((expr . "(map (lambda (x) (+ x 1)) (quote ()))") (expected . "()") (tier . 3) (axioms . (G5)) (note . "empty-list edge case, previously untested — map"))
-((expr . "(filter (lambda (x) (eq x 2)) (quote ()))") (expected . "()") (tier . 3) (axioms . (G5)) (note . "empty-list edge case, previously untested — filter"))
+((expr . "(filter (lambda (x) (00000011 x 2)) (quote ()))") (expected . "()") (tier . 3) (axioms . (G5)) (note . "empty-list edge case, previously untested — filter"))
 ((expr . "(reduce (lambda (acc x) (+ acc x)) 0 (quote ()))") (expected . "0") (tier . 3) (axioms . (G5)) (note . "empty-list edge case, previously untested — reduce returns its initial accumulator unchanged"))
-((expr . "((lambda (a b . rest) rest) 1 2 3 4 5)") (expected . "(3 4 5)") (tier . 1) (axioms . (G2)) (role . "constitutive") (note . "dotted lambda-list: variadic parameter binding, added 2026-08-09 to let list move out of Rust"))
-((expr . "((lambda args args) 1 2 3)") (expected . "(1 2 3)") (tier . 1) (axioms . (G2)) (role . "constitutive") (note . "bare-symbol lambda-list: zero fixed params, every argument bound as one list"))
-((expr . "((lambda (a b . rest) a) 1)") (error . "Arity") (tier . 1) (axioms . (S2)) (role . "constitutive") (note . "variadic lambda still enforces its fixed parameters"))
+((expr . "((lambda (a b . rest) rest) 1 2 3 4 5)") (expected . "(3 4 5)") (tier . 1) (axioms . (G2)) (role . "constitutive") (note . "dotted lambda-list: variadic parameter binding, added 2026-08-09 to let list move out of Rust") (compiler-corpus . t) (wsm-native . ((status . pending))))
+((expr . "((lambda args args) 1 2 3)") (expected . "(1 2 3)") (tier . 1) (axioms . (G2)) (role . "constitutive") (note . "bare-symbol lambda-list: zero fixed params, every argument bound as one list") (compiler-corpus . t) (wsm-native . ((status . pending))) (meta-eval . t))
+((expr . "((lambda (a b . rest) a) 1)") (error . "Arity") (tier . 1) (axioms . (S2)) (role . "constitutive") (note . "variadic lambda still enforces its fixed parameters") (compiler-corpus . t) (wsm-native . ((status . pending))))
 ((expr . "(list 1 2 3)") (expected . "(1 2 3)") (tier . 3) (axioms . (G5)) (note . "list moved from a Rust special form to lib/core.my (lambda args args) once variadic parameters existed to express it"))
-((expr . "(let ((second (lambda (x) (quote shadowed)))) (second (quote (1 2 3))))") (expected . "shadowed") (tier . 2) (axioms . (G4)) (note . "neither Lisp-1 nor Lisp-2 as an identity — ordinary def/defmacro bindings share one namespace and are locally shadowable"))
-((expr . "(let ((car (lambda (x) (quote shadowed)))) (car (quote (1 2))))") (expected . "shadowed") (tier . 1) (since-contract . (2 1)) (requires . (first-class-builtins builtin-car)) (axioms . (G4)) (role . "constitutive") (note . "contract 2.1: builtins are ordinary first-class values bootstrapped into the global environment, so lexical bindings may shadow them; only quote/cond/lambda/def/defmacro remain syntax-only special forms"))
+((expr . "(let ((local-second (lambda (x) (quote shadowed)))) (local-second (quote (1 2 3))))") (expected . "shadowed") (tier . 2) (axioms . (G4)) (note . "ordinary lexical function-valued bindings remain locally callable when their name is genuinely local and not an admitted SENS surface") (compiler-corpus . t) (meta-eval-gap . t) (wsm-native . ((status . pending))))
+((expr . "(let ((car (lambda (x) (quote shadowed)))) (car (quote (1 2))))") (error . "InvalidForm") (tier . 1) (since-contract . (6 0)) (requires . (immutable-canon)) (axioms . (G4 S2)) (role . "constitutive") (note . "Contract 6.0: Canon 0+7 spellings are reserved and unshadowable. let lowers through a lambda binder, so attempting to bind car is rejected as InvalidForm. Ordinary non-Canon builtins remain first-class and shadowable.") (compiler-corpus . t) (wsm-native . ((status . pending))))
 ((expr . "(reverse (quote ()))") (expected . "()") (tier . 3) (axioms . (G5)) (note . "empty-list edge case, previously untested"))
 ((expr . "(append (quote ()) (quote (a b)))") (expected . "(a b)") (tier . 3) (axioms . (G5)) (note . "empty-list edge case, previously untested — empty first argument"))
 ((expr . "(append (quote (a b)) (quote ()))") (expected . "(a b)") (tier . 3) (axioms . (G5)) (note . "empty-list edge case, previously untested — empty second argument"))
@@ -143,19 +165,25 @@
 ((expr . "(string->symbol \"radio\")") (expected . "radio") (tier . 2) (axioms . ()))
 ((expr . "(string-first \"radio\")") (expected . "\"r\"") (tier . 2) (axioms . ()))
 ((expr . "(string-rest \"radio\")") (expected . "\"adio\"") (tier . 2) (axioms . ()))
+((expr . "(string-slice \"привіт\" 1 3)") (expected . "\"ри\"") (tier . 2) (axioms . ()) (note . "character-indexed Unicode slice; indices are scalar values, not UTF-8 bytes"))
+((expr . "(string-slice \"abc\" 0 0)") (expected . "\"\"") (tier . 2) (axioms . ()))
+((expr . "(string-slice \"abc\" 2 9)") (expected . "\"c\"") (tier . 2) (axioms . ()) (note . "end index clamps to the string length"))
+((expr . "(string-slice \"abc\" 4 9)") (expected . "\"\"") (tier . 2) (axioms . ()) (note . "start beyond the string length yields the empty string"))
 ((expr . "(read-all \"1 2 3\")") (expected . "(1 2 3)") (tier . 2) (axioms . (G3)) (note . "the multi-form counterpart to read — previously tested only in Rust unit tests"))
 ((expr . "(princ \"raw\")") (expected . "\"raw\"") (tier . 2) (axioms . ()) (note . "princ composes and returns its argument exactly like print — the raw/unquoted transcript output itself is regression-tested in crates/my-lisp/tests/mccarthy.rs since this fixture harness only checks the return value, not the print transcript"))
 ((expr . "(< 5)") (expected . "t") (tier . 2) (axioms . ()) (note . "a single argument is vacuously ordered, previously untested here"))
-((expr . "(defmacro my-list items (cons (quote quote) (cons items (quote ())))) (my-list 1 2 3)") (expected . "(1 2 3)") (tier . 1) (axioms . (G4)) (role . "constitutive") (note . "variadic defmacro success path — the error paths were already covered, the success path wasn't"))
+((expr . "(defmacro my-list items (cons (quote quote) (cons items (quote ())))) (my-list 1 2 3)") (expected . "(1 2 3)") (tier . 1) (axioms . (G4)) (role . "constitutive") (note . "variadic defmacro success path — the error paths were already covered, the success path wasn't") (compiler-corpus . t) (meta-eval-gap . t) (wsm-native . ((status . pending))))
 ((expr . "(understand (quote (earth is a planet)))") (expected . "((planet earth))") (tier . 3) (axioms . ()) (note . "lib/understand.my — the controlled-natural-language bridge, previously tested only in Rust unit tests, not the implementation-independent contract"))
 ((expr . "(understand (quote (earth orbits sun)))") (expected . "((orbits earth sun))") (tier . 3) (axioms . ()) (note . "subject-verb-object relation shape"))
 ((expr . "(understand (quote (all planet have mass)))") (expected . "((has (var w) mass) (planet (var w)))") (tier . 3) (axioms . ()) (note . "universal-rule shape"))
 ((expr . "(narrate-fact (car (understand (quote (earth is a planet)))))") (expected . "(earth is a planet)") (tier . 3) (axioms . ()) (note . "lib/narrate.my — the structure-to-text half of the bridge, previously tested only in Rust unit tests"))
-((expr . "(equal? (quote (mars is a planet)) (narrate-fact (car (understand (quote (mars is a planet))))))") (expected . "t") (tier . 3) (axioms . ()) (note . "understand and narrate-fact are direct inverses for the is-a shape"))
-((expr . "(cond (0 (quote truthy)) (t (quote falsy)))") (expected . "truthy") (tier . 1) (axioms . ()) (note . "0 is truthy in my-lisp, unlike C/Python/JS — only Nil and Bool(false) are falsy (Value::is_truthy). Not G8: G8 is narrowly about (quote ()) as list/boolean, not a general \"empty-shaped values are false\" rule. Independent of the item-10 exactness redesign — is_truthy never inspects a number's exactness, only Nil/Bool(false)."))
-((expr . "(eq 3 3.0)") (expected . "t") (tier . 1) (axioms . (S1)) (note . "decimal literals are exact by default (S1): 3.0 is the exact integer 3, so eq (identity/atom equality) sees the same value."))
-((expr . "(eq 3 3)") (expected . "t") (tier . 1) (axioms . (S1)) (note . "same exactness, same magnitude"))
-((expr . "(eq 3.0 3.0)") (expected . "t") (tier . 1) (axioms . (S1)) (note . "same inexact value both sides"))
+((expr . "(equal? (quote (mars is a planet)) (narrate-fact (car (understand (quote (mars is a planet))))))") (expected . "(1)") (tier . 3) (axioms . ()) (note . "understand and narrate-fact are direct inverses for the is-a shape"))
+((expr . "(understand-query (quote (is socrates mortal)))") (expected . "(mortal socrates)") (tier . 3) (axioms . ()) (note . "lib/understand.my query form — a question shape -> a reason goal, the goal-shaped complement of understand"))
+((expr . "(understand-query (quote (does socrates drink hemlock)))") (expected . "(drink socrates hemlock)") (tier . 3) (axioms . ()) (note . "does-question shape -> a relation goal"))
+((expr . "(cond (0 (quote truthy)) (t (quote falsy)))") (expected . "truthy") (tier . 1) (axioms . ()) (note . "0 is truthy in my-lisp, unlike C/Python/JS — only Nil and Bool(false) are falsy (Value::is_truthy). Not G8: G8 is narrowly about (quote ()) as list/boolean, not a general \"empty-shaped values are false\" rule. Independent of the item-10 exactness redesign — is_truthy never inspects a number's exactness, only Nil/Bool(false).") (meta-eval . t))
+((expr . "(00000011 3 3.0)") (expected . "(1)") (tier . 1) (axioms . (S1)) (note . "decimal literals are exact by default (S1): 3.0 is the exact integer 3, so eq reports the same atom identity relation.") (meta-eval . t))
+((expr . "(00000011 3 3)") (expected . "(1)") (tier . 1) (axioms . (S1)) (note . "same exactness, same magnitude") (meta-eval . t))
+((expr . "(00000011 3.0 3.0)") (expected . "(1)") (tier . 1) (axioms . (S1)) (note . "same exact value both sides") (meta-eval . t))
 ((expr . "(= 3 3.0)") (expected . "t") (tier . 1) (axioms . (S1)) (note . "= compares magnitude only, deliberately diverging from eq — 3 and 3.0 are the same mathematical quantity even though they are different values"))
 ((expr . "(print 3)") (expected . "3") (tier . 2) (axioms . (S1)) (note . "exact integer prints without a decimal point"))
 ((expr . "(print 3.0)") (expected . "3") (tier . 2) (axioms . (S1)) (note . "decimal literals are exact by default (S1): 3.0 is the exact integer 3, so print renders it as \"3\""))
@@ -176,7 +204,7 @@
 ((expr . "(string-contains? \"xyz\" \"hello\")") (expected . "()") (tier . 3) (axioms . (G5)))
 ((expr . "(tcp-connect 42 8099)") (error . "Type") (tier . 2) (axioms . ()) (note . "PLAN.md item 21 — a real listen/accept/connect round trip needs a live network peer, which conformance.my's single-session fixture runner can't provide; only the type-check error path is a pure expression testable this way. See crates/my-lisp/tests/tcp.rs for the live client/server round-trip, run on separate threads with separate Sessions."))
 ((expr . "(tcp-write \"not a connection\" \"x\")") (error . "Type") (tier . 2) (axioms . ()))
-((expr . "(process-run \"git\" (quote ()))") (error . "InvalidForm") (tier . 2) (axioms . (S2)) (note . "PLAN.md item 21's follow-up — the default session (this fixture runner's own, and every conformance.my fixture's) never opts into Environment::with_process_allowlist, so process-run always fails named, never runs anything, matching S2. See crates/my-lisp/tests/mccarthy.rs's process_run_* tests for the allowlist opt-in path, which needs a session this single shared fixture-runner session can't provide per-fixture."))
+((expr . "(process-run 42 (quote ()))") (error . "Type") (tier . 2) (axioms . (S2)) (note . "process-run is unrestricted in the trusted native Lisp-machine profile, but still rejects a non-string program name with a named Type error. The fixture cannot accidentally launch a host process."))
 ((expr . "(write-file-bytes 42 (quote (1 2 3)))") (error . "Type") (tier . 2) (axioms . ()) (note . "PLAN.md item 22 — a real write-file-bytes/read-file-bytes round trip is a filesystem side effect, which conformance.my's pure-expression fixture runner can't provide; only the type-check error path is testable this way. See crates/my-lisp/tests/mccarthy.rs's write_file_bytes_then_read_file_bytes_round_trips_non_utf8_bytes for the real round trip, including bytes (255, 254) that aren't valid standalone UTF-8 — the exact case write-file (String-based) can't represent."))
 ((expr . "(write-file-bytes \"path-does-not-matter.bin\" (quote (1 256 3)))") (error . "Type") (tier . 2) (axioms . ()) (note . "PLAN.md item 22 — each byte-list element must be an integer 0-255"))
 ((expr . "(quotient 17 5)") (expected . "3") (tier . 3) (axioms . (G5)) (note . "surfaced from the fpga-lisp session's assembler.my — lib/core.my, expressible via -, <, and cond alone, no new Rust primitive needed. Scope: non-negative a, positive b only"))
@@ -195,23 +223,23 @@
 ((expr . "(assoc (quote b) (quote ((a . 1) (b . 2) (c . 3))))") (expected . "(b . 2)") (tier . 3) (axioms . (G5)) (note . "generalizes the (symbol . value) alist-lookup shape lib/meta-eval.my's env-lookup already hand-rolls for its own specific case"))
 ((expr . "(assoc (quote q) (quote ((a . 1) (b . 2))))") (expected . "()") (tier . 3) (axioms . (G5)))
 ((expr . "(cddr (quote (a b c d)))") (expected . "(c d)") (tier . 3) (axioms . (G5)) (note . "found duplicated locally in lib/understand.my before being moved to core.my, 2026-08-10"))
-((expr . "(eq cadddr fourth)") (expected . "t") (tier . 3) (axioms . (G5)) (note . "cadddr is a literal alias for fourth, same closure object -- lib/reason.my had its own character-for-character-identical local cadddr before this dedup"))
+((expr . "(00000011 cadddr fourth)") (expected . "(1)") (tier . 3) (axioms . (G5)) (note . "cadddr is a literal alias for fourth, same closure object -- lib/reason.my had its own character-for-character-identical local cadddr before this dedup"))
 ((expr . "(fifth (quote (v w x y z)))") (expected . "z") (tier . 3) (axioms . (G5)) (note . "found duplicated in two places at once: lib/narrate.my's own local fifth (identical), and lib/persistent-map.my's node-right (same operation, no name)"))
 ((expr . "(+ 123456789012345678901234567890 1)") (expected . "123456789012345678901234567891") (tier . 2) (axioms . (S1)) (note . "bare integer literals use arbitrary precision beyond f64's exact 2^53 range; exact syntax never silently rounds"))
 ; Canonical serialization law — portable wire-format facts, not Rust snapshots.
 ((expr . "(write-to-string (quote radio))") (expected . "\"radio\"") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization: readable symbol"))
-((expr . "(equal? (read (write-to-string (quote radio))) (quote radio))") (expected . "t") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: symbol"))
+((expr . "(equal? (read (write-to-string (quote radio))) (quote radio))") (expected . "(1)") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: symbol"))
 ((expr . "(write-to-string \"line\\n\\t\\\"\\\\\")") (expected . "\"\\\"line\\\\n\\\\t\\\\\\\"\\\\\\\\\\\"\"") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization: string escapes"))
-((expr . "(equal? (read (write-to-string \"line\\n\\t\\\"\\\\\")) \"line\\n\\t\\\"\\\\\")") (expected . "t") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: escaped string"))
+((expr . "(equal? (read (write-to-string \"line\\n\\t\\\"\\\\\")) \"line\\n\\t\\\"\\\\\")") (expected . "(1)") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: escaped string"))
 ((expr . "(write-to-string (quote (alpha beta gamma)))") (expected . "\"(alpha beta gamma)\"") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization: proper list"))
-((expr . "(equal? (read (write-to-string (quote (alpha beta gamma)))) (quote (alpha beta gamma)))") (expected . "t") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: proper list"))
+((expr . "(equal? (read (write-to-string (quote (alpha beta gamma)))) (quote (alpha beta gamma)))") (expected . "(1)") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: proper list"))
 ((expr . "(write-to-string (quote (alpha beta . gamma)))") (expected . "\"(alpha beta . gamma)\"") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization: dotted list"))
-((expr . "(equal? (read (write-to-string (quote (alpha beta . gamma)))) (quote (alpha beta . gamma)))") (expected . "t") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: dotted list"))
-((expr . "(list (write-to-string 42) (write-to-string 10/20))") (expected . "(\"42\" \"1/2\")") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization: exact integer and reduced rational"))
-((expr . "(list (equal? (read (write-to-string 42)) 42) (equal? (read (write-to-string 10/20)) 1/2))") (expected . "(t t)") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: exact numbers"))
-((expr . "(list (write-to-string 3.00) (write-to-string 1.25))") (expected . "(\"3\" \"5/4\")") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization: decimal literals are exact by default (S1), so 3.00 serializes as exact integer 3 and 1.25 as exact rational 5/4"))
-((expr . "(list (equal? (read (write-to-string 3.00)) 3.0) (equal? (read (write-to-string 1.25)) 1.25))") (expected . "(t t)") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: exact numbers, decimal literals are exact by default"))
-((expr . "(cond (0 (quote zero-is-truthy)) (t (quote wrong)))") (expected . "zero-is-truthy") (tier . 1) (axioms . ()) (role . "constitutive") (note . "duplicates the same fact as the earlier 0-is-truthy fixture (line ~151) in expr form rather than a bare value, kept as its own fixture since role=constitutive fixtures are what other implementations gate on. Not G8 (docs/language-core-axioms.md's own G8 boundary note uses this exact behavior as evidence G8 is narrowly about '() specifically, not a general emptiness-is-false rule) — previously mistagged (G8) here, contradicting that. Fixed 2026-08-19."))
+((expr . "(equal? (read (write-to-string (quote (alpha beta . gamma)))) (quote (alpha beta . gamma)))") (expected . "(1)") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: dotted list"))
+((expr . "(list (write-to-string 42) (write-to-string 10/20))") (expected . "(\"#q2:101010/1\" \"#q2:1/10\")") (tier . 2) (axioms . (G6 S1)) (note . "canonical machine wire: tagged binary exact integer and reduced rational; human presentation remains decimal/rational"))
+((expr . "(list (equal? (read (write-to-string 42)) 42) (equal? (read (write-to-string 10/20)) 1/2))") (expected . "((1) (1))") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: exact numbers"))
+((expr . "(list (write-to-string 3.00) (write-to-string 1.25))") (expected . "(\"#q2:11/1\" \"#q2:101/100\")") (tier . 2) (axioms . (G6 S1)) (note . "canonical machine wire is binary and exact; source spelling 3.00/1.25 does not leak into the wire"))
+((expr . "(list (equal? (read (write-to-string 3.00)) 3.0) (equal? (read (write-to-string 1.25)) 1.25))") (expected . "((1) (1))") (tier . 2) (axioms . (G6 S1)) (note . "canonical serialization round-trip: exact numbers, decimal literals are exact by default"))
+((expr . "(cond (0 (quote zero-is-truthy)) (t (quote wrong)))") (expected . "zero-is-truthy") (tier . 1) (axioms . ()) (role . "constitutive") (note . "duplicates the same fact as the earlier 0-is-truthy fixture (line ~151) in expr form rather than a bare value, kept as its own fixture since role=constitutive fixtures are what other implementations gate on. Not G8 (docs/language-core-axioms.md's own G8 boundary note uses this exact behavior as evidence G8 is narrowly about '() specifically, not a general \"empty-shaped values are false\" rule) — previously mistagged (G8) here, contradicting that. Fixed 2026-08-19.") (meta-eval . t))
 
 ((expr . "(-> 10 (+ 2) (* 3))") (expected . "36") (tier . 3) (axioms . (G5)) (note . "thread-first macro (->) unwraps forms recursively"))
 ((expr . "(->> 10 (+ 2) (* 3))") (expected . "36") (tier . 3) (axioms . (G5)) (note . "thread-last macro (->>) unwraps forms recursively, placing subject last"))
@@ -219,23 +247,45 @@
 ((expr . "(->> 5 (- 2))") (expected . "-3") (tier . 3) (axioms . (G5)))
 ((expr . "(-> 5)") (expected . "5") (tier . 3) (axioms . (G5)))
 ((expr . "(->> 5)") (expected . "5") (tier . 3) (axioms . (G5)))
-; FIX-NUMBER-TO-STRING-RATIONAL: number->string delegates to canonical
-; serialization — non-integer rationals render reduced and exact, never
-; decimal approximations; negatives included. Regression for the cdr-crash
-; on fractional digit indices (docs/BUG-number-to-string-rational.md).
-((expr . "(number->string 1/3)") (expected . "\"1/3\"") (tier . 3) (axioms . (G5 S1)) (note . "was: crash via (nth 1/3 <digit-table>) misreported as memory corruption"))
-((expr . "(number->string 10/20)") (expected . "\"1/2\"") (tier . 3) (axioms . (G5 S1)) (note . "reduced canonical form, same law as write-to-string's G6 fixture"))
-((expr . "(number->string -10/4)") (expected . "\"-5/2\"") (tier . 3) (axioms . (G5 S1)) (note . "negative + reduction in one case"))
+; FIX-NUMBER-TO-STRING-RATIONAL / #1623: number->string delegates to the
+; canonical machine wire. Exact numbers are tagged base-2 rationals; human
+; rational presentation remains a separate projection. Regression for the
+; historical cdr-crash remains covered without reintroducing decimal wire aliases.
+((expr . "(number->string 1/3)") (expected . "\"#q2:1/11\"") (tier . 3) (axioms . (G5 S1)) (note . "number->string delegates to canonical machine wire; human rational presentation is a separate projection"))
+((expr . "(number->string 10/20)") (expected . "\"#q2:1/10\"") (tier . 3) (axioms . (G5 S1)) (note . "reduced exact value in the same tagged binary wire as write-to-string"))
+((expr . "(number->string -10/4)") (expected . "\"#q2:-101/10\"") (tier . 3) (axioms . (G5 S1)) (note . "negative reduced exact value in canonical binary wire"))
 ; Contract 2.2: immutable fixed-width buffers make an explicit, portable
 ; representation boundary for bulk compute without weakening exact arithmetic.
 ((expr . "#i32(1 -2 3)") (expected . "#i32(1 -2 3)") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)))
 ((expr . "(i32-buffer 1 -2 3)") (expected . "#i32(1 -2 3)") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)))
 ((expr . "(f32-buffer 1 1/10 -2.5)") (expected . "#f32(1.0 0.1 -2.5)") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)) (note . "f32 conversion is explicit and returns inexact elements"))
 ((expr . "(list (numeric-buffer-type #i32()) (numeric-buffer-length #f32(1.0 2.0)) (numeric-buffer-ref #i32(-7) 0))") (expected . "(i32 2 -7)") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)))
-((expr . "(eq (read (write-to-string #f32(1.0 0.1 -2.5))) #f32(1.0 0.1 -2.5))") (expected . "t") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)))
+((expr . "(00000011 (read (write-to-string #f32(1.0 0.1 -2.5))) #f32(1.0 0.1 -2.5))") (expected . "(1)") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (G6 G7 S1)))
 ((expr . "(i32-buffer 2147483648)") (error . "NumericOverflow") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (S2 S3)))
 ((expr . "(i32-buffer 1/2)") (error . "Type") (tier . 2) (since-contract . (2 2)) (requires . (typed-numeric-buffers)) (axioms . (S1 S2)))
 ; Contract 2.3: the canonical semantic operation CML ComputeBackends must match.
 ((expr . "(numeric-buffer-map (lambda (x) (+ x 1)) #i32(1 2 3))") (expected . "#i32(2 3 4)") (tier . 2) (since-contract . (2 3)) (requires . (typed-numeric-buffers numeric-buffer-map)) (axioms . (G6 G7 S1)))
 ((expr . "(numeric-buffer-map (lambda (x) (+ x 0.5)) #f32(1.0 2.0))") (expected . "#f32(1.5 2.5)") (tier . 2) (since-contract . (2 3)) (requires . (typed-numeric-buffers numeric-buffer-map)) (axioms . (G6 G7 S1)))
 ((expr . "(numeric-buffer-map (lambda (x) (+ x 1)) #i32(2147483647))") (error . "NumericOverflow") (tier . 2) (since-contract . (2 3)) (requires . (typed-numeric-buffers numeric-buffer-map)) (axioms . (S2 S3)))
+
+; abs/min/max/min-list/max-list — migrated from Rust builtins.rs to
+; lib/core.my 2026-09-11 (docs/VERTICAL-SLICE-1-ABS-MIN-MAX-2026-09-11.md).
+; Semantic truth for these now lives here, not in
+; crates/my-lisp/tests/builtin_to_lisp_migration.rs's Rust assertions --
+; per the standing principle "semantic truth tests live with the
+; language; Rust tests only mechanism." Tier 3 (library, derived from
+; Canon/necessary-form primitives, not itself constitutive).
+((expr . "(abs -5)") (expected . "5") (tier . 3) (axioms . (G5)))
+((expr . "(abs 5.5)") (expected . "11/2") (tier . 3) (axioms . (G5 S1)))
+((expr . "(abs (/ -3 4))") (expected . "3/4") (tier . 3) (axioms . (G5 S1)))
+((expr . "(abs 0)") (expected . "0") (tier . 3) (axioms . (G5)))
+((expr . "(min 3 1 2)") (expected . "1") (tier . 3) (axioms . (G5)))
+((expr . "(max 3 1 2)") (expected . "3") (tier . 3) (axioms . (G5)))
+((expr . "(min 5)") (expected . "5") (tier . 3) (axioms . (G5)) (note . "single argument is vacuously the minimum"))
+((expr . "(min)") (error . "Arity") (tier . 3) (axioms . (G5 S2)) (note . "required first parameter (dotted lambda-list) gives the Arity error structurally, not a hand-written check"))
+((expr . "(max)") (error . "Arity") (tier . 3) (axioms . (G5 S2)))
+((expr . "(min-list (quote (5 2 8 1)))") (expected . "1") (tier . 3) (axioms . (G5)))
+((expr . "(max-list (quote (5 2 8 1)))") (expected . "8") (tier . 3) (axioms . (G5)))
+((expr . "(min-list (quote ()))") (expected . "()") (tier . 3) (axioms . (G5 G8)) (note . "empty list argument is Nil, distinct from min/max's own zero-argument Arity error above"))
+((expr . "(max-list (quote ()))") (expected . "()") (tier . 3) (axioms . (G5 G8)))
+((expr . "(cond ((quote radio) antenna (quote wrong)))") (error . "UnsatisfiedConditional") (tier . 1) (since-contract . (8 0)) (axioms . (G8 S2)) (role . "constitutive") (note . "Contract 8.0: canonical three-part COND exhausts to a named failure; migration-only two-part truthiness remains a bounded compatibility bridge."))
