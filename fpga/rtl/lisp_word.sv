@@ -11,7 +11,10 @@ typedef enum logic [3:0] {
     TAG_SYMBOL  = 4'd2,
     TAG_NIL     = 4'd3,
     TAG_TRUE    = 4'd4,
-    TAG_PRIMITIVE = 4'd5
+    TAG_PRIMITIVE = 4'd5,
+    // Current SENS D1 carrier. This tag is representation-only: legacy
+    // ATOM/EQ/JF keep their historical Symbol(t)/NIL behavior.
+    TAG_PREDICATE_BIT = 4'd6
 } lisp_tag_t;
 
 typedef struct packed {
