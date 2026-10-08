@@ -8,7 +8,7 @@
 //
 // op:
 //   0 = ATOM_D1  : result = PredicateBit(a is not CONS)
-//   1 = EQ_D1    : atom-only equality; non-atom input -> structural EMPTY/no-witness
+//   1 = EQ_D1    : atom-only equality; non-atom input -> named error
 //   2 = GATE_D1  : consume exact PredicateBit from a; gate_take = payload bit
 module predicate_bit_unit (
     input  logic [1:0] op,
@@ -45,11 +45,10 @@ module predicate_bit_unit (
 
             OP_EQ_D1: begin
                 if (a.tag == TAG_CONS || b.tag == TAG_CONS) begin
-                    // Current SENS EQ is partial outside the atom domain.
-                    // Return structural EMPTY/no-witness, never PredicateBit(0).
-                    result.tag = TAG_NIL;
-                    result.value = 28'd0;
-                    valid = 1'b1;
+                    // Contract 11.8: current EQ is defined only on admitted
+                    // atoms. Pair/out-of-domain input fails closed; EMPTY is
+                    // not an EQ result and must not alias PredicateBit(0).
+                    error = 1'b1;
                 end else begin
                     result.value[0] = (a == b);
                     valid = 1'b1;
