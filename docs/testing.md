@@ -32,6 +32,7 @@ slow-but-progressing run hard to distinguish from an actual hang. Pass
 | M03 | [`tb_machine.sv`](../fpga/sim/tb_machine.sv) | `(car (cons 'a 'b)) => a` through the full bootloader + control unit — the original "physical Lisp machine" milestone. |
 | M04 | [`tb_car_cdr.sv`](../fpga/sim/tb_car_cdr.sv) | `CAR` and `CDR` both, directly at the `lisp_data_unit` level, on two independent cons cells — `tb_cons.sv` (M03) only ever exercised `CAR`; `CDR` had no dedicated coverage below the bootloader level until this. |
 | M05 | [`tb_atom_eq.sv`](../fpga/sim/tb_atom_eq.sv) | `ATOM` and `EQ`: `(atom 'a)`, `(atom (cons 'a 'a))`, `(eq 'a 'a)`. |
+| D1-CARRIER | [`tb_predicate_bit_unit.sv`](../fpga/sim/tb_predicate_bit_unit.sv) | Isolated current-D1 substrate witness: distinct `TAG_PREDICATE_BIT`, ATOM_D1/EQ_D1 production, exact YES/NO gate consumption, EQ non-atom → structural EMPTY/no-witness, and rejection of NIL, Symbol(t), fixnum 0/1 and noncanonical payloads at the D1 gate. Legacy `OP_ATOM`/`OP_EQ`/`OP_JF` are unchanged. |
 | M06 | [`tb_list.sv`](../fpga/sim/tb_list.sv) | A 3-element list built as a `CONS` chain and walked back to `NIL` with `CAR`/`CDR`. |
 | M07 | [`tb_control.sv`](../fpga/sim/tb_control.sv) | `JMP`/`JF` branching: a countdown/count-up loop using `SUB`/`ADD`/`EQ`. |
 | G8 | [`tb_jf_truthiness.sv`](../fpga/sim/tb_jf_truthiness.sv) | ISA 1.0 truth contract: `JF` falls through for fixnum `0` and branches for `NIL`. |
@@ -73,11 +74,11 @@ No opcode is added lightly: the 4-bit opcode field has been full (16/16) since `
 CI runs this regression set on every push and pull request. Run it locally before trusting a change:
 
 ```bash
-for tb in tb_cons tb_heap tb_car_cdr tb_atom_eq tb_machine tb_monitor tb_control tb_jf_truthiness tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair tb_bootstrap_caar tb_bootstrap_triple tb_bootstrap_third tb_setcdr tb_bootstrap_add tb_bootstrap_length tb_bootstrap_length_onto tb_bootstrap_reverse tb_bootstrap_append tb_bootstrap_equal tb_bootloader_register_init tb_overflow_add; do
+for tb in tb_cons tb_heap tb_car_cdr tb_atom_eq tb_machine tb_monitor tb_control tb_jf_truthiness tb_list tb_call tb_env tb_lambda tb_eval_atom tb_eval_quote tb_eval_cond tb_eval_apply tb_eval_primitive tb_error_recovery tb_eval_all_primitives tb_bootstrap_nullp tb_bootstrap_second tb_bootstrap_not tb_bootstrap_pair tb_bootstrap_caar tb_bootstrap_triple tb_bootstrap_third tb_setcdr tb_bootstrap_add tb_bootstrap_length tb_bootstrap_length_onto tb_bootstrap_reverse tb_bootstrap_append tb_bootstrap_equal tb_bootloader_register_init tb_overflow_add tb_predicate_bit_unit; do
   iverilog -g2012 -I fpga/rtl -o ${tb}.vvp fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
     fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
     fpga/rtl/upc8_unit.sv fpga/rtl/sandhi_engine.sv fpga/rtl/control.sv \
-    fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
+    fpga/rtl/predicate_bit_unit.sv fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
     fpga/sim/${tb}.sv
   vvp ${tb}.vvp | tail -2
 done

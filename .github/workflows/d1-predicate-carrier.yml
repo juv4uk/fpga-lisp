@@ -1,0 +1,40 @@
+name: exact D1 PredicateBit carrier
+
+on:
+  push:
+    paths:
+      - "fpga/rtl/lisp_word.sv"
+      - "fpga/rtl/predicate_bit_unit.sv"
+      - "fpga/sim/tb_predicate_bit_unit.sv"
+      - ".github/workflows/d1-predicate-carrier.yml"
+  pull_request:
+    paths:
+      - "fpga/rtl/lisp_word.sv"
+      - "fpga/rtl/predicate_bit_unit.sv"
+      - "fpga/sim/tb_predicate_bit_unit.sv"
+      - ".github/workflows/d1-predicate-carrier.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  predicate-bit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Icarus Verilog
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog
+      - name: Execute exact D1 carrier witness
+        run: |
+          set -euo pipefail
+          iverilog -g2012 -I fpga/rtl -o tb_predicate_bit_unit.vvp \
+            fpga/rtl/lisp_word.sv fpga/rtl/predicate_bit_unit.sv \
+            fpga/sim/tb_predicate_bit_unit.sv
+          out="$(vvp tb_predicate_bit_unit.vvp)"
+          printf '%s\n' "$out"
+          echo "$out" | grep -F "D1-PREDICATE-CARRIER PASSED"
+          ! echo "$out" | grep -F "FAILED"
