@@ -79,11 +79,12 @@ jobs:
                     tb_bootstrap_caar tb_bootstrap_triple tb_bootstrap_third tb_setcdr \
                     tb_bootstrap_add tb_bootstrap_length tb_bootstrap_length_onto \
                     tb_bootstrap_reverse tb_bootstrap_append tb_bootstrap_equal \
-                    tb_bootloader_register_init tb_overflow_add; do
+                    tb_bootloader_register_init tb_overflow_add tb_predicate_bit_unit; do
             echo "::group::${tb}"
             iverilog -g2012 -I fpga/rtl -o "${tb}.vvp" fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
               fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
               fpga/rtl/control.sv fpga/rtl/upc8_unit.sv fpga/rtl/sandhi_engine.sv \
+              fpga/rtl/predicate_bit_unit.sv \
               fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
               "fpga/sim/${tb}.sv"
             out="$(vvp "${tb}.vvp")"
