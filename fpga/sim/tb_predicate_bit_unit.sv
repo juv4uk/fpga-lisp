@@ -77,8 +77,8 @@ module tb_predicate_bit_unit;
         a.tag = TAG_CONS;
         a.value = 28'd1;
         #1;
-        if (!error || valid) begin
-            $display("FAILED EQ_D1 cons input must reject");
+        if (error || !valid || result.tag != TAG_NIL || result.value != 28'd0) begin
+            $display("FAILED EQ_D1 cons input must return EMPTY/no-witness");
             failures = failures + 1;
         end
 
