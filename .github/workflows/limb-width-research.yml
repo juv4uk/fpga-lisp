@@ -1,0 +1,27 @@
+name: Limb-width exact arithmetic research
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-limb-simulation:
+    name: Exact limb oracle (16/18/24/28-bit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Icarus Verilog
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y iverilog
+      - name: Check archival research scripts
+        run: python3 -m py_compile benchmarks/limb-width/run_sim.py benchmarks/limb-width/parse_gowin.py
+      - name: Execute Python exact-integer versus RTL oracle
+        run: python3 benchmarks/limb-width/run_sim.py --random 128
