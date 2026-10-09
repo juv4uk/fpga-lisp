@@ -15,7 +15,7 @@ jobs:
   probe:
     # Hardware UNVERIFIED when skipped. Set GITHUB_HOSTED_FPGA_RUNNER only to a genuine GitHub-hosted FPGA-accessible runner.
     if: vars.GITHUB_HOSTED_FPGA_RUNNER != ''
-    runs-on: ${{ vars.GITHUB_HOSTED_FPGA_RUNNER || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04  # fixed GitHub-hosted image; no variable-driven routing
     timeout-minutes: 5
     steps:
       - name: Verify hosted hardware availability (fail closed)
