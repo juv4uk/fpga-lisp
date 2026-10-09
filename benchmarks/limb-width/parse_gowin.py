@@ -57,6 +57,10 @@ def _fill_resource_stats(row: dict[str, str], rpt: Path) -> None:
 
 def _fill_timing_stats(row: dict[str, str], tr: Path) -> None:
     for line in tr.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not row["fmax_mhz"] and (m := FMAX_RE.search(line)):
+            row["fmax_mhz"] = m.group(1)
+        if not row["setup_slack_ns"] and (m := SLACK_RE.search(line)):
+            row["setup_slack_ns"] = m.group(1)
 
 
 def parse_one(top_dir: Path) -> dict[str, str]:
@@ -91,11 +95,6 @@ def parse_one(top_dir: Path) -> dict[str, str]:
 
     _fill_resource_stats(row, rpt)
     _fill_timing_stats(row, tr)
-    if not row["fmax_mhz"] and (m := FMAX_RE.search(line)):
-            row["fmax_mhz"] = m.group(1)
-        if not row["setup_slack_ns"] and (m := SLACK_RE.search(line)):
-            row["setup_slack_ns"] = m.group(1)
-
     if not row["fmax_mhz"] or not row["setup_slack_ns"]:
         raise ValueError(f"timing parse failed for {top_dir.name}")
     return row
