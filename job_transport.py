@@ -20,6 +20,7 @@ PROTOCOL_VERSION = 1
 MAX_PROGRAM_WORDS = 4095
 MONITOR_REG = 0x01
 MONITOR_ERROR = 0x04
+MONITOR_REARM = 0x0B
 
 
 def read_exact(port, size):
@@ -69,17 +70,39 @@ def parse_request(data):
     return result_register, data[8:]
 
 
-def execute(port_name, baud, timeout, reset_wait, halt_wait, request):
+def execute(
+    port_name,
+    baud,
+    timeout,
+    reset_wait,
+    halt_wait,
+    request,
+    soft_rearm=False,
+    rearm_wait=0.05,
+):
     result_register, bootloader_frame = parse_request(request)
-    print(
-        f"CML FPGA job ready for {port_name}; press the board RESET button now",
-        file=sys.stderr,
-        flush=True,
-    )
-    time.sleep(reset_wait)
+
+    if not soft_rearm:
+        print(
+            f"CML FPGA job ready for {port_name}; press the board RESET button now",
+            file=sys.stderr,
+            flush=True,
+        )
+        time.sleep(reset_wait)
 
     with serial.Serial(port_name, baud, timeout=timeout, write_timeout=timeout) as port:
         port.reset_input_buffer()
+        if soft_rearm:
+            print(
+                f"CML FPGA job requesting monitor soft-rearm on {port_name}",
+                file=sys.stderr,
+                flush=True,
+            )
+            port.write(bytes([MONITOR_REARM]))
+            port.flush()
+            time.sleep(rearm_wait)
+            port.reset_input_buffer()
+
         port.write(bootloader_frame)
         port.flush()
         time.sleep(halt_wait)
@@ -109,6 +132,12 @@ def main():
     parser.add_argument("--timeout", type=float, default=2.0)
     parser.add_argument("--reset-wait", type=float, default=3.0)
     parser.add_argument("--halt-wait", type=float, default=2.0)
+    parser.add_argument(
+        "--soft-rearm",
+        action="store_true",
+        help="request monitor command 0x0B instead of requiring a physical RESET",
+    )
+    parser.add_argument("--rearm-wait", type=float, default=0.05)
     args = parser.parse_args()
 
     try:
@@ -119,6 +148,8 @@ def main():
             args.reset_wait,
             args.halt_wait,
             sys.stdin.buffer.read(),
+            soft_rearm=args.soft_rearm,
+            rearm_wait=args.rearm_wait,
         )
     except Exception as error:
         print(f"FPGA bridge failed: {error}", file=sys.stderr)

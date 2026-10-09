@@ -1,0 +1,39 @@
+name: FPGA soft rearm hosted simulation
+on:
+  pull_request:
+    paths:
+      - 'fpga/rtl/**'
+      - 'fpga/sim/tb_monitor.sv'
+      - 'job_transport.py'
+      - '.github/workflows/fpga-soft-rearm-pr.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  monitor-rearm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Icarus Verilog
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog
+      - name: Simulate real RTL with UART monitor and second boot
+        run: |
+          set -euo pipefail
+          iverilog -g2012 -I fpga/rtl -o /tmp/tb_monitor.vvp \
+            fpga/rtl/lisp_word.sv fpga/rtl/heap.sv \
+            fpga/rtl/lisp_data_unit.sv fpga/rtl/registers.sv fpga/rtl/instruction_decoder.sv \
+            fpga/rtl/control.sv fpga/rtl/upc8_unit.sv fpga/rtl/sandhi_engine.sv \
+            fpga/rtl/uart.sv fpga/rtl/bootloader.sv fpga/rtl/lisp_machine.sv \
+            fpga/sim/tb_monitor.sv
+          timeout 120s vvp /tmp/tb_monitor.vvp | tee /tmp/tb_monitor.log
+          grep -Fq 'M08 PASSED: UART monitor + soft rearm works' /tmp/tb_monitor.log
+          if grep -Eq 'FAILED|WATCHDOG TIMEOUT' /tmp/tb_monitor.log; then
+            exit 1
+          fi
+      - name: Verify Python host transport parses
+        run: python3 -m py_compile job_transport.py
+      - name: Ensure tests did not modify tracked files
+        run: git diff --exit-code

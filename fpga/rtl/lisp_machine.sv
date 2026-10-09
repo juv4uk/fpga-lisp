@@ -23,6 +23,29 @@ module lisp_machine (
     // CPU Reset Control
     logic boot_done;
     logic cpu_rst_n;
+    logic soft_rearm_request;
+    logic [1:0] rearm_count;
+    logic rearm_active;
+    logic boot_rst_n;
+    logic reg_rst_n;
+
+    // A monitor REARM request is stretched for two clocks. The bootloader and
+    // register file are reset by this pulse; CPU/LDU/control then remain reset
+    // naturally while boot_done is low. UART stays alive so the next program
+    // can arrive without a physical board reset.
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            rearm_count <= 0;
+        end else if (soft_rearm_request) begin
+            rearm_count <= 2;
+        end else if (rearm_count != 0) begin
+            rearm_count <= rearm_count - 1;
+        end
+    end
+
+    assign rearm_active = (rearm_count != 0);
+    assign boot_rst_n = rst_n & ~rearm_active;
+    assign reg_rst_n = rst_n & ~rearm_active;
     assign cpu_rst_n = rst_n & boot_done;
 
     // Bootloader FSM
@@ -40,7 +63,7 @@ module lisp_machine (
         .ADDR_WIDTH(12)
     ) u_boot (
         .clk(clk),
-        .rst_n(rst_n),
+        .rst_n(boot_rst_n),
         .rx_valid(uart_rx_valid),
         .rx_data(uart_rx_data),
         .boot_we(boot_we),
@@ -65,7 +88,7 @@ module lisp_machine (
     
     registers u_regs (
         .clk(clk),
-        .rst_n(rst_n),
+        .rst_n(reg_rst_n),
         .rd_addr_a(reg_rd_addr_a),
         .rd_addr_b(reg_rd_addr_b),
         .rd_data_a(reg_rd_data_a),
@@ -179,6 +202,7 @@ module lisp_machine (
         .mon_peek_valid(mon_peek_valid),
         .hp_in({4'd0, ldu_hp}),
 
+        .soft_rearm_request(soft_rearm_request),
         .halted(halted)
     );
     

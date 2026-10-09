@@ -48,6 +48,8 @@ module control (
     // Debug/monitor: current heap pointer, zero-extended to 16 bits
     input  logic [15:0]  hp_in,
 
+    // Mechanism-only request to re-enter the UART bootloader after HALT.
+    output logic         soft_rearm_request,
     output logic         halted
 );
 
@@ -62,6 +64,7 @@ module control (
     //   0x08              -> replies with perf_eval_calls (4B LE)
     //   0x09              -> replies with perf_jumps (4B LE)
     //   0x0A              -> replies with perf_heap_peak (4B LE)
+    //   0x0B              -> no reply; request a clean return to the bootloader
     // Unknown command bytes are ignored (monitor keeps waiting for the next byte).
     typedef enum logic [4:0] {
         ST_FETCH,
@@ -351,6 +354,7 @@ module control (
         in_ack = 0;
         mon_peek_cmd = 0;
         sandhi_start = 0;
+        soft_rearm_request = 0;
 
         if (state == ST_HALT || state == ST_MON_CMD || state == ST_MON_ARG1 ||
             state == ST_MON_ARG2 || state == ST_MON_HEAP_WAIT ||
@@ -581,6 +585,10 @@ module control (
                         8'h08:   next_state = ST_MON_PERF_SEND;
                         8'h09:   next_state = ST_MON_PERF_SEND;
                         8'h0A:   next_state = ST_MON_PERF_SEND;
+                        8'h0B: begin
+                            soft_rearm_request = 1;
+                            next_state = ST_MON_CMD;
+                        end
                         default: next_state = ST_MON_CMD;
                     endcase
                 end
