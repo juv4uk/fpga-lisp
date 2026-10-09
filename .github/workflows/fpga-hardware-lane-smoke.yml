@@ -13,9 +13,15 @@ permissions:
 
 jobs:
   probe:
-    runs-on: [self-hosted, guix]
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - name: Verify hosted hardware availability (fail closed)
+        shell: bash
+        run: |
+          test "${RUNNER_ENVIRONMENT:-}" = github-hosted || { echo "::error::Local runner forbidden"; exit 1; }
+          echo "::error::Physical FPGA COM4 unavailable on hosted Ubuntu; hardware proof cannot run"; exit 1
+
       - uses: actions/checkout@v5
 
       - name: Probe physical COM4 lane
