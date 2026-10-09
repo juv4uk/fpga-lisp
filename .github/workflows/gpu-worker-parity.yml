@@ -33,7 +33,7 @@ jobs:
     # Hardware UNVERIFIED when skipped. Set GITHUB_HOSTED_GPU_RUNNER only to a genuine GitHub-hosted GPU/FPGA runner.
     if: vars.GITHUB_HOSTED_GPU_RUNNER != ''
     # Лише GPU-runner: ніколи не падаємо назад на CPU-runner.
-    runs-on: ${{ vars.GITHUB_HOSTED_GPU_RUNNER || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04  # fixed GitHub-hosted image; no variable-driven routing
     timeout-minutes: 10
     env:
       CML_GPU_WORKER_SOCKET: /run/cml-gpu-worker/worker.sock
