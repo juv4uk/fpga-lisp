@@ -1,0 +1,23 @@
+name: ŚŪNYA-BHŪMI Genesis manifest research
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  manifest-test:
+    name: Genesis manifest evidence tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python syntax and deterministic evidence unit tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile genesis_manifest.py tests/test_genesis_manifest.py
+          python3 -m unittest discover -s tests -p 'test_genesis_manifest.py' -v
