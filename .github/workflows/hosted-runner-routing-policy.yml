@@ -1,0 +1,27 @@
+name: Hosted runner routing policy
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-owner-pc:
+    name: No owner-PC runner routing (GPU/FPGA not certified)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Forbid self-hosted GitHub Actions runner labels
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE '^[[:space:]]*runs-on:[[:space:]].*self-hosted' .github/workflows; then
+            echo '::error::Self-hosted runner selection is forbidden: use GitHub-hosted runners'
+            exit 1
+          fi
+          echo 'RUNNER_ROUTING_GREEN: no explicit self-hosted runs-on'
+          echo '::notice::CUDA and physical FPGA checks are UNVERIFIED unless their dedicated GitHub-hosted hardware jobs execute.'

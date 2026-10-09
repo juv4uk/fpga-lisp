@@ -30,12 +30,20 @@ concurrency:
 
 jobs:
   gpu-worker-parity:
+    # Hardware UNVERIFIED when skipped. Set GITHUB_HOSTED_GPU_RUNNER only to a genuine GitHub-hosted GPU/FPGA runner.
+    if: vars.GITHUB_HOSTED_GPU_RUNNER != ''
     # Лише GPU-runner: ніколи не падаємо назад на CPU-runner.
-    runs-on: [self-hosted, Linux, X64, gpu, gtx-1050-ti, cuda-12.6]
+    runs-on: ${{ vars.GITHUB_HOSTED_GPU_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 10
     env:
       CML_GPU_WORKER_SOCKET: /run/cml-gpu-worker/worker.sock
     steps:
+      - name: Verify hosted hardware availability (fail closed)
+        shell: bash
+        run: |
+          test "${RUNNER_ENVIRONMENT:-}" = github-hosted || { echo "::error::Local runner forbidden"; exit 1; }
+          command -v nvidia-smi >/dev/null 2>&1 || { echo "::error::GPU unavailable on hosted standard Ubuntu; hardware parity not verified"; exit 1; }
+
       - uses: actions/checkout@v4
 
       # НЕ обгортати в flock: замок допуску бере сам воркер на опкодах з provenance.

@@ -13,9 +13,17 @@ permissions:
 
 jobs:
   probe:
-    runs-on: [self-hosted, guix]
+    # Hardware UNVERIFIED when skipped. Set GITHUB_HOSTED_FPGA_RUNNER only to a genuine GitHub-hosted FPGA-accessible runner.
+    if: vars.GITHUB_HOSTED_FPGA_RUNNER != ''
+    runs-on: ${{ vars.GITHUB_HOSTED_FPGA_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 5
     steps:
+      - name: Verify hosted hardware availability (fail closed)
+        shell: bash
+        run: |
+          test "${RUNNER_ENVIRONMENT:-}" = github-hosted || { echo "::error::Local runner forbidden"; exit 1; }
+          echo "::error::Physical FPGA COM4 unavailable on hosted Ubuntu; hardware proof cannot run"; exit 1
+
       - uses: actions/checkout@v5
 
       - name: Probe physical COM4 lane
