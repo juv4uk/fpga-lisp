@@ -32,6 +32,33 @@ FIELDS = (
 )
 
 
+def _fill_resource_stats(row: dict[str, str], rpt: Path) -> None:
+    kinds: list[str] = []
+    for line in rpt.read_text(encoding="utf-8", errors="replace").splitlines():
+        if m := LOGIC_RE.search(line):
+            row["logic"] = m.group(1)
+        elif m := LUT_RE.search(line):
+            row["lut"], row["alu"] = m.groups()
+        elif m := REG_RE.search(line):
+            row["register"] = m.group(1)
+        elif m := DSP_RE.search(line):
+            row["dsp"] = m.group(1)
+        elif m := DSP_KIND_RE.search(line):
+            if m.group(1).startswith(("MULT", "PADD", "ALU")):
+                kinds.append(f"{m.group(1)}:{m.group(2)}")
+        elif m := TOOL_RE.search(line):
+            row["tool_version"] = m.group(1).strip()
+        elif m := PART_RE.search(line):
+            row["part"] = m.group(1).strip()
+
+    if kinds:
+        row["dsp_kind"] = ",".join(kinds)
+
+
+def _fill_timing_stats(row: dict[str, str], tr: Path) -> None:
+    for line in tr.read_text(encoding="utf-8", errors="replace").splitlines():
+
+
 def parse_one(top_dir: Path) -> dict[str, str]:
     match = TOP_RE.match(top_dir.name)
     if not match:
@@ -62,29 +89,9 @@ def parse_one(top_dir: Path) -> dict[str, str]:
         "part": "",
     }
 
-    kinds: list[str] = []
-    for line in rpt.read_text(encoding="utf-8", errors="replace").splitlines():
-        if m := LOGIC_RE.search(line):
-            row["logic"] = m.group(1)
-        elif m := LUT_RE.search(line):
-            row["lut"], row["alu"] = m.groups()
-        elif m := REG_RE.search(line):
-            row["register"] = m.group(1)
-        elif m := DSP_RE.search(line):
-            row["dsp"] = m.group(1)
-        elif m := DSP_KIND_RE.search(line):
-            if m.group(1).startswith(("MULT", "PADD", "ALU")):
-                kinds.append(f"{m.group(1)}:{m.group(2)}")
-        elif m := TOOL_RE.search(line):
-            row["tool_version"] = m.group(1).strip()
-        elif m := PART_RE.search(line):
-            row["part"] = m.group(1).strip()
-
-    if kinds:
-        row["dsp_kind"] = ",".join(kinds)
-
-    for line in tr.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not row["fmax_mhz"] and (m := FMAX_RE.search(line)):
+    _fill_resource_stats(row, rpt)
+    _fill_timing_stats(row, tr)
+    if not row["fmax_mhz"] and (m := FMAX_RE.search(line)):
             row["fmax_mhz"] = m.group(1)
         if not row["setup_slack_ns"] and (m := SLACK_RE.search(line)):
             row["setup_slack_ns"] = m.group(1)
