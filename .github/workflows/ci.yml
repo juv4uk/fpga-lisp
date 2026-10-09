@@ -14,7 +14,7 @@ on:
 
 jobs:
   simulate:
-    runs-on: [self-hosted, guix]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out fpga-lisp
